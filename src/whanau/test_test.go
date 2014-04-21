@@ -1,0 +1,77 @@
+package whanau
+
+import "testing"
+import "runtime"
+import "strconv"
+import "os"
+import "fmt"
+
+// import "time"
+
+// import "math/rand"
+
+func port(tag string, host int) string {
+	s := "/var/tmp/824-"
+	s += strconv.Itoa(os.Getuid()) + "/"
+	os.Mkdir(s, 0777)
+	s += "sm-"
+	s += strconv.Itoa(os.Getpid()) + "-"
+	s += tag + "-"
+	s += strconv.Itoa(host)
+	return s
+}
+
+func cleanup(ws []*WhanauServer) {
+	for i := 0; i < len(ws); i++ {
+		if ws[i] != nil {
+			ws[i].kill()
+		}
+	}
+}
+
+func TestBasic(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 3
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("Test: Basic put/lookup ...\n")
+
+	cka[1].Put("a", "x")
+	val := cka[1].Lookup("a")
+
+	fmt.Printf("lookup for key a got value %s\n", val)
+
+	fmt.Printf("...Passed\n")
+
+	fmt.Printf("Lookup in neighboring server ...\n")
+
+	cka[2].Put("b", "y")
+	val = cka[1].Lookup("b")
+
+	fmt.Printf("lookup for key b got value %s\n", val)
+
+	fmt.Printf("...Passed\n")
+}

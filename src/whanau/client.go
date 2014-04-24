@@ -77,3 +77,18 @@ func (ck *Clerk) Put(key string, value string) string {
 
 	return ""
 }
+
+// TODO just for testing
+func (ck *Clerk) RandomWalk(steps int) string {
+	args := &RandomWalkArgs{}
+	args.Steps = steps
+	var reply RandomWalkReply
+	ok := call(ck.server, "WhanauServer.RandomWalk", args, &reply)
+	if ok && (reply.Err == OK) {
+		return reply.Server
+	}
+
+	return "RANDOMWALK ERR"
+}
+
+

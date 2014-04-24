@@ -8,10 +8,12 @@ import "log"
 import "sync"
 import "os"
 import "fmt"
+import "math/rand"
+import "time"
 
 //import "encoding/gob"
 
-const Debug = 0
+const Debug = 1
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -95,12 +97,39 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	return nil
 }
 
+// Random walk
+func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) string {
+  steps := args.Steps
+  fmt.Println("In RandomWalk")
+  // pick a random neighbor
+  rand.Seed(time.Now().Unix())
+  randIndex := rand.Intn(len(ws.neighbors))
+  neighbor := ws.neighbors[randIndex]
+  fmt.Println("len neighbors: " , len(ws.neighbors))
+  fmt.Println("randIndex: ", randIndex)
+  fmt.Println("neighbor: " , neighbor)
+  if steps == 1 {
+    return neighbor
+  } else {
+    args := &RandomWalkArgs{}
+    args.Steps = steps - 1
+    var reply RandomWalkReply
+    ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
+    if ok && (reply.Err == OK) {
+      return reply.Server
+    }
+  }
+
+  return ErrRandWalk
+}
+
 // tell the server to shut itself down.
 func (ws *WhanauServer) kill() {
 	ws.dead = true
 	ws.l.Close()
 	//	ws.px.Kill()
 }
+
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string, neighbors []string) *WhanauServer {

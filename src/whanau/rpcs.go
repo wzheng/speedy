@@ -19,3 +19,13 @@ type PutArgs struct {
 type PutReply struct {
 	Err Err
 }
+
+type RandomWalkArgs struct {
+  Steps   int
+}
+
+type RandomWalkReply struct {
+  // TODO return record?
+  Server  string
+  Err     Err
+}

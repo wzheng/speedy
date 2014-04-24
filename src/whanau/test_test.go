@@ -29,6 +29,20 @@ func cleanup(ws []*WhanauServer) {
 	}
 }
 
+// TODO just for testing
+func testRandomWalk(server string, steps int) string {
+	args := &RandomWalkArgs{}
+	args.Steps = steps
+	var reply RandomWalkReply
+	ok := call(server, "WhanauServer.RandomWalk", args, &reply)
+	if ok && (reply.Err == OK) {
+		return reply.Server
+	}
+
+	return "RANDOMWALK ERR"
+}
+
+
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
@@ -74,4 +88,10 @@ func TestBasic(t *testing.T) {
 	fmt.Printf("lookup for key b got value %s\n", val)
 
 	fmt.Printf("...Passed\n")
+
+  // Testing randomwalk
+  //rw1 := ws[0].RandomWalk(1)
+  rw2 := testRandomWalk(ws[0].myaddr, 2)
+  //fmt.Printf("rand walk 1 from ws0 %s\n", rw1)
+  fmt.Printf("rand walk 2 from ws0 %s\n", rw2)
 }

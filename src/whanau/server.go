@@ -9,7 +9,6 @@ import "sync"
 import "os"
 import "fmt"
 import "math/rand"
-import "time"
 
 //import "encoding/gob"
 
@@ -100,16 +99,11 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
   steps := args.Steps
-  fmt.Println("In RandomWalk")
   // pick a random neighbor
-  rand.Seed(time.Now().Unix())
   randIndex := rand.Intn(len(ws.neighbors))
   neighbor := ws.neighbors[randIndex]
-  fmt.Println("len neighbors: " , len(ws.neighbors))
-  fmt.Println("randIndex: ", randIndex)
-  fmt.Println("neighbor: " , neighbor)
   if steps == 1 {
-	  reply.Server = ws.myaddr
+	  reply.Server = neighbor
 	  reply.Err = OK
   } else {
     args := &RandomWalkArgs{}

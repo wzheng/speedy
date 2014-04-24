@@ -98,7 +98,7 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 }
 
 // Random walk
-func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) string {
+func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
   steps := args.Steps
   fmt.Println("In RandomWalk")
   // pick a random neighbor
@@ -109,18 +109,20 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
   fmt.Println("randIndex: ", randIndex)
   fmt.Println("neighbor: " , neighbor)
   if steps == 1 {
-    return neighbor
+	  reply.Server = ws.myaddr
+	  reply.Err = OK
   } else {
     args := &RandomWalkArgs{}
     args.Steps = steps - 1
-    var reply RandomWalkReply
-    ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
-    if ok && (reply.Err == OK) {
-      return reply.Server
+    var rpc_reply RandomWalkReply
+    ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
+    if ok && (rpc_reply.Err == OK) {
+	    reply.Server = rpc_reply.Server
+	    reply.Err = OK
     }
   }
 
-  return ErrRandWalk
+  return nil
 }
 
 // tell the server to shut itself down.

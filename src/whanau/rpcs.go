@@ -30,6 +30,15 @@ type RandomWalkReply struct {
 	Err    Err
 }
 
+type GetIdArgs struct {
+	Layer int
+}
+
+type GetIdReply struct {
+	Key string
+	Err Err
+}
+
 type InitPaxosClusterArgs struct {
 	RequestServer string
 	Phase         string

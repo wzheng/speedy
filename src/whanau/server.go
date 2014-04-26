@@ -138,6 +138,18 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 	return nil
 }
 
+// Gets the ID from node's local id table
+func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
+	layer := args.Layer
+	// gets the id associated with a layer
+	if 0 <= layer && layer <= len(ws.ids) {
+		id := ws.ids[layer]
+		reply.Key = id
+		reply.Err = OK
+	}
+	return nil
+}
+
 // Whanau Routing Protocal methods
 
 // TODO

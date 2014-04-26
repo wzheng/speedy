@@ -29,3 +29,11 @@ type RandomWalkReply struct {
   Server  string
   Err     Err
 }
+
+type ChooseIdArgs struct {
+    Layer string
+}
+
+type ChooseIdReply struct {
+    Key string
+}

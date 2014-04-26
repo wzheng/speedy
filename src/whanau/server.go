@@ -24,7 +24,7 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 }
 
 // tuple for (id, address) pairs used in finger table
-type Pair struct {
+type Finger struct {
 	Id      string
 	Address string
 }
@@ -187,7 +187,9 @@ func (ws *WhanauServer) SampleRecords(rd int) []Record {
 	return records
 }
 
-func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Pair {
+// Constructs Finger table for a specified layer
+func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
+	fingers := make([]Finger, 0)
 	for i := 0; i < rf; i++ {
 		steps := 2 // TODO: set to global W parameter
 		args := &RandomWalkArgs{steps}
@@ -195,7 +197,23 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Pair {
 		ws.RandomWalk(args, reply)
 		// TODO: need to finish after the getids rpc is made
 	}
-	return nil
+	return fingers
+}
+
+// Choose id for specified layer
+func (ws *WhanauServer) ChooseID(layer int) string {
+
+	if layer == 0 {
+		// choose randomly from db
+		randIndex := rand.Intn(len(ws.db))
+		record := ws.db[randIndex]
+		return record.Key
+
+	} else {
+		// choose finger randomly from layer - 1, use id of that finger
+		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
+		return randFinger.Id
+	}
 }
 
 // tell the server to shut itself down.

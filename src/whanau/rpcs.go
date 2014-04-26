@@ -36,7 +36,7 @@ type GetIdArgs struct {
 
 type GetIdReply struct {
 	Key string
-    Err Err
+	Err Err
 }
 
 type InitPaxosClusterArgs struct {

@@ -1,18 +1,19 @@
 package whanau
+
 import "math/rand"
 
 func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
-	if (args.Phase == PhaseOne) {
+	if args.Phase == PhaseOne {
 		reply.Reply = Commit
 	} else {
-		if (args.Action == Commit) {
+		if args.Action == Commit {
 
 		} else {
-			
+
 		}
 		reply.Err = OK
 	}
-	
+
 	return nil
 }
 
@@ -23,7 +24,7 @@ func (ws *WhanauServer) ConstructPaxosCluster() error {
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
 
-	// pick several random walk nodes to join the Paxos cluster	
+	// pick several random walk nodes to join the Paxos cluster
 	for i := 0; i < PaxosSize; i++ {
 		args := &RandomWalkArgs{}
 		args.Steps = PaxosWalk
@@ -47,7 +48,7 @@ func (ws *WhanauServer) ConstructPaxosCluster() error {
 		args.Action = ""
 		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
 		if ok && (reply.Err == OK) {
-			if (reply.Reply == Reject) {
+			if reply.Reply == Reject {
 				if_commit = false
 				break
 			}
@@ -61,7 +62,7 @@ func (ws *WhanauServer) ConstructPaxosCluster() error {
 		args.RequestServer = ws.myaddr
 		args.Phase = PhaseTwo
 
-		if (if_commit) {
+		if if_commit {
 			args.Action = Commit
 		} else {
 			args.Action = Abort
@@ -74,4 +75,3 @@ func (ws *WhanauServer) ConstructPaxosCluster() error {
 
 	return nil
 }
-

@@ -57,7 +57,7 @@ func testGetId(server string, layer int) string {
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-  rand.Seed(time.Now().UTC().UnixNano()) // for testing
+	rand.Seed(time.Now().UTC().UnixNano()) // for testing
 	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)

@@ -21,24 +21,23 @@ type PutReply struct {
 }
 
 type RandomWalkArgs struct {
-  Steps   int
+	Steps int
 }
 
 type RandomWalkReply struct {
-  // TODO return record?
-  Server  string
-  Err     Err
+	// TODO return record?
+	Server string
+	Err    Err
 }
-
 
 type InitPaxosClusterArgs struct {
 	RequestServer string
-	Phase string
-	Action string
-	KeyMap map[string]string
+	Phase         string
+	Action        string
+	KeyMap        map[string]string
 }
 
 type InitPaxosClusterReply struct {
 	Reply string
-	Err Err
+	Err   Err
 }

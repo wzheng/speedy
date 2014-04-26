@@ -40,11 +40,10 @@ func testRandomWalk(server string, steps int) string {
 	return "RANDOMWALK ERR"
 }
 
-
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-  rand.Seed(time.Now().UTC().UnixNano()) // for testing
+	rand.Seed(time.Now().UTC().UnixNano()) // for testing
 	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -89,18 +88,18 @@ func TestBasic(t *testing.T) {
 
 	fmt.Printf("...Passed\n")
 
-  // Testing randomwalk
-  rw1 := testRandomWalk(ws[0].myaddr, 1)
-  rw2 := testRandomWalk(ws[0].myaddr, 2)
-  fmt.Printf("rand walk 1 from ws0 %s\n", rw1)
-  fmt.Printf("rand walk 2 from ws0 %s\n", rw2)
+	// Testing randomwalk
+	rw1 := testRandomWalk(ws[0].myaddr, 1)
+	rw2 := testRandomWalk(ws[0].myaddr, 2)
+	fmt.Printf("rand walk 1 from ws0 %s\n", rw1)
+	fmt.Printf("rand walk 2 from ws0 %s\n", rw2)
 
-  // Testing sample record
-  cka[0].Put("testkey", "testval")
-  cka[0].Put("testkey1", "testval1")
-  cka[0].Put("testkey2", "testval2")
-  cka[0].Put("testkey3", "testval3")
-  cka[0].Put("testkey4", "testval4")
-  testsamples := ws[0].SampleRecords(3)
-  fmt.Printf("testsamples: ", testsamples)
+	// Testing sample record
+	cka[0].Put("testkey", "testval")
+	cka[0].Put("testkey1", "testval1")
+	cka[0].Put("testkey2", "testval2")
+	cka[0].Put("testkey3", "testval3")
+	cka[0].Put("testkey4", "testval4")
+	testsamples := ws[0].SampleRecords(3)
+	fmt.Printf("testsamples: ", testsamples)
 }

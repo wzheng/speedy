@@ -77,4 +77,3 @@ func (ck *Clerk) Put(key string, value string) string {
 
 	return ""
 }
-

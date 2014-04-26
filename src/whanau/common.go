@@ -1,8 +1,8 @@
 package whanau
 
 const (
-	OK       = "OK"
-	ErrNoKey = "ErrNoKey"
+	OK          = "OK"
+	ErrNoKey    = "ErrNoKey"
 	ErrRandWalk = "ErrRandWalk"
 )
 
@@ -10,7 +10,7 @@ const (
 const (
 	// Action
 	Commit = "commit"
-	Abort = "abort"
+	Abort  = "abort"
 
 	// Reply
 	Accept = "accept"
@@ -27,7 +27,7 @@ type Err string
 var W = 1  // mixing time of honest region
 var RD = 1 // size of db
 var RF = 1 // size of fingertable
-var RS = 1  // size of succ records
-var L = 1 // number of layers
+var RS = 1 // size of succ records
+var L = 1  // number of layers
 var PaxosSize = 5
 var PaxosWalk = 5

@@ -9,6 +9,7 @@ import "sync"
 import "os"
 import "fmt"
 import "math/rand"
+
 //import "builtin"
 
 //import "encoding/gob"
@@ -23,16 +24,16 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 }
 
 // tuple for (id, address) pairs used in finger table
-type Pair struct {
-  Id        string
-  Address   string
+type Finger struct {
+	Id      string
+	Address string
 }
 
 // Key value pair
 // TODO: change value later to a paxos cluster
 type Record struct {
-  Key         string
-  Value       string
+	Key   string
+	Value string
 }
 
 type WhanauServer struct {
@@ -44,10 +45,10 @@ type WhanauServer struct {
 
 	neighbors []string          // list of servers this server can talk to
 	kvstore   map[string]string // local k/v table
-  ids       []string          // contains id of each layer
-  fingers   []Pair            // (id, server name) pairs
-  succ      [][]Record        // contains successor records for each layer
-  db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	ids       []string          // contains id of each layer
+	fingers   [][]Finger        // (id, server name) pairs
+	succ      [][]Record        // contains successor records for each layer
+	db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
 
 func IsInList(val string, array []string) bool {
@@ -116,25 +117,25 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-  steps := args.Steps
-  // pick a random neighbor
-  randIndex := rand.Intn(len(ws.neighbors))
-  neighbor := ws.neighbors[randIndex]
-  if steps == 1 {
-	  reply.Server = neighbor
-	  reply.Err = OK
-  } else {
-    args := &RandomWalkArgs{}
-    args.Steps = steps - 1
-    var rpc_reply RandomWalkReply
-    ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
-    if ok && (rpc_reply.Err == OK) {
-	    reply.Server = rpc_reply.Server
-	    reply.Err = OK
-    }
-  }
+	steps := args.Steps
+	// pick a random neighbor
+	randIndex := rand.Intn(len(ws.neighbors))
+	neighbor := ws.neighbors[randIndex]
+	if steps == 1 {
+		reply.Server = neighbor
+		reply.Err = OK
+	} else {
+		args := &RandomWalkArgs{}
+		args.Steps = steps - 1
+		var rpc_reply RandomWalkReply
+		ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
+		if ok && (rpc_reply.Err == OK) {
+			reply.Server = rpc_reply.Server
+			reply.Err = OK
+		}
+	}
 
-  return nil
+	return nil
 }
 
 // Whanau Routing Protocal methods
@@ -142,51 +143,66 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // TODO
 // Populates routing table
 func (ws *WhanauServer) Setup() {
-  // fill up db
+	// fill up db
 
-  // populate id, fingers, succ
+	// populate id, fingers, succ
 }
 
 // return random Key/value record from local storage
 func (ws *WhanauServer) SampleRecord() Record {
-  randIndex := rand.Intn(len(ws.kvstore))
-  keys := make([]string, 0)
-  for k, _ := range ws.kvstore {
-    keys = append(keys, k)
-  }
-  key := keys[randIndex]
-  value := ws.kvstore[key]
-  record := Record{key, value}
+	randIndex := rand.Intn(len(ws.kvstore))
+	keys := make([]string, 0)
+	for k, _ := range ws.kvstore {
+		keys = append(keys, k)
+	}
+	key := keys[randIndex]
+	value := ws.kvstore[key]
+	record := Record{key, value}
 
-  // TODO remove later
-  fmt.Println("record: ", record)
-  return record
+	// TODO remove later
+	fmt.Println("record: ", record)
+	return record
 }
 
 // Returns a list of records sampled randomly from local kv store
 // Note: we agreed that duplicates are fine
 func (ws *WhanauServer) SampleRecords(rd int) []Record {
 
-  records := make([]Record, 0)
-  for i := 0; i < rd; i++ {
-    records = append(records, ws.SampleRecord())
-  }
-  return records
+	records := make([]Record, 0)
+	for i := 0; i < rd; i++ {
+		records = append(records, ws.SampleRecord())
+	}
+	return records
 }
 
-
-func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Pair {
-  for i := 0; i < rf; i++ {
-    steps := 2 // TODO: set to global W parameter
-    args := &RandomWalkArgs{steps}
-    reply := &RandomWalkReply{}
-    ws.RandomWalk(args, reply)
-    // TODO: need to finish after the getids rpc is made
-  }
-  return nil
+// Constructs Finger table for a specified layer
+func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
+  fingers := make([]Finger, 0)
+	for i := 0; i < rf; i++ {
+		steps := 2 // TODO: set to global W parameter
+		args := &RandomWalkArgs{steps}
+		reply := &RandomWalkReply{}
+		ws.RandomWalk(args, reply)
+		// TODO: need to finish after the getids rpc is made
+	}
+	return fingers
 }
 
+// Choose id for specified layer
+func (ws *WhanauServer) ChooseID(layer int) string {
 
+  if layer == 0 {
+    // choose randomly from db
+    randIndex := rand.Intn(len(ws.db))
+    record := ws.db[randIndex]
+    return record.Key
+
+  } else {
+    // choose finger randomly from layer - 1, use id of that finger
+    randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
+    return randFinger.Id
+  }
+}
 
 // tell the server to shut itself down.
 func (ws *WhanauServer) kill() {
@@ -194,6 +210,8 @@ func (ws *WhanauServer) kill() {
 	ws.l.Close()
 	//	ws.px.Kill()
 }
+
+
 
 
 // TODO servers is for a paxos cluster

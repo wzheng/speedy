@@ -117,7 +117,9 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
+	fmt.Println("In randomwalk of ", ws.myaddr)
 	steps := args.Steps
+	fmt.Println("steps: ", steps)
 	// pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
@@ -141,6 +143,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // Gets the ID from node's local id table
 func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	layer := args.Layer
+	fmt.Println("layer: ", layer)
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
@@ -194,8 +197,29 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		steps := 2 // TODO: set to global W parameter
 		args := &RandomWalkArgs{steps}
 		reply := &RandomWalkReply{}
-		ws.RandomWalk(args, reply)
-		// TODO: need to finish after the getids rpc is made
+
+		// Keep trying until succeed or timeout
+		// TODO add timeout later
+		for reply.Err != OK {
+			ws.RandomWalk(args, reply)
+			fmt.Println("In reply.Err: ", reply.Err)
+			fmt.Println("reply.Server: ", reply.Server)
+		}
+		server := reply.Server
+
+		// get id of server using rpc call to that server
+		getIdArg := &GetIdArgs{layer}
+		getIdReply := &GetIdReply{}
+		ok := false
+
+		// TODO add timeout later
+		for !ok || (getIdReply.Err != OK) {
+			fmt.Println("getIdReply.Err: ", getIdReply.Err)
+			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
+		}
+
+		finger := Finger{getIdReply.Key, server}
+		fingers = append(fingers, finger)
 	}
 	return fingers
 }

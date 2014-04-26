@@ -102,4 +102,5 @@ func TestBasic(t *testing.T) {
 	cka[0].Put("testkey4", "testval4")
 	testsamples := ws[0].SampleRecords(3)
 	fmt.Printf("testsamples: ", testsamples)
+  ws[0].ConstructFingers(1, 1)
 }

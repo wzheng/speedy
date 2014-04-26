@@ -9,6 +9,7 @@ import "sync"
 import "os"
 import "fmt"
 import "math/rand"
+//import "builtin"
 
 //import "encoding/gob"
 
@@ -21,6 +22,17 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+// tuple for (id, address) pairs used in finger table
+type Pair struct {
+  Id        string
+  Address   string
+}
+
+// Key value pair
+type Record struct {
+  Key       string
+  Value     string
+}
 type WhanauServer struct {
 	mu     sync.Mutex
 	l      net.Listener
@@ -30,6 +42,10 @@ type WhanauServer struct {
 
 	neighbors []string          // list of servers this server can talk to
 	kvstore   map[string]string // local k/v table
+  ids       []string          // contains id of each layer
+  fingers   []Pair            // (id, server name) pairs
+  succ      [][]Record        // contains successor records for each layer
+  db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
 
 func IsInList(val string, array []string) bool {
@@ -118,6 +134,41 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 
   return nil
 }
+
+// Whanau Routing Protocal methods
+
+// TODO
+// Populates routing table
+func (ws *WhanauServer) Setup() {
+  // fill up db
+
+  // populate id, fingers, succ
+}
+
+// return random Key/value record from local storage
+func (ws *WhanauServer) SampleRecord() *Record {
+  randIndex := rand.Intn(len(ws.kvstore))
+  keys := make([]string, 0)
+  for k, _ := range ws.kvstore {
+    keys = append(keys, k)
+  }
+  key := keys[randIndex]
+  value := ws.kvstore[key]
+  record := new(Record)
+  record.Key = key
+  record.Value = value
+
+  // TODO remove later
+  fmt.Println("key: " + key)
+  return record
+}
+
+
+
+
+
+
+
 
 // tell the server to shut itself down.
 func (ws *WhanauServer) kill() {

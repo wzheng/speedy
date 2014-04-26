@@ -6,8 +6,7 @@ import "strconv"
 import "os"
 import "fmt"
 import "math/rand"
-
-// import "time"
+import "time"
 
 func port(tag string, host int) string {
 	s := "/var/tmp/824-"
@@ -45,7 +44,7 @@ func testRandomWalk(server string, steps int) string {
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-  rand.Seed(0) // for testing
+  rand.Seed(time.Now().UTC().UnixNano()) // for testing
 	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -63,6 +62,7 @@ func TestBasic(t *testing.T) {
 			}
 			neighbors = append(neighbors, kvh[j])
 		}
+
 		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
 	}
 
@@ -94,4 +94,9 @@ func TestBasic(t *testing.T) {
   rw2 := testRandomWalk(ws[0].myaddr, 2)
   fmt.Printf("rand walk 1 from ws0 %s\n", rw1)
   fmt.Printf("rand walk 2 from ws0 %s\n", rw2)
+
+  // Testing sample record
+  cka[0].Put("testkey", "testval")
+  cka[0].Put("testkey1", "testval1")
+  ws[0].SampleRecord()
 }

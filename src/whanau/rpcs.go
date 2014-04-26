@@ -37,3 +37,15 @@ type ChooseIdArgs struct {
 type ChooseIdReply struct {
     Key string
 }
+
+type InitPaxosClusterArgs struct {
+	RequestServer string
+	Phase string
+	Action string
+	KeyMap map[string]string
+}
+
+type InitPaxosClusterReply struct {
+	Reply string
+	Err Err
+}

@@ -34,7 +34,7 @@ type WhanauServer struct {
 	pkvstore  map[KeyType]TrueValueType     // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType         // k/v table used for routing
 	ids       []KeyType                     // contains id of each layer
-	fingers   []Pair                        // (id, server name) pairs
+	fingers   []Finger                      // (id, server name) pairs
 	succ      [][]Record                    // contains successor records for each layer
 	db        []Record                      // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
@@ -204,7 +204,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 }
 
 // Choose id for specified layer
-func (ws *WhanauServer) ChooseID(layer int) string {
+func (ws *WhanauServer) ChooseID(layer int) KeyType {
 
 	if layer == 0 {
 		// choose randomly from db

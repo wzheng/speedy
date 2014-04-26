@@ -31,12 +31,6 @@ type ValueType struct {
 
 type TrueValueType string
 
-// tuple for (id, address) pairs used in finger table
-type Pair struct {
-	Id      string
-	Address string
-}
-
 // Key value pair
 type Record struct {
 	Key   KeyType

@@ -35,7 +35,7 @@ type GetIdArgs struct {
 }
 
 type GetIdReply struct {
-	Key string
+	Key KeyType
 	Err Err
 }
 

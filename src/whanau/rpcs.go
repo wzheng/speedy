@@ -29,3 +29,5 @@ type RandomWalkReply struct {
   Server  string
   Err     Err
 }
+
+

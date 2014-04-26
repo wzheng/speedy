@@ -164,7 +164,7 @@ func (ws *WhanauServer) SampleRecord() Record {
 }
 
 // Returns a list of records sampled randomly from local kv store
-// TODO: does it need to return a list of unique records?
+// Note: we agreed that duplicates are fine
 func (ws *WhanauServer) SampleRecords(rd int) []Record {
 
   records := make([]Record, 0)
@@ -175,7 +175,16 @@ func (ws *WhanauServer) SampleRecords(rd int) []Record {
 }
 
 
-
+func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Pair {
+  for i := 0; i < rf; i++ {
+    steps := 2 // TODO: set to global W parameter
+    args := &RandomWalkArgs{steps}
+    reply := &RandomWalkReply{}
+    ws.RandomWalk(args, reply)
+    // TODO: need to finish after the getids rpc is made
+  }
+  return nil
+}
 
 
 

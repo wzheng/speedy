@@ -45,8 +45,8 @@ type WhanauServer struct {
 
 	neighbors []string          // list of servers this server can talk to
 	kvstore   map[string]string // local k/v table
-	ids       []string          // contains id of each layer
-	fingers   [][]Finger        // (id, server name) pairs
+	ids       [L]string          // contains id of each layer
+	fingers   [][]Finger            // (id, server name) pairs
 	succ      [][]Record        // contains successor records for each layer
 	db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
@@ -117,9 +117,7 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-	fmt.Println("In randomwalk of ", ws.myaddr)
 	steps := args.Steps
-	fmt.Println("steps: ", steps)
 	// pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
@@ -143,7 +141,6 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // Gets the ID from node's local id table
 func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	layer := args.Layer
-	fmt.Println("layer: ", layer)
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
@@ -202,8 +199,6 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		// TODO add timeout later
 		for reply.Err != OK {
 			ws.RandomWalk(args, reply)
-			fmt.Println("In reply.Err: ", reply.Err)
-			fmt.Println("reply.Server: ", reply.Server)
 		}
 		server := reply.Server
 
@@ -214,7 +209,6 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
-			fmt.Println("getIdReply.Err: ", getIdReply.Err)
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
 		}
 
@@ -287,3 +281,13 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 	return ws
 }
+
+// Methods used only for testing
+
+// This method is only used for putting ids into the table for testing purposes
+func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
+	ws.ids[args.Key] = args.Value
+	reply.Err = OK
+	return nil
+}
+

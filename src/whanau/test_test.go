@@ -41,7 +41,7 @@ func testRandomWalk(server string, steps int) string {
 }
 
 // Test getID
-func testGetId(server string, layer int) string {
+func testGetId(server string, layer int) KeyType {
     args := &GetIdArgs{}
     args.Layer = layer
     var reply GetIdReply
@@ -142,6 +142,7 @@ func TestRandomWalk(t *testing.T) {
 func TestSampleRecords(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
+	rand.Seed(time.Now().UTC().UnixNano()) // for testing
 	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)

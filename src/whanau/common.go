@@ -39,7 +39,7 @@ type Record struct {
 
 // tuple for (id, address) pairs used in finger table
 type Finger struct {
-	Id      string
+	Id      KeyType
 	Address string
 }
 

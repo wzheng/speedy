@@ -33,8 +33,8 @@ type WhanauServer struct {
 	neighbors []string                      // list of servers this server can talk to
 	pkvstore  map[KeyType]TrueValueType     // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType         // k/v table used for routing
-	ids       []KeyType                     // contains id of each layer
-	fingers   []Finger                      // (id, server name) pairs
+	ids       [L]KeyType                     // contains id of each layer
+	fingers   [][]Finger                      // (id, server name) pairs
 	succ      [][]Record                    // contains successor records for each layer
 	db        []Record                      // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
@@ -57,7 +57,7 @@ func (ws *WhanauServer) PaxosLookup(servers ValueType) TrueValueType {
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {
-		var ret TrueValueType 
+		var ret TrueValueType
 		ret = ws.PaxosLookup(val)
 
 		reply.Value = ret

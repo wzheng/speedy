@@ -46,7 +46,7 @@ type WhanauServer struct {
 	neighbors []string          // list of servers this server can talk to
 	kvstore   map[string]string // local k/v table
 	ids       [L]string          // contains id of each layer
-	fingers   []Pair            // (id, server name) pairs
+	fingers   [][]Finger            // (id, server name) pairs
 	succ      [][]Record        // contains successor records for each layer
 	db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }

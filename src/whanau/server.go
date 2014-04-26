@@ -177,7 +177,7 @@ func (ws *WhanauServer) SampleRecords(rd int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
-  fingers := make([]Finger, 0)
+	fingers := make([]Finger, 0)
 	for i := 0; i < rf; i++ {
 		steps := 2 // TODO: set to global W parameter
 		args := &RandomWalkArgs{steps}
@@ -191,17 +191,17 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) string {
 
-  if layer == 0 {
-    // choose randomly from db
-    randIndex := rand.Intn(len(ws.db))
-    record := ws.db[randIndex]
-    return record.Key
+	if layer == 0 {
+		// choose randomly from db
+		randIndex := rand.Intn(len(ws.db))
+		record := ws.db[randIndex]
+		return record.Key
 
-  } else {
-    // choose finger randomly from layer - 1, use id of that finger
-    randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
-    return randFinger.Id
-  }
+	} else {
+		// choose finger randomly from layer - 1, use id of that finger
+		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
+		return randFinger.Id
+	}
 }
 
 // tell the server to shut itself down.
@@ -210,9 +210,6 @@ func (ws *WhanauServer) kill() {
 	ws.l.Close()
 	//	ws.px.Kill()
 }
-
-
-
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string, neighbors []string) *WhanauServer {

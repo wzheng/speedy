@@ -268,7 +268,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 // This method is only used for putting ids into the table for testing purposes
 func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
-	ws.ids[args.Key] = args.Value
+	ws.ids[args.Layer] = args.Key
 	reply.Err = OK
 	return nil
 }

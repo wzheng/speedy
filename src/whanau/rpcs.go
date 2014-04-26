@@ -53,8 +53,8 @@ type InitPaxosClusterReply struct {
 
 // Types only used for testing
 type PutIdArgs struct {
-    Key int
-    Value string
+    Layer int
+    Key string
 }
 
 type PutIdReply struct {

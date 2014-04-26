@@ -51,7 +51,7 @@ func call(srv string, rpcname string,
 	return false
 }
 
-func (ck *Clerk) Lookup(key string) string {
+func (ck *Clerk) Lookup(key KeyType) TrueValueType {
 	args := &LookupArgs{}
 	args.Key = key
 	var reply LookupReply
@@ -65,7 +65,7 @@ func (ck *Clerk) Lookup(key string) string {
 
 // TODO this eventually needs to become a real put
 // TODO hashing for debugging?
-func (ck *Clerk) Put(key string, value string) string {
+func (ck *Clerk) Put(key KeyType, value TrueValueType) string {
 	args := &PutArgs{}
 	args.Key = key
 	args.Value = value

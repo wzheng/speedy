@@ -1,19 +1,19 @@
 package whanau
 
 type LookupArgs struct {
-	Key        string
+	Key        KeyType
 	RoutedFrom []string // servers that have already tried to serve this key
 }
 
 type LookupReply struct {
 	Err   Err
-	Value string
+	Value TrueValueType
 }
 
 // TODO hashing for debugging?
 type PutArgs struct {
-	Key   string
-	Value string
+	Key   KeyType
+	Value TrueValueType
 }
 
 type PutReply struct {
@@ -26,8 +26,8 @@ type RandomWalkArgs struct {
 
 type RandomWalkReply struct {
 	// TODO return record?
-	Server string
-	Err    Err
+	Server  string
+	Err     Err
 }
 
 type GetIdArgs struct {
@@ -41,9 +41,12 @@ type GetIdReply struct {
 
 type InitPaxosClusterArgs struct {
 	RequestServer string
-	Phase         string
-	Action        string
-	KeyMap        map[string]string
+	Phase string
+	Action string
+
+	// only populated in phase 2
+	KeyMap map[KeyType]TrueValueType
+	Servers []string
 }
 
 type InitPaxosClusterReply struct {

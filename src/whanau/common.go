@@ -23,6 +23,32 @@ const (
 
 type Err string
 
+type KeyType string
+
+type ValueType struct {
+	Servers []string
+}
+
+type TrueValueType string
+
+// tuple for (id, address) pairs used in finger table
+type Pair struct {
+	Id      string
+	Address string
+}
+
+// Key value pair
+type Record struct {
+	Key   KeyType
+	Value ValueType
+}
+
+// tuple for (id, address) pairs used in finger table
+type Finger struct {
+	Id      string
+	Address string
+}
+
 // Global Parameters
 const (
     W = 1  // mixing time of honest region

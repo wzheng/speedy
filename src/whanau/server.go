@@ -23,19 +23,6 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
-// tuple for (id, address) pairs used in finger table
-type Finger struct {
-	Id      string
-	Address string
-}
-
-// Key value pair
-// TODO: change value later to a paxos cluster
-type Record struct {
-	Key   string
-	Value string
-}
-
 type WhanauServer struct {
 	mu     sync.Mutex
 	l      net.Listener
@@ -43,12 +30,13 @@ type WhanauServer struct {
 	myaddr string
 	dead   bool // for testing
 
-	neighbors []string          // list of servers this server can talk to
-	kvstore   map[string]string // local k/v table
-	ids       [L]string          // contains id of each layer
-	fingers   [][]Finger            // (id, server name) pairs
-	succ      [][]Record        // contains successor records for each layer
-	db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	neighbors []string                      // list of servers this server can talk to
+	pkvstore  map[KeyType]TrueValueType     // local k/v table, used for Paxos
+	kvstore   map[KeyType]ValueType         // k/v table used for routing
+	ids       []KeyType                     // contains id of each layer
+	fingers   []Pair                        // (id, server name) pairs
+	succ      [][]Record                    // contains successor records for each layer
+	db        []Record                      // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
 
 func IsInList(val string, array []string) bool {
@@ -61,10 +49,18 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
+func (ws *WhanauServer) PaxosLookup(servers ValueType) TrueValueType {
+	// TODO: make a call to a random server in the group
+	return ""
+}
+
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {
-		reply.Value = val
+		var ret TrueValueType 
+		ret = ws.PaxosLookup(val)
+
+		reply.Value = ret
 		reply.Err = OK
 		return nil
 	}
@@ -89,7 +85,7 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 
 // Client-style lookup on neighboring servers.
 // routedFrom is supposed to prevent infinite lookup loops.
-func (ws *WhanauServer) NeighborLookup(key string, routedFrom []string) string {
+func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) TrueValueType {
 	args := &LookupArgs{}
 	args.Key = key
 	args.RoutedFrom = routedFrom
@@ -108,9 +104,15 @@ func (ws *WhanauServer) NeighborLookup(key string, routedFrom []string) string {
 	return ErrNoKey
 }
 
+func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
+	// TODO: needs to do a real paxos put
+	ws.pkvstore[key] = value
+	return nil
+}
+
 // TODO this eventually needs to become a real put
 func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
-	ws.kvstore[args.Key] = args.Value
+	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
 	reply.Err = OK
 	return nil
 }
@@ -163,7 +165,7 @@ func (ws *WhanauServer) Setup() {
 // return random Key/value record from local storage
 func (ws *WhanauServer) SampleRecord() Record {
 	randIndex := rand.Intn(len(ws.kvstore))
-	keys := make([]string, 0)
+	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
 		keys = append(keys, k)
 	}
@@ -197,6 +199,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		ws.RandomWalk(args, reply)
 		// TODO: need to finish after the getids rpc is made
 	}
+
 	return fingers
 }
 
@@ -230,7 +233,8 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 	ws.myaddr = myaddr
 	ws.neighbors = neighbors
 
-	ws.kvstore = make(map[string]string)
+	ws.kvstore = make(map[KeyType]ValueType)
+	ws.pkvstore = make(map[KeyType]TrueValueType)
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(ws)

@@ -78,3 +78,15 @@ func (ck *Clerk) Put(key string, value string) string {
 	return ""
 }
 
+//Only for testing purposes for testing getid
+func (ck *Clerk) PutId(key int, value string) string {
+    args := &PutIdArgs{}
+    args.Key = key
+    args.Value = value
+    var reply PutIdReply
+    ok := call(ck.server, "WhanauServer.PutId", args, &reply)
+    if ok && (reply.Err == OK) {
+        return ""
+    }
+    return ""
+}

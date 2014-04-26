@@ -45,7 +45,7 @@ type WhanauServer struct {
 
 	neighbors []string          // list of servers this server can talk to
 	kvstore   map[string]string // local k/v table
-	ids       []string          // contains id of each layer
+	ids       [L]string          // contains id of each layer
 	fingers   []Pair            // (id, server name) pairs
 	succ      [][]Record        // contains successor records for each layer
 	db        []Record          // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
@@ -245,3 +245,13 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 	return ws
 }
+
+// Methods used only for testing
+
+// This method is only used for putting ids into the table for testing purposes
+func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
+	ws.ids[args.Key] = args.Value
+	reply.Err = OK
+	return nil
+}
+

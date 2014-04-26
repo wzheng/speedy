@@ -50,3 +50,13 @@ type InitPaxosClusterReply struct {
 	Reply string
 	Err   Err
 }
+
+// Types only used for testing
+type PutIdArgs struct {
+    Key int
+    Value string
+}
+
+type PutIdReply struct {
+    Err Err
+}

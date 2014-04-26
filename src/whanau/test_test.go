@@ -40,6 +40,19 @@ func testRandomWalk(server string, steps int) string {
 	return "RANDOMWALK ERR"
 }
 
+// Test getID
+func testGetId(server string, layer int) string {
+    args := &GetIdArgs{}
+    args.Layer = layer
+    var reply GetIdReply
+    ok := call(server, "WhanauServer.GetId", args, &reply)
+    if ok && (reply.Err == OK) {
+        return reply.Key
+    }
+
+    return "GETID ERR"
+}
+
 
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
@@ -101,6 +114,9 @@ func TestBasic(t *testing.T) {
   cka[0].Put("testkey2", "testval2")
   cka[0].Put("testkey3", "testval3")
   cka[0].Put("testkey4", "testval4")
+  cka[0].PutId(0, "testId")
   testsamples := ws[0].SampleRecords(3)
+  testGetId := testGetId(ws[0].myaddr, 0)
   fmt.Printf("testsamples: ", testsamples)
+  fmt.Printf("testgetid: ", testGetId)
 }

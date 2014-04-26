@@ -29,10 +29,12 @@ type Pair struct {
 }
 
 // Key value pair
+// TODO: change value later to a paxos cluster
 type Record struct {
-  Key       string
-  Value     string
+  Key         string
+  Value       string
 }
+
 type WhanauServer struct {
 	mu     sync.Mutex
 	l      net.Listener
@@ -146,7 +148,7 @@ func (ws *WhanauServer) Setup() {
 }
 
 // return random Key/value record from local storage
-func (ws *WhanauServer) SampleRecord() *Record {
+func (ws *WhanauServer) SampleRecord() Record {
   randIndex := rand.Intn(len(ws.kvstore))
   keys := make([]string, 0)
   for k, _ := range ws.kvstore {
@@ -154,16 +156,23 @@ func (ws *WhanauServer) SampleRecord() *Record {
   }
   key := keys[randIndex]
   value := ws.kvstore[key]
-  record := new(Record)
-  record.Key = key
-  record.Value = value
+  record := Record{key, value}
 
   // TODO remove later
-  fmt.Println("key: " + key)
+  fmt.Println("record: ", record)
   return record
 }
 
+// Returns a list of records sampled randomly from local kv store
+// TODO: does it need to return a list of unique records?
+func (ws *WhanauServer) SampleRecords(rd int) []Record {
 
+  records := make([]Record, 0)
+  for i := 0; i < rd; i++ {
+    records = append(records, ws.SampleRecord())
+  }
+  return records
+}
 
 
 

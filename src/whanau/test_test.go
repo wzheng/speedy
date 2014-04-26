@@ -98,5 +98,9 @@ func TestBasic(t *testing.T) {
   // Testing sample record
   cka[0].Put("testkey", "testval")
   cka[0].Put("testkey1", "testval1")
-  ws[0].SampleRecord()
+  cka[0].Put("testkey2", "testval2")
+  cka[0].Put("testkey3", "testval3")
+  cka[0].Put("testkey4", "testval4")
+  testsamples := ws[0].SampleRecords(3)
+  fmt.Printf("testsamples: ", testsamples)
 }

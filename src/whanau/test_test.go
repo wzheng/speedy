@@ -187,10 +187,6 @@ func TestGetId(t *testing.T) {
 	defer cleanup(ws)
 
 	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-
-	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
 		for j := 0; j < nservers; j++ {
 			if j == i {

@@ -8,16 +8,22 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *Init
 	} else {
 		if args.Action == Commit {
 
+			for k, v := range args.KeyMap {
+				ws.pkvstore[k] = v
+				var value ValueType
+				value.Servers = args.Servers
+				ws.kvstore[k] = value
+			}
 		} else {
-
+			// do nothing?
 		}
-		reply.Err = OK
 	}
 
+	reply.Err = OK
 	return nil
 }
 
-func (ws *WhanauServer) ConstructPaxosCluster() error {
+func (ws *WhanauServer) ConstructPaxosCluster() []string {
 
 	var cluster []string
 
@@ -73,5 +79,5 @@ func (ws *WhanauServer) ConstructPaxosCluster() error {
 		}
 	}
 
-	return nil
+	return cluster
 }

@@ -51,7 +51,7 @@ func call(srv string, rpcname string,
 	return false
 }
 
-func (ck *Clerk) Lookup(key string) string {
+func (ck *Clerk) Lookup(key KeyType) TrueValueType {
 	args := &LookupArgs{}
 	args.Key = key
 	var reply LookupReply
@@ -65,7 +65,7 @@ func (ck *Clerk) Lookup(key string) string {
 
 // TODO this eventually needs to become a real put
 // TODO hashing for debugging?
-func (ck *Clerk) Put(key string, value string) string {
+func (ck *Clerk) Put(key KeyType, value TrueValueType) string {
 	args := &PutArgs{}
 	args.Key = key
 	args.Value = value
@@ -76,17 +76,4 @@ func (ck *Clerk) Put(key string, value string) string {
 	}
 
 	return ""
-}
-
-//Only for testing purposes for testing getid
-func (ck *Clerk) PutId(key int, value string) string {
-    args := &PutIdArgs{}
-    args.Key = key
-    args.Value = value
-    var reply PutIdReply
-    ok := call(ck.server, "WhanauServer.PutId", args, &reply)
-    if ok && (reply.Err == OK) {
-        return ""
-    }
-    return ""
 }

@@ -39,6 +39,16 @@ type GetIdReply struct {
 	Err Err
 }
 
+type SampleSuccessorsArgs struct {
+    Key KeyType
+    T int
+}
+
+type SampleSuccessorsReply struct {
+    Successors []Record
+    Err Err
+}
+
 type InitPaxosClusterArgs struct {
 	RequestServer string
 	Phase         string

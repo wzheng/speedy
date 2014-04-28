@@ -274,3 +274,54 @@ func TestConstructFingers(t *testing.T) {
 	fingers2 := ws[0].ConstructFingers(2, RF)
 	fmt.Println("fingers2:", fingers2)
 }
+
+func TestSuccessors(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 3
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	// hard code in IDs for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < L; j++ {
+			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
+			ws[i].ids[j] = id
+		}
+	}
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
+	fmt.Println("ws[0].ids", ws[0].ids)
+	// layer 0
+	fingers0 := ws[0].ConstructFingers(0, RF)
+	fmt.Println("fingers0:", fingers0)
+
+	// layer 1
+	fingers1 := ws[0].ConstructFingers(1, RF)
+	fmt.Println("fingers1:", fingers1)
+	// layer 2
+
+	fingers2 := ws[0].ConstructFingers(2, RF)
+	fmt.Println("fingers2:", fingers2)
+}

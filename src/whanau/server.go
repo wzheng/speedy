@@ -275,12 +275,36 @@ func (s *recordSorter) Less(i, j int) bool {
     return s.by(&s.records[i], &s.records[j])
 }
 
-func (ws *WhanauServer) SampleSuccessors(key string, t int) []Record {
+func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
     recordKey := func(r1, r2 *Record) bool {
         return r1.Key < r2.Key
     }
     By(recordKey).Sort(ws.db)
-    return ws.db[0:t]
+
+    key := args.Key
+    t := args.T
+    var records []Record
+    curCount := 0
+    curRecord := 0
+
+    if t <= len(ws.db) {
+        for curCount < t {
+            if ws.db[curRecord].Key >= key {
+                records = append(records, ws.db[curRecord])
+                curCount++
+            }
+            curRecord++
+            if curRecord == len(ws.db) {
+                curRecord = 0
+                key = ws.db[curRecord].Key
+            }
+        }
+        reply.Successors = records
+        reply.Err = OK
+    } else {
+        reply.Err = ErrNoKey
+    }
+    return nil
 }
 
 // tell the server to shut itself down.

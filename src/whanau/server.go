@@ -30,13 +30,13 @@ type WhanauServer struct {
 	myaddr string
 	dead   bool // for testing
 
-	neighbors []string                      // list of servers this server can talk to
-	pkvstore  map[KeyType]TrueValueType     // local k/v table, used for Paxos
-	kvstore   map[KeyType]ValueType         // k/v table used for routing
-	ids       [L]KeyType                     // contains id of each layer
-	fingers   [][]Finger                      // (id, server name) pairs
-	succ      [][]Record                    // contains successor records for each layer
-	db        []Record                      // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	neighbors []string                  // list of servers this server can talk to
+	pkvstore  map[KeyType]TrueValueType // local k/v table, used for Paxos
+	kvstore   map[KeyType]ValueType     // k/v table used for routing
+	ids       [L]KeyType                // contains id of each layer
+	fingers   [][]Finger                // (id, server name) pairs
+	succ      [][]Record                // contains successor records for each layer
+	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 }
 
 func IsInList(val string, array []string) bool {
@@ -146,6 +146,7 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
+    DPrintf("In getid rpc id: %s", id)
 		reply.Key = id
 		reply.Err = OK
 	}
@@ -173,8 +174,6 @@ func (ws *WhanauServer) SampleRecord() Record {
 	value := ws.kvstore[key]
 	record := Record{key, value}
 
-	// TODO remove later
-	fmt.Println("record: ", record)
 	return record
 }
 
@@ -193,17 +192,19 @@ func (ws *WhanauServer) SampleRecords(rd int) []Record {
 func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 	fingers := make([]Finger, 0)
 	for i := 0; i < rf; i++ {
-		steps := 2 // TODO: set to global W parameter
+		steps := W // TODO: set to global W parameter
 		args := &RandomWalkArgs{steps}
 		reply := &RandomWalkReply{}
 
 		// Keep trying until succeed or timeout
 		// TODO add timeout later
 		for reply.Err != OK {
+      DPrintf("random walk")
 			ws.RandomWalk(args, reply)
 		}
 		server := reply.Server
 
+    DPrintf("randserver: %s", server)
 		// get id of server using rpc call to that server
 		getIdArg := &GetIdArgs{layer}
 		getIdReply := &GetIdReply{}
@@ -211,6 +212,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
+      DPrintf("rpc to getid")
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
 		}
 
@@ -294,4 +296,3 @@ func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
 	reply.Err = OK
 	return nil
 }
-

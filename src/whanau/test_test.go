@@ -331,13 +331,6 @@ func TestSuccessors(t *testing.T) {
 }
 
 
-/*
-func runWSSetup(ws *WhanauServer, nlayers int, nfingers int, c chan bool) {
-  ws.Setup(nlayers, nfingers)
-  DPrintfl("ws %s done", ws.myaddr)
-  c <- true
-}
-*/
 func TestSetup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
@@ -385,23 +378,26 @@ func TestSetup(t *testing.T) {
 	}
 
   // run setup in parallel
-  //c := make(chan bool) // writes true of done
+  c := make(chan bool) // writes true of done
   for i := 0; i < nservers; i++ {
-    DPrintf("ws[%d].Setup", i)
-    go func () {
-      ws[i].Setup(L, RF)
-      //c <- true
-    }()
+    go func (srv int) {
+      DPrintf("running ws[%d].Setup", srv)
+      ws[srv].Setup(3, 3)
+      c <- true
+    }(i)
   }
 
   // wait for all setups to finish
-  /*
   for i := 0; i < nservers; i++ {
-    time.Sleep(1000)
+    //time.Sleep(1000)
     done := <-c
     DPrintf("ws[%d] setup done: %b", i, done)
   }
-  */
-  //fmt.Println("ws[0].db", ws[0].db)
+
+  // check populated ids and fingers
+  for i := 0; i < nservers; i++ {
+    fmt.Printf("ws[%d].ids: %s\n", i, ws[i].ids)
+    fmt.Printf("ws[%d].fingers: %s\n\n", i, ws[i].fingers)
+  }
 }
 

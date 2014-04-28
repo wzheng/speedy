@@ -166,19 +166,17 @@ func (ws *WhanauServer) Setup(nlayers int, rf int) {
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
   ws.db = ws.SampleRecords(RD)
-  ids := make([]KeyType, 0)
-  fingers := make([][]Finger, 0)
+  // reset ids, fingers
+  ws.ids = make([]KeyType, 0)
+  ws.fingers = make([][]Finger, 0)
+  // TODO add successors
   for i := 0; i < nlayers; i++ {
-    ids = append(ids, ws.ChooseID(i))
-    fingers = append(fingers, ws.ConstructFingers(i, rf))
+    // populate tables in layers
+    ws.ids = append(ws.ids, ws.ChooseID(i))
+    ws.fingers = append(ws.fingers, ws.ConstructFingers(i, rf))
     // TODO add sucessors
   }
 
-
-	// populate id, fingers, succ
-  ws.ids = ids
-  ws.fingers = fingers
-  // TODO add successors
 }
 
 // return random Key/value record from local storage

@@ -274,7 +274,7 @@ func (s *recordSorter) Swap(i, j int) {
 func (s *recordSorter) Less(i, j int) bool {
     return s.by(&s.records[i], &s.records[j])
 }
-
+// Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
     recordKey := func(r1, r2 *Record) bool {
         return r1.Key < r2.Key
@@ -286,7 +286,6 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
     var records []Record
     curCount := 0
     curRecord := 0
-
     if t <= len(ws.db) {
         for curCount < t {
             if ws.db[curRecord].Key >= key {

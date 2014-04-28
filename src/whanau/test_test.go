@@ -275,7 +275,7 @@ func TestConstructFingers(t *testing.T) {
 	fmt.Println("fingers2:", fingers2)
 }
 
-func TestSuccessors(t *testing.T) {
+func TestSampleSuccessors(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 3
@@ -304,24 +304,24 @@ func TestSuccessors(t *testing.T) {
 		cka[i] = MakeClerk(kvh[i])
 	}
 
-	// hard code in IDs for each server
+	// hard code in dbs for each server
 	for i := 0; i < nservers; i++ {
-		for j := 0; j < L; j++ {
-			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
-			ws[i].ids[j] = id
+        ws[i].db = make([]Record, RD)
+		for j := 0; j < RD; j++ {
+			var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
+            var servers = []string{"server address"}
+            var value ValueType = ValueType{servers}
+            record := Record{key, value}
+			ws[i].db[j] = record
 		}
 	}
-	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
-	fmt.Println("ws[0].ids", ws[0].ids)
-	// layer 0
-	fingers0 := ws[0].ConstructFingers(0, RF)
-	fmt.Println("fingers0:", fingers0)
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: SuccessorsSample")
+	fmt.Println("ws[0].db", ws[0].db)
 
-	// layer 1
-	fingers1 := ws[0].ConstructFingers(1, RF)
-	fmt.Println("fingers1:", fingers1)
-	// layer 2
-
-	fingers2 := ws[0].ConstructFingers(2, RF)
-	fmt.Println("fingers2:", fingers2)
+    args := &SampleSuccessorsArgs{}
+    args.Key = "testing sample successors"
+    args.T = 1
+    var reply SampleSuccessorsReply
+	ws[0].SampleSuccessors(args, &reply)
+    fmt.Println("testSampleSuccessors: ", reply.Successors)
 }

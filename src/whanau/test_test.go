@@ -183,7 +183,8 @@ func TestSampleRecords(t *testing.T) {
 	fmt.Println("testsamples: ", testsamples)
 }
 
-func TestGetId(t *testing.T) {
+/*
+func testGetId(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	rand.Seed(time.Now().UTC().UnixNano()) // for testing
@@ -223,7 +224,7 @@ func TestGetId(t *testing.T) {
     testGetId := testGetId(ws[0].myaddr, 0)
     fmt.Println("testgetid: ", testGetId)
 }
-
+*/
 func TestConstructFingers(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
@@ -255,10 +256,12 @@ func TestConstructFingers(t *testing.T) {
 
 	// hard code in IDs for each server
 	for i := 0; i < nservers; i++ {
+    ids := make([]KeyType, 0)
 		for j := 0; j < L; j++ {
 			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
-			ws[i].ids[j] = id
+			ids = append(ids, id)
 		}
+    ws[i].ids = ids
 	}
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
 	fmt.Println("ws[0].ids", ws[0].ids)
@@ -308,7 +311,8 @@ func TestSuccessors(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < L; j++ {
 			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
-			ws[i].ids[j] = id
+			//ws[i].ids[j] = id
+      ws[i].ids = append(ws[i].ids, id)
 		}
 	}
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
@@ -325,3 +329,79 @@ func TestSuccessors(t *testing.T) {
 	fingers2 := ws[0].ConstructFingers(2, RF)
 	fmt.Println("fingers2:", fingers2)
 }
+
+
+/*
+func runWSSetup(ws *WhanauServer, nlayers int, nfingers int, c chan bool) {
+  ws.Setup(nlayers, nfingers)
+  DPrintfl("ws %s done", ws.myaddr)
+  c <- true
+}
+*/
+func TestSetup(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 3
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Setup")
+
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < 3; j++ {
+			var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
+      val := ValueType{}
+      for k := 0; k < PaxosSize; k++ {
+        val.Servers = append(val.Servers, "ws" + strconv.Itoa(i) + "srv" + strconv.Itoa(k))
+      }
+      ws[i].kvstore[key] = val
+		}
+
+    fmt.Printf("ws[%d].kvstore: ", i)
+    fmt.Println(ws[i].kvstore)
+	}
+
+  // run setup in parallel
+  //c := make(chan bool) // writes true of done
+  for i := 0; i < nservers; i++ {
+    DPrintf("ws[%d].Setup", i)
+    go func () {
+      ws[i].Setup(L, RF)
+      //c <- true
+    }()
+  }
+
+  // wait for all setups to finish
+  /*
+  for i := 0; i < nservers; i++ {
+    time.Sleep(1000)
+    done := <-c
+    DPrintf("ws[%d] setup done: %b", i, done)
+  }
+  */
+  //fmt.Println("ws[0].db", ws[0].db)
+}
+

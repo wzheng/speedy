@@ -46,7 +46,7 @@ type Finger struct {
 // Global Parameters
 const (
 	W         = 2 // mixing time of honest region
-	RD        = 1 // size of db
+	RD        = 2 // size of db
 	RF        = 2 // size of fingertable (per layer)
 	RS        = 1 // size of succ records
 	L         = 3 // number of layers

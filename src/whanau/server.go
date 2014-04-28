@@ -3,14 +3,14 @@
 package whanau
 
 import (
-    "net"
-    "net/rpc"
-    "log"
-    "sync"
-    "os"
-    "fmt"
-    "math/rand"
-    "sort"
+	"fmt"
+	"log"
+	"math/rand"
+	"net"
+	"net/rpc"
+	"os"
+	"sort"
+	"sync"
 )
 
 //import "builtin"
@@ -36,7 +36,7 @@ type WhanauServer struct {
 	neighbors []string                  // list of servers this server can talk to
 	pkvstore  map[KeyType]TrueValueType // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType     // k/v table used for routing
-	ids       [L]KeyType                // contains id of each layer
+	ids       []KeyType                // contains id of each layer
 	fingers   [][]Finger                // (id, server name) pairs
 	succ      [][]Record                // contains successor records for each layer
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
@@ -146,6 +146,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // Gets the ID from node's local id table
 func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	layer := args.Layer
+  DPrintf("In getid, len(ws.ids): %d", len(ws.ids))
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
@@ -160,10 +161,24 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 
 // TODO
 // Populates routing table
-func (ws *WhanauServer) Setup() {
-	// fill up db
+func (ws *WhanauServer) Setup(nlayers int, rf int) {
+  DPrintf("In Setup of server %s", ws.myaddr)
+	// fill up db by randomly sampling records from random walks
+	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
+  ws.db = ws.SampleRecords(RD)
+  ids := make([]KeyType, 0)
+  fingers := make([][]Finger, 0)
+  for i := 0; i < nlayers; i++ {
+    ids = append(ids, ws.ChooseID(i))
+    fingers = append(fingers, ws.ConstructFingers(i, rf))
+    // TODO add sucessors
+  }
+
 
 	// populate id, fingers, succ
+  ws.ids = ids
+  ws.fingers = fingers
+  // TODO add successors
 }
 
 // return random Key/value record from local storage
@@ -213,6 +228,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		getIdReply := &GetIdReply{}
 		ok := false
 
+    // block until succeeds
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
 			DPrintf("rpc to getid")
@@ -230,9 +246,11 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
 
 	if layer == 0 {
+    DPrintf("In ChooseID, layer 0")
 		// choose randomly from db
 		randIndex := rand.Intn(len(ws.db))
 		record := ws.db[randIndex]
+    DPrintf("record.Key", record.Key)
 		return record.Key
 
 	} else {
@@ -247,64 +265,64 @@ type By func(p1, p2 *Record) bool
 
 // Sort uses By to sort the Record slice
 func (by By) Sort(records []Record) {
-    rs := &recordSorter{
-        records: records,
-        by: by,
-    }
-    sort.Sort(rs)
+	rs := &recordSorter{
+		records: records,
+		by:      by,
+	}
+	sort.Sort(rs)
 }
 
 // recordSorter joins a By function and a slice of Records to be sorted.
 type recordSorter struct {
-    records []Record
-    by      func(p1, p2 *Record) bool // Closure used in the Less method.
+	records []Record
+	by      func(p1, p2 *Record) bool // Closure used in the Less method.
 }
 
 // Len is part of sort.Interface.
 func (s *recordSorter) Len() int {
-    return len(s.records)
+	return len(s.records)
 }
 
 // Swap is part of sort.Interface.
 func (s *recordSorter) Swap(i, j int) {
-    s.records[i], s.records[j] = s.records[j], s.records[i]
+	s.records[i], s.records[j] = s.records[j], s.records[i]
 }
 
 // Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
 func (s *recordSorter) Less(i, j int) bool {
-    return s.by(&s.records[i], &s.records[j])
+	return s.by(&s.records[i], &s.records[j])
 }
 
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
-    recordKey := func(r1, r2 *Record) bool {
-        return r1.Key < r2.Key
-    }
-    By(recordKey).Sort(ws.db)
+	recordKey := func(r1, r2 *Record) bool {
+		return r1.Key < r2.Key
+	}
+	By(recordKey).Sort(ws.db)
 
-    key := args.Key
-    t := args.T
-    var records []Record
-    curCount := 0
-    curRecord := 0
+	key := args.Key
+	t := args.T
+	var records []Record
+	curCount := 0
+	curRecord := 0
 
-    if t <= len(ws.db) {
-        for curCount < t {
-            if ws.db[curRecord].Key >= key {
-                records = append(records, ws.db[curRecord])
-                curCount++
-            }
-            curRecord++
-            if curRecord == len(ws.db) {
-                curRecord = 0
-                key = ws.db[curRecord].Key
-            }
-        }
-        reply.Successors = records
-        reply.Err = OK
-    } else {
-        reply.Err = ErrNoKey
-    }
-    return nil
+	if t <= len(ws.db) {
+		for curCount < t {
+			if ws.db[curRecord].Key >= key {
+				records = append(records, ws.db[curRecord])
+				curCount++
+			}
+			curRecord++
+			if curRecord == len(ws.db) {
+				curRecord = 0
+				key = ws.db[curRecord].Key
+			}
+		}
+		reply.Successors = records
+		reply.Err = OK
+	} else {
+		reply.Err = ErrNoKey
+	}
+	return nil
 }
 
 // tell the server to shut itself down.

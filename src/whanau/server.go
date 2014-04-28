@@ -190,18 +190,20 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 // Populates routing table
 func (ws *WhanauServer) Setup(nlayers int, rf int) {
 	DPrintf("In Setup of server %s", ws.myaddr)
+
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
 	ws.db = ws.SampleRecords(RD)
-	// reset ids, fingers
+
+	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
-	// TODO add successors
+	ws.succ = make([][]Record, 0)
 	for i := 0; i < nlayers; i++ {
 		// populate tables in layers
 		ws.ids = append(ws.ids, ws.ChooseID(i))
 		ws.fingers = append(ws.fingers, ws.ConstructFingers(i, rf))
-		// TODO add sucessors
+		ws.succ = append(ws.succ, ws.Successors(i))
 	}
 
 }
@@ -350,29 +352,29 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	return nil
 }
 
-func (ws *WhanauServer) Successors(layer int) []Record{
-    var successors []Record
-    for i := 0; i < RS; i++ {
-        args := &RandomWalkArgs{}
-        args.Steps = STEPS
-        reply := &RandomWalkReply{}
-        ws.RandomWalk(args, reply)
+func (ws *WhanauServer) Successors(layer int) []Record {
+	var successors []Record
+	for i := 0; i < RS; i++ {
+		args := &RandomWalkArgs{}
+		args.Steps = STEPS
+		reply := &RandomWalkReply{}
+		ws.RandomWalk(args, reply)
 
-        if reply.Err == OK {
-            vj := reply.Server
-            getIdArgs := &GetIdArgs{layer}
-            getIdReply := &GetIdReply{}
-            ws.GetId(getIdArgs, getIdReply)
+		if reply.Err == OK {
+			vj := reply.Server
+			getIdArgs := &GetIdArgs{layer}
+			getIdReply := &GetIdReply{}
+			ws.GetId(getIdArgs, getIdReply)
 
-            sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
-            sampleSuccessorsReply := &SampleSuccessorsReply{}
-            for sampleSuccessorsReply.Err != OK {
-                call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
-            }
-            successors = append(successors, sampleSuccessorsReply.Successors...)
-        }
-    }
-    return successors
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
+			sampleSuccessorsReply := &SampleSuccessorsReply{}
+			for sampleSuccessorsReply.Err != OK {
+				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
+			}
+			successors = append(successors, sampleSuccessorsReply.Successors...)
+		}
+	}
+	return successors
 }
 
 // tell the server to shut itself down.
@@ -429,7 +431,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 // This method is only used for putting ids into the table for testing purposes
 func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
 	//ws.ids[args.Layer] = args.Key
-  ws.ids = append(ws.ids, args.Key)
+	ws.ids = append(ws.ids, args.Key)
 	reply.Err = OK
 	return nil
 }

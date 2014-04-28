@@ -80,5 +80,5 @@ type PaxosGetArgs struct {
 
 type PaxosGetReply struct {
 	Value TrueValueType
-	Err Err
+	Err   Err
 }

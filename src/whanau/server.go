@@ -306,6 +306,31 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
     return nil
 }
 
+func (ws *WhanauServer) Successors(layer int) []Record{
+    var successors []Record
+    for i := 0; i < RS; i++ {
+        args := &RandomWalkArgs{}
+        args.Steps = STEPS
+        reply := &RandomWalkReply{}
+        ws.RandomWalk(args, reply)
+
+        if reply.Err == OK {
+            vj := reply.Server
+            getIdArgs := &GetIdArgs{layer}
+            getIdReply := &GetIdReply{}
+            ws.GetId(getIdArgs, getIdReply)
+
+            sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
+            sampleSuccessorsReply := &SampleSuccessorsReply{}
+            for sampleSuccessorsReply.Err != OK {
+                call(vj, "Whanau.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
+            }
+            successors = append(successors, sampleSuccessorsReply.Successors...)
+        }
+    }
+    return successors
+}
+
 // tell the server to shut itself down.
 func (ws *WhanauServer) kill() {
 	ws.dead = true

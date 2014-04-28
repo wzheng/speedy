@@ -52,4 +52,6 @@ const (
 	L         = 3 // number of layers
 	PaxosSize = 5
 	PaxosWalk = 5
+    STEPS     = 1 // number of steps to take in random walk
+    NUM_SUCCESSORS = 1 //number of successors obtained each step
 )

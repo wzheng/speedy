@@ -30,7 +30,7 @@ func cleanup(ws []*WhanauServer) {
 // TODO just for testing
 func testRandomWalk(server string, steps int) string {
 	args := &RandomWalkArgs{}
-	args.Steps = steps
+	args.Steps = STEPS
 	var reply RandomWalkReply
 	ok := call(server, "WhanauServer.RandomWalk", args, &reply)
 	if ok && (reply.Err == OK) {

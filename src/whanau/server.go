@@ -36,7 +36,7 @@ type WhanauServer struct {
 	neighbors []string                  // list of servers this server can talk to
 	pkvstore  map[KeyType]TrueValueType // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType     // k/v table used for routing
-	ids       []KeyType                // contains id of each layer
+	ids       []KeyType                 // contains id of each layer
 	fingers   [][]Finger                // (id, server name) pairs
 	succ      [][]Record                // contains successor records for each layer
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
@@ -146,7 +146,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // Gets the ID from node's local id table
 func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	layer := args.Layer
-  DPrintf("In getid, len(ws.ids): %d", len(ws.ids))
+	DPrintf("In getid, len(ws.ids): %d", len(ws.ids))
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
@@ -162,20 +162,20 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 // TODO
 // Populates routing table
 func (ws *WhanauServer) Setup(nlayers int, rf int) {
-  DPrintf("In Setup of server %s", ws.myaddr)
+	DPrintf("In Setup of server %s", ws.myaddr)
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-  ws.db = ws.SampleRecords(RD)
-  // reset ids, fingers
-  ws.ids = make([]KeyType, 0)
-  ws.fingers = make([][]Finger, 0)
-  // TODO add successors
-  for i := 0; i < nlayers; i++ {
-    // populate tables in layers
-    ws.ids = append(ws.ids, ws.ChooseID(i))
-    ws.fingers = append(ws.fingers, ws.ConstructFingers(i, rf))
-    // TODO add sucessors
-  }
+	ws.db = ws.SampleRecords(RD)
+	// reset ids, fingers
+	ws.ids = make([]KeyType, 0)
+	ws.fingers = make([][]Finger, 0)
+	// TODO add successors
+	for i := 0; i < nlayers; i++ {
+		// populate tables in layers
+		ws.ids = append(ws.ids, ws.ChooseID(i))
+		ws.fingers = append(ws.fingers, ws.ConstructFingers(i, rf))
+		// TODO add sucessors
+	}
 
 }
 
@@ -226,7 +226,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		getIdReply := &GetIdReply{}
 		ok := false
 
-    // block until succeeds
+		// block until succeeds
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
 			DPrintf("rpc to getid")
@@ -244,11 +244,11 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
 
 	if layer == 0 {
-    DPrintf("In ChooseID, layer 0")
+		DPrintf("In ChooseID, layer 0")
 		// choose randomly from db
 		randIndex := rand.Intn(len(ws.db))
 		record := ws.db[randIndex]
-    DPrintf("record.Key", record.Key)
+		DPrintf("record.Key", record.Key)
 		return record.Key
 
 	} else {
@@ -291,6 +291,7 @@ func (s *recordSorter) Less(i, j int) bool {
 	return s.by(&s.records[i], &s.records[j])
 }
 
+// Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
 	recordKey := func(r1, r2 *Record) bool {
 		return r1.Key < r2.Key
@@ -302,7 +303,6 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	var records []Record
 	curCount := 0
 	curRecord := 0
-
 	if t <= len(ws.db) {
 		for curCount < t {
 			if ws.db[curRecord].Key >= key {
@@ -321,6 +321,31 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 		reply.Err = ErrNoKey
 	}
 	return nil
+}
+
+func (ws *WhanauServer) Successors(layer int) []Record {
+	var successors []Record
+	for i := 0; i < RS; i++ {
+		args := &RandomWalkArgs{}
+		args.Steps = STEPS
+		reply := &RandomWalkReply{}
+		ws.RandomWalk(args, reply)
+
+		if reply.Err == OK {
+			vj := reply.Server
+			getIdArgs := &GetIdArgs{layer}
+			getIdReply := &GetIdReply{}
+			ws.GetId(getIdArgs, getIdReply)
+
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
+			sampleSuccessorsReply := &SampleSuccessorsReply{}
+			for sampleSuccessorsReply.Err != OK {
+				call(vj, "Whanau.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
+			}
+			successors = append(successors, sampleSuccessorsReply.Successors...)
+		}
+	}
+	return successors
 }
 
 // tell the server to shut itself down.
@@ -376,7 +401,8 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 // This method is only used for putting ids into the table for testing purposes
 func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
-	ws.ids[args.Layer] = args.Key
+	//ws.ids[args.Layer] = args.Key
+  ws.ids = append(ws.ids, args.Key)
 	reply.Err = OK
 	return nil
 }

@@ -40,13 +40,13 @@ type GetIdReply struct {
 }
 
 type SampleSuccessorsArgs struct {
-    Key KeyType
-    T int
+	Key KeyType
+	T   int
 }
 
 type SampleSuccessorsReply struct {
-    Successors []Record
-    Err Err
+	Successors []Record
+	Err        Err
 }
 
 type InitPaxosClusterArgs struct {

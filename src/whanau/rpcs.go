@@ -73,3 +73,12 @@ type PutIdArgs struct {
 type PutIdReply struct {
 	Err Err
 }
+
+type PaxosGetArgs struct {
+	Key KeyType
+}
+
+type PaxosGetReply struct {
+	Value TrueValueType
+	Err Err
+}

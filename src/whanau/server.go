@@ -52,16 +52,43 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
-func (ws *WhanauServer) PaxosLookup(servers ValueType) TrueValueType {
+func (ws *WhanauServer) PaxosGet(args *PaxosGetArgs, reply *PaxosGetReply) error {
+	// starts a new paxos log entry
+	reply.Value = ""
+	return nil
+}
+
+func (ws *WhanauServer) PaxosLookup(key KeyType, servers ValueType) TrueValueType {
 	// TODO: make a call to a random server in the group
+	randIndex := rand.Intn(len(servers.Servers))
+	server := servers.Servers[randIndex]
+	var retries []string
+	
+	args := &PaxosGetArgs{}
+	var reply PaxosGetReply
+
+	args.Key = key
+	
+	for {
+		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
+		if ok {
+			return reply.Value
+		} else {
+			// try another server
+			retries = append(retries, server)
+			randIndex = rand.Intn(len(servers.Servers))
+			server = servers.Servers[randIndex]
+		}
+	}
+	
 	return ""
 }
 
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {
-		var ret TrueValueType
-		ret = ws.PaxosLookup(val)
+
+		ret := ws.PaxosLookup(args.Key, val)
 
 		reply.Value = ret
 		reply.Err = OK

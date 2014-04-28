@@ -26,8 +26,8 @@ type RandomWalkArgs struct {
 
 type RandomWalkReply struct {
 	// TODO return record?
-	Server  string
-	Err     Err
+	Server string
+	Err    Err
 }
 
 type GetIdArgs struct {
@@ -41,11 +41,11 @@ type GetIdReply struct {
 
 type InitPaxosClusterArgs struct {
 	RequestServer string
-	Phase string
-	Action string
+	Phase         string
+	Action        string
 
 	// only populated in phase 2
-	KeyMap map[KeyType]TrueValueType
+	KeyMap  map[KeyType]TrueValueType
 	Servers []string
 }
 
@@ -56,10 +56,10 @@ type InitPaxosClusterReply struct {
 
 // Types only used for testing
 type PutIdArgs struct {
-    Layer int
-    Key KeyType
+	Layer int
+	Key   KeyType
 }
 
 type PutIdReply struct {
-    Err Err
+	Err Err
 }

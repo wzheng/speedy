@@ -2,13 +2,16 @@
 
 package whanau
 
-import "net"
-import "net/rpc"
-import "log"
-import "sync"
-import "os"
-import "fmt"
-import "math/rand"
+import (
+    "net"
+    "net/rpc"
+    "log"
+    "sync"
+    "os"
+    "fmt"
+    "math/rand"
+    "sort"
+)
 
 //import "builtin"
 
@@ -235,6 +238,47 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
 		return randFinger.Id
 	}
+}
+
+// Defines ordering of Record args
+type By func(p1, p2 *Record) bool
+
+// Sort uses By to sort the Record slice
+func (by By) Sort(records []Record) {
+    rs := &recordSorter{
+        records: records,
+        by: by,
+    }
+    sort.Sort(rs)
+}
+
+// recordSorter joins a By function and a slice of Records to be sorted.
+type recordSorter struct {
+    records []Record
+    by      func(p1, p2 *Record) bool // Closure used in the Less method.
+}
+
+// Len is part of sort.Interface.
+func (s *recordSorter) Len() int {
+    return len(s.records)
+}
+
+// Swap is part of sort.Interface.
+func (s *recordSorter) Swap(i, j int) {
+    s.records[i], s.records[j] = s.records[j], s.records[i]
+}
+
+// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
+func (s *recordSorter) Less(i, j int) bool {
+    return s.by(&s.records[i], &s.records[j])
+}
+
+func (ws *WhanauServer) SampleSuccessors(key string, t int) []Record {
+    recordKey := func(r1, r2 *Record) bool {
+        return r1.Key < r2.Key
+    }
+    By(recordKey).Sort(ws.db)
+    return ws.db[0:t]
 }
 
 // tell the server to shut itself down.

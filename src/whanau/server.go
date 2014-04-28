@@ -323,7 +323,7 @@ func (ws *WhanauServer) Successors(layer int) []Record{
             sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
             sampleSuccessorsReply := &SampleSuccessorsReply{}
             for sampleSuccessorsReply.Err != OK {
-                call(vj, "Whanau.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
+                call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
             }
             successors = append(successors, sampleSuccessorsReply.Successors...)
         }

@@ -183,6 +183,7 @@ func TestSampleRecords(t *testing.T) {
 	fmt.Println("testsamples: ", testsamples)
 }
 
+
 func TestGetId(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
@@ -255,10 +256,12 @@ func TestConstructFingers(t *testing.T) {
 
 	// hard code in IDs for each server
 	for i := 0; i < nservers; i++ {
+		ids := make([]KeyType, 0)
 		for j := 0; j < L; j++ {
 			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
-			ws[i].ids[j] = id
+			ids = append(ids, id)
 		}
+		ws[i].ids = ids
 	}
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
 	fmt.Println("ws[0].ids", ws[0].ids)
@@ -306,24 +309,94 @@ func TestSampleSuccessors(t *testing.T) {
 
 	// hard code in dbs for each server
 	for i := 0; i < nservers; i++ {
-        ws[i].db = make([]Record, RD)
+		ws[i].db = make([]Record, RD)
 		for j := 0; j < RD; j++ {
 			var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
-            var servers = []string{"server address"}
-            var value ValueType = ValueType{servers}
-            record := Record{key, value}
+			var servers = []string{"server address"}
+			var value ValueType = ValueType{servers}
+			record := Record{key, value}
 			ws[i].db[j] = record
 		}
 	}
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: SuccessorsSample")
 	fmt.Println("ws[0].db", ws[0].db)
 
-    args := &SampleSuccessorsArgs{}
-    args.Key = "testing sample successors"
-    args.T = 1
-    var reply SampleSuccessorsReply
+	args := &SampleSuccessorsArgs{}
+	args.Key = "testing sample successors"
+	args.T = 1
+	var reply SampleSuccessorsReply
 	ws[0].SampleSuccessors(args, &reply)
-    fmt.Println("testSampleSuccessors: ", reply.Successors)
+	fmt.Println("testSampleSuccessors: ", reply.Successors)
+}
+
+func TestSetup(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 3
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Setup")
+
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < 3; j++ {
+			var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
+			val := ValueType{}
+			for k := 0; k < PaxosSize; k++ {
+				val.Servers = append(val.Servers, "ws"+strconv.Itoa(i)+"srv"+strconv.Itoa(k))
+			}
+			ws[i].kvstore[key] = val
+		}
+
+		fmt.Printf("ws[%d].kvstore: ", i)
+		fmt.Println(ws[i].kvstore)
+	}
+
+	// run setup in parallel
+	c := make(chan bool) // writes true of done
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			DPrintf("running ws[%d].Setup", srv)
+			ws[srv].Setup(3, 3)
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		//time.Sleep(1000)
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
+
+	// check populated ids and fingers
+	for i := 0; i < nservers; i++ {
+		fmt.Printf("ws[%d].ids: %s\n", i, ws[i].ids)
+		fmt.Printf("ws[%d].fingers: %s\n\n", i, ws[i].fingers)
+	}
 }
 
 func TestSuccessors(t *testing.T) {

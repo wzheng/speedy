@@ -186,10 +186,15 @@ func TestSampleRecords(t *testing.T) {
 func TestGetId(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
+	rand.Seed(time.Now().UTC().UnixNano()) // for testing
 	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
 
 	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
@@ -208,17 +213,15 @@ func TestGetId(t *testing.T) {
 		cka[i] = MakeClerk(kvh[i])
 	}
 
+	// Testing get id
 	fmt.Println("Test: GetId")
-	cka[0].Put("testkey", "testval")
-	cka[0].Put("testkey1", "testval1")
-
-	args := &PutIdArgs{}
-	args.Layer = 0
-	args.Key = "testingGettingKey"
-	var reply PutIdReply
-	ws[0].PutId(args, &reply)
-	testGetId := testGetId(ws[0].myaddr, 0)
-	fmt.Println("testgetid: ", testGetId)
+    args := &PutIdArgs{}
+    args.Layer = 0
+    args.Key = "testingGettingKey"
+    var reply PutIdReply
+    ws[0].PutId(args, &reply)
+    testGetId := testGetId(ws[0].myaddr, 0)
+    fmt.Println("testgetid: ", testGetId)
 }
 
 func TestConstructFingers(t *testing.T) {

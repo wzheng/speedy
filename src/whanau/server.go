@@ -146,7 +146,7 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	// gets the id associated with a layer
 	if 0 <= layer && layer <= len(ws.ids) {
 		id := ws.ids[layer]
-    DPrintf("In getid rpc id: %s", id)
+		DPrintf("In getid rpc id: %s", id)
 		reply.Key = id
 		reply.Err = OK
 	}
@@ -199,12 +199,12 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		// Keep trying until succeed or timeout
 		// TODO add timeout later
 		for reply.Err != OK {
-      DPrintf("random walk")
+			DPrintf("random walk")
 			ws.RandomWalk(args, reply)
 		}
 		server := reply.Server
 
-    DPrintf("randserver: %s", server)
+		DPrintf("randserver: %s", server)
 		// get id of server using rpc call to that server
 		getIdArg := &GetIdArgs{layer}
 		getIdReply := &GetIdReply{}
@@ -212,7 +212,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
-      DPrintf("rpc to getid")
+			DPrintf("rpc to getid")
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
 		}
 

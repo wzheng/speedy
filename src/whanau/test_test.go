@@ -132,7 +132,7 @@ func TestRandomWalk(t *testing.T) {
 	}
 
 	// Testing randomwalk
-  fmt.Println("Test: RandomWalk")
+	fmt.Println("Test: RandomWalk")
 	rw1 := testRandomWalk(ws[0].myaddr, 1)
 	rw2 := testRandomWalk(ws[0].myaddr, 2)
 	fmt.Printf("rand walk 1 from ws0 %s\n", rw1)
@@ -170,15 +170,15 @@ func TestSampleRecords(t *testing.T) {
 	}
 
 	// Testing sample record
-  fmt.Println("Test: SampleRecord")
+	fmt.Println("Test: SampleRecord")
 	// paxos clusters
 	val1 := ValueType{[]string{"s1", "s2"}}
 	val2 := ValueType{[]string{"s3", "s4"}}
 	val3 := ValueType{[]string{"s5", "s6"}}
-  var key1, key2, key3 KeyType = "key1", "key2", "key3"
+	var key1, key2, key3 KeyType = "key1", "key2", "key3"
 	ws[0].kvstore[key1] = val1
-  ws[0].kvstore[key2] = val2
-  ws[0].kvstore[key3] = val3
+	ws[0].kvstore[key2] = val2
+	ws[0].kvstore[key3] = val3
 	testsamples := ws[0].SampleRecords(3)
 	fmt.Println("testsamples: ", testsamples)
 }
@@ -208,7 +208,7 @@ func TestGetId(t *testing.T) {
 		cka[i] = MakeClerk(kvh[i])
 	}
 
-  fmt.Println("Test: GetId")
+	fmt.Println("Test: GetId")
 	cka[0].Put("testkey", "testval")
 	cka[0].Put("testkey1", "testval1")
 
@@ -229,7 +229,7 @@ func TestConstructFingers(t *testing.T) {
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
 
-  for i := 0; i < nservers; i++ {
+	for i := 0; i < nservers; i++ {
 		kvh[i] = port("basic", i)
 	}
 
@@ -250,24 +250,24 @@ func TestConstructFingers(t *testing.T) {
 		cka[i] = MakeClerk(kvh[i])
 	}
 
-  // hard code in IDs for each server
-  for i := 0; i < nservers; i++ {
-    for j := 0; j < L; j++ {
-      var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
-      ws[i].ids[j] = id
-    }
-  }
-  fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
-  fmt.Println("ws[0].ids", ws[0].ids)
-  // layer 0
-  fingers0 := ws[0].ConstructFingers(0, RF)
-  fmt.Println("fingers0:", fingers0)
+	// hard code in IDs for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < L; j++ {
+			var id KeyType = KeyType("ws" + strconv.Itoa(i) + "id" + strconv.Itoa(j))
+			ws[i].ids[j] = id
+		}
+	}
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: ConstructFingers Basic")
+	fmt.Println("ws[0].ids", ws[0].ids)
+	// layer 0
+	fingers0 := ws[0].ConstructFingers(0, RF)
+	fmt.Println("fingers0:", fingers0)
 
-  // layer 1
-  fingers1 := ws[0].ConstructFingers(1, RF)
-  fmt.Println("fingers1:", fingers1)
-  // layer 2
+	// layer 1
+	fingers1 := ws[0].ConstructFingers(1, RF)
+	fmt.Println("fingers1:", fingers1)
+	// layer 2
 
-  fingers2 := ws[0].ConstructFingers(2, RF)
-  fmt.Println("fingers2:", fingers2)
+	fingers2 := ws[0].ConstructFingers(2, RF)
+	fmt.Println("fingers2:", fingers2)
 }

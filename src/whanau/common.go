@@ -48,7 +48,7 @@ const (
 	W         = 2 // mixing time of honest region
 	RD        = 1 // size of db
 	RF        = 2 // size of fingertable (per layer)
-	RS        = 1 // size of succ records
+	RS        = 5 // size of succ records
 	L         = 3 // number of layers
 	PaxosSize = 5
 	PaxosWalk = 5

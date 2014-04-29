@@ -456,3 +456,81 @@ func TestSuccessors(t *testing.T) {
 	allsuccessors := ws[0].Successors(0)
 	fmt.Println("testSuccessors: ", allsuccessors)
 }
+
+func TestLookup(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 3
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
+
+	testKeys := []KeyType{"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+	counter := 0
+	nkeys := 3
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < nkeys; j++ {
+			//var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
+			//var key KeyType = KeyType(strconv.Itoa((i + 1) * (j + 1)))
+			var key KeyType = testKeys[counter]
+			counter++
+			val := ValueType{}
+			for k := 0; k < PaxosSize; k++ {
+				val.Servers = append(val.Servers, "ws"+strconv.Itoa(i)+"srv"+strconv.Itoa(k))
+			}
+			ws[i].kvstore[key] = val
+		}
+	}
+
+	// run setup in parallel
+	nlayers := 3
+	nfingers := 2
+	c := make(chan bool) // writes true of done
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			DPrintf("running ws[%d].Setup", srv)
+			ws[srv].Setup(nlayers, nfingers)
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		//time.Sleep(1000)
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
+
+	fmt.Printf("Finished setup\n")
+	fmt.Printf("Checking ChooseFinger\n")
+
+	// check populated ids and fingers
+
+	fmt.Printf("ws[%d].fingers: %s\n", 0, ws[0].fingers)
+	finger, layer := ws[0].ChooseFinger("1", "3", nlayers)
+	fmt.Printf("chosen finger: %s, chosen layer: %s\n", finger, layer)
+}

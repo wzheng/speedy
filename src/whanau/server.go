@@ -84,6 +84,51 @@ func (ws *WhanauServer) PaxosLookup(key KeyType, servers ValueType) TrueValueTyp
 	return ""
 }
 
+// WHANAU LOOKUP HELPER METHODS
+
+// Returns randomly chosen finger and randomly chosen layer as part of lookup
+// TODO implement, what happens if there are no ids in the range??
+func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
+	DPrintf("In chooseFinger, x0: %s, key: %s", x0, key)
+	// find all fingers from all layers such that the key falls between x0 and the finger id
+	candidateFingers := make([][]Finger, 0)
+	// maps index to nonempty layer number
+	layerMap := make([]int, 0)
+	for i := 0; i < nlayers; i++ {
+		DPrintf("ws.fingers[%s]: %s", i, ws.fingers[i])
+		for j := 0; j < len(ws.fingers[i]); j++ {
+			// if id is not before both x0 and key and not after both x0 and key, then it is in the range
+
+			id := ws.fingers[i][j].Id
+			//if x0 <= id && id <= key {
+			if !(id < x0 && id < key) && !(id > x0 && id > key) {
+				// only create non empty candidate fingers
+				if len(candidateFingers) <= i {
+					newLayer := make([]Finger, 0)
+					candidateFingers = append(candidateFingers, newLayer)
+					candidateFingers[i] = append(candidateFingers[i], ws.fingers[i][j])
+					layerMap = append(layerMap, i)
+				}
+			}
+		}
+	}
+
+	// pick random layer out of nonempty candidate fingers
+	DPrintf("len(candidateFingers): %d", len(candidateFingers))
+	if len(candidateFingers) > 0 {
+		randIndex := rand.Intn(len(candidateFingers))
+		finger := candidateFingers[randIndex][rand.Intn(len(candidateFingers[randIndex]))]
+		return finger, layerMap[randIndex]
+	}
+
+	// if can't find any, randomly choose layer and randomly return finger
+	// TODO, not sure if this is right behavior
+	DPrintf("cant' find finger with suitable key, pick random one instead")
+	randLayer := rand.Intn(len(ws.fingers))
+	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
+	return randfinger, randLayer
+}
+
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {
@@ -203,12 +248,12 @@ func (ws *WhanauServer) Setup(nlayers int, rf int) {
 		// populate tables in layers
 		ws.ids = append(ws.ids, ws.ChooseID(i))
 
-        curFingerTable := ws.ConstructFingers(i, rf)
-        ByFinger(FingerId).Sort(curFingerTable)
+		curFingerTable := ws.ConstructFingers(i, rf)
+		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
 
-        curSuccessorTable := ws.Successors(i)
-        By(RecordKey).Sort(curSuccessorTable)
+		curSuccessorTable := ws.Successors(i)
+		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 	}
 }
@@ -307,11 +352,11 @@ func (by By) Sort(records []Record) {
 
 // sort uses By to sort fingers by id
 func (by ByFinger) Sort(fingers []Finger) {
-    fs := &fingerSorter{
-        fingers: fingers,
-        by:      by,
-    }
-    sort.Sort(fs)
+	fs := &fingerSorter{
+		fingers: fingers,
+		by:      by,
+	}
+	sort.Sort(fs)
 }
 
 // recordSorter joins a By function and a slice of Records to be sorted.
@@ -322,8 +367,8 @@ type recordSorter struct {
 
 // fingerSorter joins a By function and a slice of Fingers to be sorted.
 type fingerSorter struct {
-    fingers []Finger
-    by      func(f1, f2 *Finger) bool // Closure used in the Less method
+	fingers []Finger
+	by      func(f1, f2 *Finger) bool // Closure used in the Less method
 }
 
 // Len is part of sort.Interface.
@@ -332,7 +377,7 @@ func (s *recordSorter) Len() int {
 }
 
 func (s *fingerSorter) Len() int {
-    return len(s.fingers)
+	return len(s.fingers)
 }
 
 // Swap is part of sort.Interface.
@@ -341,7 +386,7 @@ func (s *recordSorter) Swap(i, j int) {
 }
 
 func (s *fingerSorter) Swap(i, j int) {
-    s.fingers[i], s.fingers[j] = s.fingers[j], s.fingers[i]
+	s.fingers[i], s.fingers[j] = s.fingers[j], s.fingers[i]
 }
 
 // Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
@@ -350,15 +395,15 @@ func (s *recordSorter) Less(i, j int) bool {
 }
 
 func (s *fingerSorter) Less(i, j int) bool {
-    return s.by(&s.fingers[i], &s.fingers[j])
+	return s.by(&s.fingers[i], &s.fingers[j])
 }
 
 var RecordKey = func(r1, r2 *Record) bool {
-    return r1.Key < r2.Key
+	return r1.Key < r2.Key
 }
 
 var FingerId = func(f1, f2 *Finger) bool {
-    return f1.Id < f2.Id
+	return f1.Id < f2.Id
 }
 
 // Gets successors that are nearest each key

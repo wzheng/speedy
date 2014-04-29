@@ -82,3 +82,12 @@ type PaxosGetReply struct {
 	Value TrueValueType
 	Err   Err
 }
+
+type PaxosPutArgs struct {
+	Key KeyType
+	Value TrueValueType
+}
+
+type PaxosPutReply struct {
+	Err Err
+}

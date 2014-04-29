@@ -7,7 +7,6 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *Init
 		reply.Reply = Commit
 	} else {
 		if args.Action == Commit {
-
 			for k, v := range args.KeyMap {
 				ws.pkvstore[k] = v
 				var value ValueType

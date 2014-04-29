@@ -40,6 +40,8 @@ type WhanauServer struct {
 	fingers   [][]Finger                // (id, server name) pairs
 	succ      [][]Record                // contains successor records for each layer
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	pending   map[KeyType]TrueValueType // this is a list of pending writes
+	view      int                       // the current view
 }
 
 func IsInList(val string, array []string) bool {
@@ -52,13 +54,13 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
-func (ws *WhanauServer) PaxosGet(args *PaxosGetArgs, reply *PaxosGetReply) error {
+func (ws *WhanauServer) PaxosGetRPC(args *PaxosGetArgs, reply *PaxosGetReply) error {
 	// starts a new paxos log entry
 	reply.Value = ""
 	return nil
 }
 
-func (ws *WhanauServer) PaxosLookup(key KeyType, servers ValueType) TrueValueType {
+func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
 	// TODO: make a call to a random server in the group
 	randIndex := rand.Intn(len(servers.Servers))
 	server := servers.Servers[randIndex]
@@ -133,7 +135,7 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {
 
-		ret := ws.PaxosLookup(args.Key, val)
+		ret := ws.PaxosGet(args.Key, val)
 
 		reply.Value = ret
 		reply.Err = OK
@@ -179,15 +181,36 @@ func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) TrueVal
 	return ErrNoKey
 }
 
+func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error{
+	// this will initiate a new paxos call its paxos cluster
+	return nil
+}
+
 func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
 	// TODO: needs to do a real paxos put
-	ws.pkvstore[key] = value
 	return nil
 }
 
 // TODO this eventually needs to become a real put
 func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
+	// makes an RPC call to itself, this is kind of weird...
+
+	rpc_args := &LookupArgs{}
+	var rpc_reply LookupReply
+	
+	ok := call(ws.myaddr, "WhanauServer.Lookup", rpc_args, rpc_reply)
+
+	if ok {
+		if rpc_reply.Err == ErrNoKey {
+			// TODO: adds the key to its local pending put list
+			
+		} else {
+			// TODO: make a paxos request directly to one of the servers
+			
+		}
+	}
+
 	reply.Err = OK
 	return nil
 }
@@ -476,6 +499,8 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 	ws.kvstore = make(map[KeyType]ValueType)
 	ws.pkvstore = make(map[KeyType]TrueValueType)
+
+	ws.view = 0
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(ws)

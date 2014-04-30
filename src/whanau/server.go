@@ -87,34 +87,52 @@ func (ws *WhanauServer) PaxosLookup(key KeyType, servers ValueType) TrueValueTyp
 // WHANAU LOOKUP HELPER METHODS
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
-// TODO implement, what happens if there are no ids in the range??
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
 	DPrintf("In chooseFinger, x0: %s, key: %s", x0, key)
 	// find all fingers from all layers such that the key falls between x0 and the finger id
 	candidateFingers := make([][]Finger, 0)
 	// maps index to nonempty layer number
 	layerMap := make([]int, 0)
+	counter := 0
 	for i := 0; i < nlayers; i++ {
-		DPrintf("ws.fingers[%s]: %s", i, ws.fingers[i])
+		DPrintf("ws.fingers[%d]: %s", i, ws.fingers[i])
 		for j := 0; j < len(ws.fingers[i]); j++ {
-			// if id is not before both x0 and key and not after both x0 and key, then it is in the range
 
+			// compare x0 <= id <= key on a circle
 			id := ws.fingers[i][j].Id
-			//if x0 <= id && id <= key {
-			if !(id < x0 && id < key) && !(id > x0 && id > key) {
-				// only create non empty candidate fingers
-				if len(candidateFingers) <= i {
-					newLayer := make([]Finger, 0)
-					candidateFingers = append(candidateFingers, newLayer)
-					candidateFingers[i] = append(candidateFingers[i], ws.fingers[i][j])
-					layerMap = append(layerMap, i)
+			if x0 <= key {
+				if x0 <= id && id <= key {
+					if len(candidateFingers) <= counter {
+						// only create non empty candidate fingers
+						newLayer := make([]Finger, 0)
+						candidateFingers = append(candidateFingers, newLayer)
+						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
+						layerMap = append(layerMap, i)
+						counter++
+					} else {
+						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
+					}
+				}
+			} else {
+				// case where x0 > key, compare !(key < x < x0) --> x > x0 or x < key
+				if id > x0 || id < key {
+					if len(candidateFingers) < counter {
+						// only create non empty candidate fingers
+						newLayer := make([]Finger, 0)
+						candidateFingers = append(candidateFingers, newLayer)
+						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
+						layerMap = append(layerMap, i)
+						counter++
+					} else {
+						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
+					}
 				}
 			}
 		}
 	}
 
+	DPrintf("len(candidateFingers): %d, len(layerMap): %d", len(candidateFingers), len(layerMap))
 	// pick random layer out of nonempty candidate fingers
-	DPrintf("len(candidateFingers): %d", len(candidateFingers))
 	if len(candidateFingers) > 0 {
 		randIndex := rand.Intn(len(candidateFingers))
 		finger := candidateFingers[randIndex][rand.Intn(len(candidateFingers[randIndex]))]
@@ -122,7 +140,7 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 	}
 
 	// if can't find any, randomly choose layer and randomly return finger
-	// TODO, not sure if this is right behavior
+	// probably shouldn't get here?
 	DPrintf("cant' find finger with suitable key, pick random one instead")
 	randLayer := rand.Intn(len(ws.fingers))
 	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
@@ -218,11 +236,10 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 // Gets the ID from node's local id table
 func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 	layer := args.Layer
-	DPrintf("In getid, len(ws.ids): %d", len(ws.ids))
+	//DPrintf("In getid, len(ws.ids): %d layer: %d", len(ws.ids), layer)
 	// gets the id associated with a layer
-	if 0 <= layer && layer <= len(ws.ids) {
+	if 0 <= layer && layer < len(ws.ids) {
 		id := ws.ids[layer]
-		DPrintf("In getid rpc id: %s", id)
 		reply.Key = id
 		reply.Err = OK
 	}
@@ -247,14 +264,17 @@ func (ws *WhanauServer) Setup(nlayers int, rf int) {
 	for i := 0; i < nlayers; i++ {
 		// populate tables in layers
 		ws.ids = append(ws.ids, ws.ChooseID(i))
-
+		DPrintf("Finished ChooseID of server %s, layer %d", ws.myaddr, i)
 		curFingerTable := ws.ConstructFingers(i, rf)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
 
+		DPrintf("Finished ConstructFingers of server %s, layer %d", ws.myaddr, i)
 		curSuccessorTable := ws.Successors(i)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
+
+		DPrintf("Finished SuccessorTable of server %s, layer %d", ws.myaddr, i)
 	}
 }
 
@@ -285,6 +305,8 @@ func (ws *WhanauServer) SampleRecords(rd int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
+
+	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0)
 	for i := 0; i < rf; i++ {
 		steps := W // TODO: set to global W parameter
@@ -294,12 +316,12 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		// Keep trying until succeed or timeout
 		// TODO add timeout later
 		for reply.Err != OK {
-			DPrintf("random walk")
+			//DPrintf("random walk")
 			ws.RandomWalk(args, reply)
 		}
 		server := reply.Server
 
-		DPrintf("randserver: %s", server)
+		//DPrintf("randserver: %s", server)
 		// get id of server using rpc call to that server
 		getIdArg := &GetIdArgs{layer}
 		getIdReply := &GetIdReply{}
@@ -308,7 +330,7 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 		// block until succeeds
 		// TODO add timeout later
 		for !ok || (getIdReply.Err != OK) {
-			DPrintf("rpc to getid")
+			DPrintf("rpc to getid of %s from ConstructFingers %s layer %d", server, ws.myaddr, layer)
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
 		}
 
@@ -322,8 +344,8 @@ func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
 
+	DPrintf("In ChooseID of %s, layer %d", ws.myaddr, layer)
 	if layer == 0 {
-		DPrintf("In ChooseID, layer 0")
 		// choose randomly from db
 		randIndex := rand.Intn(len(ws.db))
 		record := ws.db[randIndex]
@@ -436,6 +458,7 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
+	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	var successors []Record
 	for i := 0; i < RS; i++ {
 		args := &RandomWalkArgs{}
@@ -447,6 +470,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 			vj := reply.Server
 			getIdArgs := &GetIdArgs{layer}
 			getIdReply := &GetIdReply{}
+			DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
 			ws.GetId(getIdArgs, getIdReply)
 
 			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}

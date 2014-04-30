@@ -17,7 +17,7 @@ import (
 
 //import "encoding/gob"
 
-const Debug = 1
+const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -118,7 +118,7 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 			} else {
 				// case where x0 > key, compare !(key < x < x0) --> x > x0 or x < key
 				if id > x0 || id < key {
-					if len(candidateFingers) < counter {
+					if len(candidateFingers) <= counter {
 						// only create non empty candidate fingers
 						newLayer := make([]Finger, 0)
 						candidateFingers = append(candidateFingers, newLayer)
@@ -151,13 +151,17 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 
 // Query for a key in the successor table
 func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
+	DPrintf("In Query of server %s", ws.myaddr)
 	layer := args.Layer
 	key := args.Key
 	valueIndex := sort.Search(len(ws.succ[layer]), func(i int) bool { return ws.succ[layer][i].Key == key })
 	if valueIndex < len(ws.succ[layer]) {
+		DPrintf("In Query: found the key!!!!")
 		reply.Value = ws.succ[layer][valueIndex].Value
+		DPrintf("reply.Value: %s", reply.Value)
 		reply.Err = OK
 	} else {
+		DPrintf("In Query: did not find key, reply.Value: %s reply.Value.Servers == nil %s", reply.Value, reply.Value.Servers == nil)
 		reply.Err = ErrNoKey
 	}
 	return nil
@@ -177,37 +181,49 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	}
 	j = (j + fingerLength - 1) % fingerLength
 	value := new(ValueType)
-	for value == nil {
+	count := 0
+	for value.Servers == nil && count < 10 {
 		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
 		queryArgs := &QueryArgs{key, i}
-		var queryReply QueryReply
-		call(f.Address, "WhanauServer.Query", queryArgs, &queryReply)
+		queryReply := &QueryReply{}
+		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
 		if queryReply.Err == OK {
+			DPrintf("Found key in Try!")
 			value := queryReply.Value
 			reply.Value = value
 			reply.Err = OK
+			return nil
 		}
+		count++
 	}
+	DPrintf("In Try RPC, did not find key")
 	reply.Err = ErrNoKey
 	return nil
 }
 
 // TODO this eventually needs to become a real lookup
+// Returns paxos cluster for given key
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
+
+	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
 	value := new(ValueType)
 	addr := ws.myaddr
 	count := 0
-	for value == nil && count < 50 {
+	for value.Servers == nil && count < 10 {
 		tryArgs := &TryArgs{key}
-		var tryReply TryReply
+		//var tryReply TryReply
+		tryReply := &TryReply{}
 		call(addr, "WhanauServer.Try", tryArgs, tryReply)
 		if tryReply.Err == OK {
 			value := tryReply.Value
 			reply.Value = value
+			reply.Err = OK
+			return nil
 		} else {
 			randomWalkArgs := &RandomWalkArgs{STEPS}
-			var randomWalkReply RandomWalkReply
+			//var randomWalkReply RandomWalkReply
+			randomWalkReply := &RandomWalkReply{}
 			call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
 			if randomWalkReply.Err == OK {
 				addr = randomWalkReply.Server
@@ -215,7 +231,7 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 		}
 		count++
 	}
-	if value != nil {
+	if value.Servers != nil {
 		reply.Err = OK
 	} else {
 		reply.Err = ErrNoKey

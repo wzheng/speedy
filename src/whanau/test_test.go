@@ -53,6 +53,7 @@ func testGetId(server string, layer int) KeyType {
 	return "GETID ERR"
 }
 
+/*
 func TestBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
@@ -100,6 +101,7 @@ func TestBasic(t *testing.T) {
 
 	fmt.Printf("...Passed\n")
 }
+*/
 
 func TestRandomWalk(t *testing.T) {
 	runtime.GOMAXPROCS(4)
@@ -533,20 +535,22 @@ func TestLookup(t *testing.T) {
 	var key KeyType = "3"
 	finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
 	fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
-
 	fmt.Printf("Checking Try for every key from every node\n")
+	numFound := 0
+	numTotal := 0
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < len(testKeys); j++ {
 			key := testKeys[j]
-			tryargs := &TryArgs{key}
-			tryreply := &TryReply{}
-			ws[i].Try(tryargs, tryreply)
-			if tryreply.Err != OK {
-				fmt.Printf("Try failed\n")
+			DPrintf("key: %s", key)
+			largs := &LookupArgs{key, nil}
+			DPrintf("largs.Key: %s", largs.Key)
+			lreply := &LookupReply{}
+			ws[i].Lookup(largs, lreply)
+			if lreply.Err != OK {
+				fmt.Printf("Did not find key\n")
 			} else {
-				value := tryreply.Value
-				fmt.Printf("returned value: %s\n", value)
-				fmt.Printf("expected value: %s\n", records[key])
+				value := lreply.Value
+				fmt.Printf("Found key! returned value: %s, expected value: %s\n", value, records[key])
 				// compare string arrays...
 				if len(value.Servers) != len(records[key].Servers) {
 					t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
@@ -556,8 +560,11 @@ func TestLookup(t *testing.T) {
 						t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
 					}
 				}
+				numFound++
 			}
+			numTotal++
 		}
 	}
 
+	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
 }

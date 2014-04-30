@@ -149,6 +149,20 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 	return randfinger, randLayer
 }
 
+// Query for a key in the successor table
+func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
+    layer := args.Layer
+    key := args.Key
+    valueIndex := sort.Search(len(ws.succ[layer]), func (i int) bool {return ws.succ[layer][i].Key == key})
+    if valueIndex < len(ws.succ[layer]) {
+        reply.Value = ws.succ[layer][valueIndex].Value
+        reply.Err = OK
+    } else {
+        reply.Err = ErrNoKey
+    }
+    return nil
+}
+
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {

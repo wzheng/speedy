@@ -49,6 +49,16 @@ type SampleSuccessorsReply struct {
 	Err        Err
 }
 
+type QueryArgs struct {
+    Key KeyType
+    Layer int
+}
+
+type QueryReply struct {
+    Value ValueType
+    Err Err
+}
+
 type InitPaxosClusterArgs struct {
 	RequestServer string
 	Phase         string

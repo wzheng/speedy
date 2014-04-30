@@ -194,31 +194,33 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
-	if val, ok := ws.kvstore[args.Key]; ok {
-
-		ret := ws.PaxosGet(args.Key, val)
-
-		reply.Value = ret
-		reply.Err = OK
-		return nil
-	}
-
-	// probe neighbors
-	// TODO eventually needs to look up based on successor table
-	routedFrom := args.RoutedFrom
-	routedFrom = append(routedFrom, ws.myaddr)
-	neighborVal := ws.NeighborLookup(args.Key, routedFrom)
-
-	// TODO this is a hack. NeighborLookup should be changed
-	// to actually return an error.
-	if neighborVal != ErrNoKey {
-		reply.Value = neighborVal
-		reply.Err = OK
-		return nil
-	}
-
-	reply.Err = ErrNoKey
-	return nil
+    key := args.Key
+    value := new(ValueType)
+    addr := ws.myaddr
+    count := 0
+    for value == nil && count < 50{
+        tryArgs := &TryArgs{key}
+        var tryReply TryReply
+        call(addr, "WhanauServer.Try", tryArgs, tryReply)
+        if tryReply.Err == OK {
+            value := tryReply.Value
+            reply.Val = value
+        } else {
+            randomWalkArgs := &RandomWalkArgs{STEPS}
+            var randomWalkReply RandomWalkReply
+            call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
+            if randomWalkReply.Err == OK {
+                addr = randomWalkReply.Server
+            }
+        }
+        count++
+    }
+    if value != nil {
+        reply.Err = OK
+    } else {
+        reply.Err = ErrNoKey
+    }
+    return nil
 }
 
 // Client-style lookup on neighboring servers.

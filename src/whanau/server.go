@@ -194,38 +194,40 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
-    key := args.Key
-    value := new(ValueType)
-    addr := ws.myaddr
-    count := 0
-    for value == nil && count < 50{
-        tryArgs := &TryArgs{key}
-        var tryReply TryReply
-        call(addr, "WhanauServer.Try", tryArgs, tryReply)
-        if tryReply.Err == OK {
-            value := tryReply.Value
-            reply.Val = value
-        } else {
-            randomWalkArgs := &RandomWalkArgs{STEPS}
-            var randomWalkReply RandomWalkReply
-            call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
-            if randomWalkReply.Err == OK {
-                addr = randomWalkReply.Server
-            }
-        }
-        count++
-    }
-    if value != nil {
-        reply.Err = OK
-    } else {
-        reply.Err = ErrNoKey
-    }
-    return nil
+	key := args.Key
+	value := new(ValueType)
+	addr := ws.myaddr
+	count := 0
+	for value == nil && count < 50 {
+		tryArgs := &TryArgs{key}
+		var tryReply TryReply
+		call(addr, "WhanauServer.Try", tryArgs, tryReply)
+		if tryReply.Err == OK {
+			value := tryReply.Value
+			reply.Value = value
+		} else {
+			randomWalkArgs := &RandomWalkArgs{STEPS}
+			var randomWalkReply RandomWalkReply
+			call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
+			if randomWalkReply.Err == OK {
+				addr = randomWalkReply.Server
+			}
+		}
+		count++
+	}
+	if value != nil {
+		reply.Err = OK
+	} else {
+		reply.Err = ErrNoKey
+	}
+	return nil
 }
 
 // Client-style lookup on neighboring servers.
 // routedFrom is supposed to prevent infinite lookup loops.
-func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) TrueValueType {
+// TODO Change to TrueValueType later
+/*
+func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueType {
 	args := &LookupArgs{}
 	args.Key = key
 	args.RoutedFrom = routedFrom
@@ -243,7 +245,7 @@ func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) TrueVal
 
 	return ErrNoKey
 }
-
+*/
 func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
 	// this will initiate a new paxos call its paxos cluster
 	return nil

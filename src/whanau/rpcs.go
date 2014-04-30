@@ -7,7 +7,7 @@ type LookupArgs struct {
 
 type LookupReply struct {
 	Err   Err
-	Value TrueValueType
+	Value ValueType
 }
 
 // TODO hashing for debugging?

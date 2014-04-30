@@ -51,7 +51,8 @@ func call(srv string, rpcname string,
 	return false
 }
 
-func (ck *Clerk) Lookup(key KeyType) TrueValueType {
+// TODO change to TrueValueType later
+func (ck *Clerk) Lookup(key KeyType) ValueType {
 	args := &LookupArgs{}
 	args.Key = key
 	var reply LookupReply
@@ -60,7 +61,7 @@ func (ck *Clerk) Lookup(key KeyType) TrueValueType {
 		return reply.Value
 	}
 
-	return ""
+	return ValueType{}
 }
 
 // TODO this eventually needs to become a real put

@@ -59,6 +59,15 @@ type QueryReply struct {
     Err Err
 }
 
+type TryArgs struct {
+    Key KeyType
+}
+
+type TryReply struct {
+    Value ValueType
+    Err Err
+}
+
 type InitPaxosClusterArgs struct {
 	RequestServer string
 	Phase         string

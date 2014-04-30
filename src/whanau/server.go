@@ -163,6 +163,34 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
     return nil
 }
 
+// Try finds the value associated with the key
+func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
+    key := args.Key
+    fingerLength := len(ws.fingers[0])
+    j := sort.Search(fingerLength, func (i int) bool {
+        return ws.fingers[0][i].Id >= key
+    })
+    j = j % fingerLength
+    if j < 0 {
+        j = j + fingerLength
+    }
+    j = (j + fingerLength - 1) % fingerLength
+    value := new(ValueType)
+    for value == nil {
+        f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
+        queryArgs := &QueryArgs{key, i}
+        var queryReply QueryReply
+        call(f.Address, "WhanauServer.Query", queryArgs, &queryReply)
+        if queryReply.Err == OK {
+            value := queryReply.Value
+            reply.Value = value
+            reply.Err = OK
+        }
+    }
+    reply.Err = ErrNoKey
+    return nil
+}
+
 // TODO this eventually needs to become a real lookup
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	if val, ok := ws.kvstore[args.Key]; ok {

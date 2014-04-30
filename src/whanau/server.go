@@ -17,7 +17,7 @@ import (
 
 //import "encoding/gob"
 
-const Debug = 0
+const Debug = 1
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -142,7 +142,7 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 	}
 
 	// if can't find any, randomly choose layer and randomly return finger
-	// probably shouldn't get here?
+	// TODO probably shouldn't get here?
 	DPrintf("cant' find finger with suitable key, pick random one instead")
 	randLayer := rand.Intn(len(ws.fingers))
 	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
@@ -180,24 +180,27 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		j = j + fingerLength
 	}
 	j = (j + fingerLength - 1) % fingerLength
-	value := new(ValueType)
+
 	count := 0
-	for value.Servers == nil && count < 10 {
+	queryArgs := &QueryArgs{}
+	queryReply := &QueryReply{}
+	for queryReply.Err != OK && count < TIMEOUT {
 		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
-		queryArgs := &QueryArgs{key, i}
-		queryReply := &QueryReply{}
+		queryArgs.Key = key
+		queryArgs.Layer = i
 		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
-		if queryReply.Err == OK {
-			DPrintf("Found key in Try!")
-			value := queryReply.Value
-			reply.Value = value
-			reply.Err = OK
-			return nil
-		}
 		count++
 	}
-	DPrintf("In Try RPC, did not find key")
-	reply.Err = ErrNoKey
+
+	if queryReply.Err == OK {
+		DPrintf("Found key in Try!")
+		value := queryReply.Value
+		reply.Value = value
+		reply.Err = OK
+	} else {
+		DPrintf("In Try RPC, did not find key")
+		reply.Err = ErrNoKey
+	}
 	return nil
 }
 
@@ -207,35 +210,30 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
 
 	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
-	value := new(ValueType)
 	addr := ws.myaddr
 	count := 0
-	for value.Servers == nil && count < 10 {
-		tryArgs := &TryArgs{key}
-		//var tryReply TryReply
-		tryReply := &TryReply{}
+	tryArgs := &TryArgs{key}
+	tryReply := &TryReply{}
+
+	for tryReply.Err != OK && count < TIMEOUT {
 		call(addr, "WhanauServer.Try", tryArgs, tryReply)
-		if tryReply.Err == OK {
-			value := tryReply.Value
-			reply.Value = value
-			reply.Err = OK
-			return nil
-		} else {
-			randomWalkArgs := &RandomWalkArgs{STEPS}
-			//var randomWalkReply RandomWalkReply
-			randomWalkReply := &RandomWalkReply{}
-			call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
-			if randomWalkReply.Err == OK {
-				addr = randomWalkReply.Server
-			}
+		randomWalkArgs := &RandomWalkArgs{STEPS}
+		randomWalkReply := &RandomWalkReply{}
+		call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
+		if randomWalkReply.Err == OK {
+			addr = randomWalkReply.Server
 		}
 		count++
 	}
-	if value.Servers != nil {
+
+	if tryReply.Err == OK {
+		value := tryReply.Value
+		reply.Value = value
 		reply.Err = OK
 	} else {
 		reply.Err = ErrNoKey
 	}
+
 	return nil
 }
 

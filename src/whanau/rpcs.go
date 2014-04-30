@@ -50,22 +50,22 @@ type SampleSuccessorsReply struct {
 }
 
 type QueryArgs struct {
-    Key KeyType
-    Layer int
+	Key   KeyType
+	Layer int
 }
 
 type QueryReply struct {
-    Value ValueType
-    Err Err
+	Value ValueType
+	Err   Err
 }
 
 type TryArgs struct {
-    Key KeyType
+	Key KeyType
 }
 
 type TryReply struct {
-    Value ValueType
-    Err Err
+	Value ValueType
+	Err   Err
 }
 
 type InitPaxosClusterArgs struct {

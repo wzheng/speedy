@@ -151,44 +151,45 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 
 // Query for a key in the successor table
 func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
-    layer := args.Layer
-    key := args.Key
-    valueIndex := sort.Search(len(ws.succ[layer]), func (i int) bool {return ws.succ[layer][i].Key == key})
-    if valueIndex < len(ws.succ[layer]) {
-        reply.Value = ws.succ[layer][valueIndex].Value
-        reply.Err = OK
-    } else {
-        reply.Err = ErrNoKey
-    }
-    return nil
+	layer := args.Layer
+	key := args.Key
+	valueIndex := sort.Search(len(ws.succ[layer]), func(i int) bool { return ws.succ[layer][i].Key == key })
+	if valueIndex < len(ws.succ[layer]) {
+		reply.Value = ws.succ[layer][valueIndex].Value
+		reply.Err = OK
+	} else {
+		reply.Err = ErrNoKey
+	}
+	return nil
 }
 
 // Try finds the value associated with the key
 func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
-    key := args.Key
-    fingerLength := len(ws.fingers[0])
-    j := sort.Search(fingerLength, func (i int) bool {
-        return ws.fingers[0][i].Id >= key
-    })
-    j = j % fingerLength
-    if j < 0 {
-        j = j + fingerLength
-    }
-    j = (j + fingerLength - 1) % fingerLength
-    value := new(ValueType)
-    for value == nil {
-        f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
-        queryArgs := &QueryArgs{key, i}
-        var queryReply QueryReply
-        call(f.Address, "WhanauServer.Query", queryArgs, &queryReply)
-        if queryReply.Err == OK {
-            value := queryReply.Value
-            reply.Value = value
-            reply.Err = OK
-        }
-    }
-    reply.Err = ErrNoKey
-    return nil
+	key := args.Key
+	DPrintf("In Try RPC, trying key: %s", key)
+	fingerLength := len(ws.fingers[0])
+	j := sort.Search(fingerLength, func(i int) bool {
+		return ws.fingers[0][i].Id >= key
+	})
+	j = j % fingerLength
+	if j < 0 {
+		j = j + fingerLength
+	}
+	j = (j + fingerLength - 1) % fingerLength
+	value := new(ValueType)
+	for value == nil {
+		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
+		queryArgs := &QueryArgs{key, i}
+		var queryReply QueryReply
+		call(f.Address, "WhanauServer.Query", queryArgs, &queryReply)
+		if queryReply.Err == OK {
+			value := queryReply.Value
+			reply.Value = value
+			reply.Err = OK
+		}
+	}
+	reply.Err = ErrNoKey
+	return nil
 }
 
 // TODO this eventually needs to become a real lookup

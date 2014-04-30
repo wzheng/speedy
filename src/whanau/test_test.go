@@ -491,17 +491,17 @@ func TestLookup(t *testing.T) {
 	testKeys := []KeyType{"1", "2", "3", "4", "5", "6", "7", "8", "9"}
 	counter := 0
 	nkeys := 3
+	records := make(map[KeyType]ValueType)
 	// hard code in records for each server
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < nkeys; j++ {
-			//var key KeyType = KeyType("ws" + strconv.Itoa(i) + "key" + strconv.Itoa(j))
-			//var key KeyType = KeyType(strconv.Itoa((i + 1) * (j + 1)))
 			var key KeyType = testKeys[counter]
 			counter++
 			val := ValueType{}
 			for k := 0; k < PaxosSize; k++ {
 				val.Servers = append(val.Servers, "ws"+strconv.Itoa(i)+"srv"+strconv.Itoa(k))
 			}
+			records[key] = val
 			ws[i].kvstore[key] = val
 		}
 	}
@@ -529,8 +529,35 @@ func TestLookup(t *testing.T) {
 	fmt.Printf("Checking ChooseFinger\n")
 
 	// check populated ids and fingers
+	var x0 KeyType = "1"
+	var key KeyType = "3"
+	finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
+	fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
 
-	fmt.Printf("ws[%d].fingers: %s\n", 0, ws[0].fingers)
-	finger, layer := ws[0].ChooseFinger("1", "3", nlayers)
-	fmt.Printf("chosen finger: %s, chosen layer: %s\n", finger, layer)
+	fmt.Printf("Checking Try for every key from every node\n")
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < len(testKeys); j++ {
+			key := testKeys[j]
+			tryargs := &TryArgs{key}
+			tryreply := &TryReply{}
+			ws[i].Try(tryargs, tryreply)
+			if tryreply.Err != OK {
+				fmt.Printf("Try failed\n")
+			} else {
+				value := tryreply.Value
+				fmt.Printf("returned value: %s\n", value)
+				fmt.Printf("expected value: %s\n", records[key])
+				// compare string arrays...
+				if len(value.Servers) != len(records[key].Servers) {
+					t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
+				}
+				for k := 0; k < len(value.Servers); k++ {
+					if value.Servers[k] != records[key].Servers[k] {
+						t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
+					}
+				}
+			}
+		}
+	}
+
 }

@@ -199,7 +199,7 @@ func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) TrueVal
 	return ErrNoKey
 }
 
-func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error{
+func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
 	// this will initiate a new paxos call its paxos cluster
 	return nil
 }
@@ -216,16 +216,16 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 
 	rpc_args := &LookupArgs{}
 	var rpc_reply LookupReply
-	
+
 	ok := call(ws.myaddr, "WhanauServer.Lookup", rpc_args, rpc_reply)
 
 	if ok {
 		if rpc_reply.Err == ErrNoKey {
 			// TODO: adds the key to its local pending put list
-			
+
 		} else {
 			// TODO: make a paxos request directly to one of the servers
-			
+
 		}
 	}
 

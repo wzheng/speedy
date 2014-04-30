@@ -84,7 +84,7 @@ type PaxosGetReply struct {
 }
 
 type PaxosPutArgs struct {
-	Key KeyType
+	Key   KeyType
 	Value TrueValueType
 }
 

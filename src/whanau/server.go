@@ -190,6 +190,13 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		queryArgs.Key = key
 		queryArgs.Layer = i
 		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
+    /*
+    j = j - 1
+    if j < 0 {
+		  j = j + fingerLength
+	  }
+	  j = (j + fingerLength - 1) % fingerLength
+    */
 		count++
 	}
 

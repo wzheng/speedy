@@ -58,5 +58,5 @@ const (
 	PaxosWalk = 5
 	//STEPS          = 2 // number of steps to take in random walk
 	//NUM_SUCCESSORS = 2 //number of successors obtained each step
-	TIMEOUT = 5 // number of times to try querying
+	TIMEOUT = 10 // number of times to try querying
 )

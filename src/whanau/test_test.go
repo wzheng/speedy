@@ -462,7 +462,7 @@ func testSuccessors(t *testing.T) {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-	const nservers = 3
+	const nservers = 10
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -492,6 +492,7 @@ func TestLookup(t *testing.T) {
 
 	const nkeys = 10           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
+  keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)
 	counter := 0
 	// hard code in records for each server
@@ -499,6 +500,7 @@ func TestLookup(t *testing.T) {
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
 			var key KeyType = KeyType(strconv.Itoa(counter))
+      keys = append(keys, key)
 			counter++
 			val := ValueType{}
 			// randomly pick 5 servers
@@ -515,12 +517,12 @@ func TestLookup(t *testing.T) {
   }
 	// run setup in parallel
 	// parameters
-	constant := 2
+	constant := 4
 	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
 	nfingers := constant * int(math.Sqrt(k*nservers))
-	//w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-  w := 1
-	rd := int(math.Sqrt(k*nservers))            // number of records in the db
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+  //w := 1
+	rd := constant * int(math.Sqrt(k*nservers))            // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
@@ -544,32 +546,79 @@ func TestLookup(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < nlayers; j++ {
       fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
-			fmt.Printf("ws[%d].ids[%d]: %s\n", i, j, ws[i].ids[j])
-			fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j, ws[i].fingers[j])
 			fmt.Printf("ws[%d].succ[%d]: %s\n\n", i, j, ws[i].succ[j])
 		}
 	}
+  fmt.Printf("Check key coverage in all dbs")
 
+  keyset := make(map[KeyType]bool)
+  for i := 0; i < len(keys); i++ {
+    keyset[keys[i]] = false
+  }
+
+  for i := 0; i < nservers; i++ {
+    srv := ws[i]
+    for j := 0; j < len(srv.db); j++ {
+      keyset[srv.db[j].Key] = true
+    }
+  }
+
+  // count number of covered keys, all the false keys in keyset
+  covered_count := 0 
+  for _, v := range keyset {
+    if v {
+      covered_count++
+    }
+  }
+  fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
+
+
+  fmt.Printf("Check key coverage in all successor tables")
+  keyset = make(map[KeyType]bool)
+  for i := 0; i < len(keys); i++ {
+    keyset[keys[i]] = false
+  }
+
+  for i := 0; i < nservers; i++ {
+    srv := ws[i]
+    for j := 0; j < len(srv.succ); j++ {
+      for k := 0; k < len(srv.succ[j]); k++ {
+        keyset[srv.succ[j][k].Key] = true
+      }
+    }
+  }
+
+  // count number of covered keys, all the false keys in keyset
+  covered_count = 0 
+  for _, v := range keyset {
+    if v {
+      covered_count++
+    }
+  }
+
+  fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
 	// check populated ids and fingers
 	/*
 		var x0 KeyType = "1"
 		var key KeyType = "3"
 		finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
 		fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
-	*/
+ */ 
+	
 	fmt.Printf("Checking Try for every key from every node\n")
 	numFound := 0
 	numTotal := 0
 	ctr := 0
+  fmt.Printf("All test keys: %s\n", keys)
 	for i := 0; i < nservers; i++ {
-		for j := 0; j < nkeys; j++ {
-			key := KeyType(strconv.Itoa(ctr))
+		for j := 0; j < len(keys); j++ {
+			key := KeyType(keys[j])
 			ctr++
 			largs := &LookupArgs{key, nlayers, w, nil}
 			lreply := &LookupReply{}
 			ws[i].Lookup(largs, lreply)
 			if lreply.Err != OK {
-				fmt.Printf("Did not find key\n")
+        fmt.Printf("Did not find key: %s\n", key)
 			} else {
 				value := lreply.Value
 				fmt.Printf("Found key! returned value: %s, expected value: %s\n", value, records[key])
@@ -589,5 +638,6 @@ func TestLookup(t *testing.T) {
 	}
 
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
-
+  
 }
+

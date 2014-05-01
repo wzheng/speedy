@@ -23,6 +23,15 @@ const (
 
 type Err string
 
+// for Paxos
+
+const (
+	GET = "Get"
+	PUT = "Put"
+)
+
+type Operation string
+
 type KeyType string
 
 type ValueType struct {

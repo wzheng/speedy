@@ -27,12 +27,18 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 }
 
 type WhanauServer struct {
+	//// Server variables ////
 	mu     sync.Mutex
 	l      net.Listener
 	me     int
 	myaddr string
 	dead   bool // for testing
 
+	//// Paxos variables ////
+	// map of key -> local WhanauPaxos instance handling the key
+	paxosInstances map[string]WhanauPaxos
+
+	//// Routing variables ////
 	neighbors []string                  // list of servers this server can talk to
 	pkvstore  map[KeyType]TrueValueType // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType     // k/v table used for routing

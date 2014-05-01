@@ -348,7 +348,7 @@ func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int)
 
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-	ws.db = ws.SampleRecords(rd)
+	ws.db = ws.SampleRecords(rd, w)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
@@ -372,7 +372,7 @@ func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int)
 }
 
 // return random Key/value record from local storage
-func (ws *WhanauServer) SampleRecord() Record {
+func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecordReply) error {
 	randIndex := rand.Intn(len(ws.kvstore))
 	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
@@ -382,16 +382,37 @@ func (ws *WhanauServer) SampleRecord() Record {
 	value := ws.kvstore[key]
 	record := Record{key, value}
 
-	return record
+  reply.Record = record
+  reply.Err = OK
+	return nil
 }
 
 // Returns a list of records sampled randomly from local kv store
 // Note: we agreed that duplicates are fine
-func (ws *WhanauServer) SampleRecords(rd int) []Record {
+func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 	records := make([]Record, 0)
 	for i := 0; i < rd; i++ {
-		records = append(records, ws.SampleRecord())
+    // random walk
+    rwargs := &RandomWalkArgs{steps}
+    rwreply := &RandomWalkReply{}
+    counter := 0
+    for rwreply.Err != OK && counter < TIMEOUT {
+      ws.RandomWalk(rwargs, rwreply)
+      counter++
+    }
+    server := rwreply.Server
+    // Do rpc call to samplerecord
+    srargs := &SampleRecordArgs{}
+    srreply := &SampleRecordReply{}
+    counter = 0
+    for srreply.Err != OK && counter < TIMEOUT {
+      call(server, "WhanauServer.SampleRecord", srargs, srreply)
+    }
+
+    if srreply.Err == OK {
+      records = append(records, srreply.Record)
+    }
 	}
 	return records
 }

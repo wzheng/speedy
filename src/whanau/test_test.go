@@ -462,7 +462,7 @@ func testSuccessors(t *testing.T) {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-	const nservers = 5
+	const nservers = 3
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -490,7 +490,7 @@ func TestLookup(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
-	const nkeys = 50           // keys are strings from 0 to 99
+	const nkeys = 10           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 	records := make(map[KeyType]ValueType)
 	counter := 0
@@ -510,13 +510,17 @@ func TestLookup(t *testing.T) {
 		}
 	}
 
+  for i := 0; i < nservers; i++ {
+    fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+  }
 	// run setup in parallel
 	// parameters
-	constant := 5
+	constant := 2
 	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
 	nfingers := constant * int(math.Sqrt(k*nservers))
-	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := 10 * int(math.Sqrt(k*nservers))            // number of records in the db
+	//w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+  w := 1
+	rd := int(math.Sqrt(k*nservers))            // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
@@ -539,6 +543,7 @@ func TestLookup(t *testing.T) {
 
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < nlayers; j++ {
+      fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
 			fmt.Printf("ws[%d].ids[%d]: %s\n", i, j, ws[i].ids[j])
 			fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j, ws[i].fingers[j])
 			fmt.Printf("ws[%d].succ[%d]: %s\n\n", i, j, ws[i].succ[j])

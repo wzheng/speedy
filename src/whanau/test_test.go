@@ -521,9 +521,8 @@ func TestLookup(t *testing.T) {
 	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
 	nfingers := constant * int(math.Sqrt(k*nservers))
 	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-  //w := 1
-	rd := constant * int(math.Sqrt(k*nservers))            // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	rd := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
 	c := make(chan bool) // writes true of done

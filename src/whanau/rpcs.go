@@ -2,6 +2,8 @@ package whanau
 
 type LookupArgs struct {
 	Key        KeyType
+	NLayers    int
+	Steps      int
 	RoutedFrom []string // servers that have already tried to serve this key
 }
 
@@ -60,7 +62,8 @@ type QueryReply struct {
 }
 
 type TryArgs struct {
-	Key KeyType
+	Key     KeyType
+	NLayers int
 }
 
 type TryReply struct {

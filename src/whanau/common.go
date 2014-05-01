@@ -45,14 +45,18 @@ type Finger struct {
 
 // Global Parameters
 const (
-	W              = 2 // mixing time of honest region
-	RD             = 1 // size of db
-	RF             = 2 // size of fingertable (per layer)
-	RS             = 5 // size of succ records
-	L              = 3 // number of layers
-	PaxosSize      = 5
-	PaxosWalk      = 5
-	STEPS          = 1 // number of steps to take in random walk
-	NUM_SUCCESSORS = 1 //number of successors obtained each step
-	TIMEOUT        = 5 // number of times to try querying
+	// n = number of honest nodes
+	// m = O(n) number of honest edges
+	// k = number of keys/node
+
+	//W              = 2 // mixing time of honest region
+	//RD             = 5 // size of db sqrt(km)
+	//RF             = 5 // size of fingertable (per layer)
+	//RS             = 5 // size of succ records
+	//L              = 3 // number of layers log(km)
+	PaxosSize = 5
+	PaxosWalk = 5
+	//STEPS          = 2 // number of steps to take in random walk
+	//NUM_SUCCESSORS = 2 //number of successors obtained each step
+	TIMEOUT = 5 // number of times to try querying
 )

@@ -23,12 +23,11 @@ type PutReply struct {
 }
 
 type SampleRecordArgs struct {
-
 }
 
 type SampleRecordReply struct {
-  Record  Record
-  Err Err
+	Record Record
+	Err    Err
 }
 type RandomWalkArgs struct {
 	Steps int

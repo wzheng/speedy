@@ -23,7 +23,7 @@ func port(tag string, host int) string {
 func cleanup(ws []*WhanauServer) {
 	for i := 0; i < len(ws); i++ {
 		if ws[i] != nil {
-			ws[i].kill()
+			ws[i].Kill()
 		}
 	}
 }
@@ -463,7 +463,7 @@ func testSuccessors(t *testing.T) {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-	const nservers = 100
+	const nservers = 10
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -491,9 +491,9 @@ func TestLookup(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
-	const nkeys = 100           // keys are strings from 0 to 99
+	const nkeys = 10           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
-  keys := make([]KeyType, 0)
+	keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)
 	counter := 0
 	// hard code in records for each server
@@ -501,7 +501,7 @@ func TestLookup(t *testing.T) {
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
 			var key KeyType = KeyType(strconv.Itoa(counter))
-      keys = append(keys, key)
+			keys = append(keys, key)
 			counter++
 			val := ValueType{}
 			// randomly pick 5 servers
@@ -513,22 +513,22 @@ func TestLookup(t *testing.T) {
 		}
 	}
 
-  for i := 0; i < nservers; i++ {
-    fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-  }
+	for i := 0; i < nservers; i++ {
+		fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+	}
 	// run setup in parallel
 	// parameters
 	constant := 5
 	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
 	nfingers := constant * int(math.Sqrt(k*nservers))
 	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))             // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))      // number of nodes to sample to get successors
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
 	c := make(chan bool) // writes true of done
-  fmt.Printf("Starting setup\n")
-  start := time.Now()
+	fmt.Printf("Starting setup\n")
+	start := time.Now()
 	for i := 0; i < nservers; i++ {
 		go func(srv int) {
 			DPrintf("running ws[%d].Setup", srv)
@@ -543,82 +543,85 @@ func TestLookup(t *testing.T) {
 		DPrintf("ws[%d] setup done: %b", i, done)
 	}
 
-  elapsed := time.Since(start)
-  fmt.Printf("Finished setup, time: %s\n", elapsed)
+	elapsed := time.Since(start)
+	fmt.Printf("Finished setup, time: %s\n", elapsed)
 
-  /*
 	for i := 0; i < nservers; i++ {
-		for j := 0; j < nlayers; j++ {
-      fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
-			fmt.Printf("ws[%d].succ[%d]: %s\n\n", i, j, ws[i].succ[j])
+		fmt.Println("")
+		//fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
+
+		fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
+		for j := 1; j < nlayers; j++ {
+			fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
+			fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
+			//fmt.Printf("ws[%d].succ[%d]: %s\n", i, j, ws[i].succ[j])
 		}
 	}
-  */
-  fmt.Printf("Check key coverage in all dbs")
 
-  keyset := make(map[KeyType]bool)
-  for i := 0; i < len(keys); i++ {
-    keyset[keys[i]] = false
-  }
+	fmt.Printf("Check key coverage in all dbs")
 
-  for i := 0; i < nservers; i++ {
-    srv := ws[i]
-    for j := 0; j < len(srv.db); j++ {
-      keyset[srv.db[j].Key] = true
-    }
-  }
+	keyset := make(map[KeyType]bool)
+	for i := 0; i < len(keys); i++ {
+		keyset[keys[i]] = false
+	}
 
-  // count number of covered keys, all the false keys in keyset
-  covered_count := 0 
-  for _, v := range keyset {
-    if v {
-      covered_count++
-    }
-  }
-  fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
+	for i := 0; i < nservers; i++ {
+		srv := ws[i]
+		for j := 0; j < len(srv.db); j++ {
+			keyset[srv.db[j].Key] = true
+		}
+	}
 
+	// count number of covered keys, all the false keys in keyset
+	covered_count := 0
+	for _, v := range keyset {
+		if v {
+			covered_count++
+		}
+	}
+	fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
 
-  fmt.Printf("Check key coverage in all successor tables")
-  keyset = make(map[KeyType]bool)
-  for i := 0; i < len(keys); i++ {
-    keyset[keys[i]] = false
-  }
+	fmt.Printf("Check key coverage in all successor tables")
+	keyset = make(map[KeyType]bool)
+	for i := 0; i < len(keys); i++ {
+		keyset[keys[i]] = false
+	}
 
-  for i := 0; i < nservers; i++ {
-    srv := ws[i]
-    for j := 0; j < len(srv.succ); j++ {
-      for k := 0; k < len(srv.succ[j]); k++ {
-        keyset[srv.succ[j][k].Key] = true
-      }
-    }
-  }
+	for i := 0; i < nservers; i++ {
+		srv := ws[i]
+		for j := 0; j < len(srv.succ); j++ {
+			for k := 0; k < len(srv.succ[j]); k++ {
+				keyset[srv.succ[j][k].Key] = true
+			}
+		}
+	}
 
-  // count number of covered keys, all the false keys in keyset
-  covered_count = 0
-  missing_keys := make([]KeyType, 0)
-  for k, v := range keyset {
-    if v {
-      covered_count++
-    } else {
-      missing_keys = append(missing_keys, k)
-    }
-  }
+	// count number of covered keys, all the false keys in keyset
+	covered_count = 0
+	missing_keys := make([]KeyType, 0)
+	for k, v := range keyset {
+		if v {
+			covered_count++
+		} else {
+			missing_keys = append(missing_keys, k)
+		}
+	}
 
-  fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
-  fmt.Printf("missing keys in succs: %s\n", missing_keys)
+	fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
+	fmt.Printf("missing keys in succs: %s\n", missing_keys)
 	// check populated ids and fingers
 	/*
 		var x0 KeyType = "1"
 		var key KeyType = "3"
 		finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
 		fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
- */ 
-	
+	*/
+
 	fmt.Printf("Checking Try for every key from every node\n")
 	numFound := 0
 	numTotal := 0
 	ctr := 0
-  fmt.Printf("All test keys: %s\n", keys)
+	fmt.Printf("All test keys: %s\n", keys)
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < len(keys); j++ {
 			key := KeyType(keys[j])
@@ -627,7 +630,7 @@ func TestLookup(t *testing.T) {
 			lreply := &LookupReply{}
 			ws[i].Lookup(largs, lreply)
 			if lreply.Err != OK {
-        fmt.Printf("Did not find key: %s\n", key)
+				fmt.Printf("Did not find key: %s\n", key)
 			} else {
 				value := lreply.Value
 				// compare string arrays...
@@ -645,7 +648,7 @@ func TestLookup(t *testing.T) {
 		}
 	}
 
+	fmt.Printf("numFound: %d\n", numFound)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
-  
-}
 
+}

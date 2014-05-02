@@ -17,7 +17,7 @@ import (
 
 //import "encoding/gob"
 
-const Debug = 1
+const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -50,6 +50,18 @@ type WhanauServer struct {
 	view      int                       // the current view
 }
 
+// for testing
+func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
+	ws.kvstore[key] = value
+}
+
+func (ws *WhanauServer) GetDB() []Record {
+	return ws.db
+}
+
+func (ws *WhanauServer) GetSucc() [][]Record {
+	return ws.succ
+}
 func IsInList(val string, array []string) bool {
 	for _, v := range array {
 		if v == val {
@@ -96,7 +108,6 @@ func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
-	DPrintf("In chooseFinger, x0: %s, key: %s", x0, key)
 	// find all fingers from all layers such that the key falls between x0 and the finger id
 	candidateFingers := make([][]Finger, 0)
 	// maps index to nonempty layer number
@@ -123,7 +134,7 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 				}
 			} else {
 				// case where x0 > key, compare !(key < x < x0) --> x > x0 or x < key
-				if id > x0 || id < key {
+				if id >= x0 || id <= key {
 					if len(candidateFingers) <= counter {
 						// only create non empty candidate fingers
 						newLayer := make([]Finger, 0)
@@ -149,7 +160,6 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 
 	// if can't find any, randomly choose layer and randomly return finger
 	// TODO probably shouldn't get here?
-	DPrintf("cant' find finger with suitable key, pick random one instead")
 	randLayer := rand.Intn(len(ws.fingers))
 	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
 	return randfinger, randLayer
@@ -160,8 +170,11 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 	DPrintf("In Query of server %s", ws.myaddr)
 	layer := args.Layer
 	key := args.Key
-	valueIndex := sort.Search(len(ws.succ[layer]), func(i int) bool { return ws.succ[layer][i].Key == key })
-	if valueIndex < len(ws.succ[layer]) {
+	valueIndex := sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
+		return ws.succ[layer][valueIndex].Key >= key
+	})
+
+	if valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
 		DPrintf("In Query: found the key!!!!")
 		reply.Value = ws.succ[layer][valueIndex].Value
 		DPrintf("reply.Value: %s", reply.Value)
@@ -176,6 +189,7 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 // Try finds the value associated with the key
 func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	key := args.Key
+	nlayers := args.NLayers
 	DPrintf("In Try RPC, trying key: %s", key)
 	fingerLength := len(ws.fingers[0])
 	j := sort.Search(fingerLength, func(i int) bool {
@@ -186,15 +200,20 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		j = j + fingerLength
 	}
 	j = (j + fingerLength - 1) % fingerLength
-
 	count := 0
 	queryArgs := &QueryArgs{}
 	queryReply := &QueryReply{}
 	for queryReply.Err != OK && count < TIMEOUT {
-		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, L)
+		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, nlayers)
 		queryArgs.Key = key
 		queryArgs.Layer = i
 		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
+		j = j - 1
+		j = j % fingerLength
+		if j < 0 {
+			j = j + fingerLength
+		}
+
 		count++
 	}
 
@@ -204,7 +223,6 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		reply.Value = value
 		reply.Err = OK
 	} else {
-		DPrintf("In Try RPC, did not find key")
 		reply.Err = ErrNoKey
 	}
 	return nil
@@ -214,16 +232,18 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 // Returns paxos cluster for given key
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
+	nlayers := args.NLayers
+	steps := args.Steps
 
 	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
 	addr := ws.myaddr
 	count := 0
-	tryArgs := &TryArgs{key}
+	tryArgs := &TryArgs{key, nlayers}
 	tryReply := &TryReply{}
 
 	for tryReply.Err != OK && count < TIMEOUT {
 		call(addr, "WhanauServer.Try", tryArgs, tryReply)
-		randomWalkArgs := &RandomWalkArgs{STEPS}
+		randomWalkArgs := &RandomWalkArgs{steps}
 		randomWalkReply := &RandomWalkReply{}
 		call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
 		if randomWalkReply.Err == OK {
@@ -233,6 +253,7 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	}
 
 	if tryReply.Err == OK {
+		//fmt.Printf("found key after %d tries\n", count)
 		value := tryReply.Value
 		reply.Value = value
 		reply.Err = OK
@@ -340,12 +361,18 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 
 // TODO
 // Populates routing table
-func (ws *WhanauServer) Setup(nlayers int, rf int) {
+// nlayers = number of layers
+// rf = size of finger table
+// w = number of steps in random walk
+// rd = size of database
+// rs = number of nodes to collect samples from
+// t = number of successors returned from sample per node
+func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int) {
 	DPrintf("In Setup of server %s", ws.myaddr)
 
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-	ws.db = ws.SampleRecords(RD)
+	ws.db = ws.SampleRecords(rd, w)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
@@ -354,22 +381,22 @@ func (ws *WhanauServer) Setup(nlayers int, rf int) {
 	for i := 0; i < nlayers; i++ {
 		// populate tables in layers
 		ws.ids = append(ws.ids, ws.ChooseID(i))
-		DPrintf("Finished ChooseID of server %s, layer %d", ws.myaddr, i)
-		curFingerTable := ws.ConstructFingers(i, rf)
+		//fmt.Printf("Finished ChooseID of server %s, layer %d\n", ws.myaddr, i)
+		curFingerTable := ws.ConstructFingers(i, rf, w)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
 
-		DPrintf("Finished ConstructFingers of server %s, layer %d", ws.myaddr, i)
-		curSuccessorTable := ws.Successors(i)
+		//fmt.Printf("Finished ConstructFingers of server %s, layer %d\n", ws.myaddr, i)
+		curSuccessorTable := ws.Successors(i, w, rs, t)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 
-		DPrintf("Finished SuccessorTable of server %s, layer %d", ws.myaddr, i)
+		//fmt.Printf("Finished SuccessorTable of server %s, layer %d\n", ws.myaddr, i)
 	}
 }
 
 // return random Key/value record from local storage
-func (ws *WhanauServer) SampleRecord() Record {
+func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecordReply) error {
 	randIndex := rand.Intn(len(ws.kvstore))
 	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
@@ -379,53 +406,76 @@ func (ws *WhanauServer) SampleRecord() Record {
 	value := ws.kvstore[key]
 	record := Record{key, value}
 
-	return record
+	reply.Record = record
+	reply.Err = OK
+	return nil
 }
 
 // Returns a list of records sampled randomly from local kv store
 // Note: we agreed that duplicates are fine
-func (ws *WhanauServer) SampleRecords(rd int) []Record {
+func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 	records := make([]Record, 0)
 	for i := 0; i < rd; i++ {
-		records = append(records, ws.SampleRecord())
+		// random walk
+		rwargs := &RandomWalkArgs{steps}
+		rwreply := &RandomWalkReply{}
+		counter := 0
+		for rwreply.Err != OK && counter < TIMEOUT {
+			ws.RandomWalk(rwargs, rwreply)
+			counter++
+		}
+		server := rwreply.Server
+		// Do rpc call to samplerecord
+		srargs := &SampleRecordArgs{}
+		srreply := &SampleRecordReply{}
+		counter = 0
+		for srreply.Err != OK && counter < TIMEOUT {
+			call(server, "WhanauServer.SampleRecord", srargs, srreply)
+		}
+
+		if srreply.Err == OK {
+			records = append(records, srreply.Record)
+		}
 	}
 	return records
 }
 
 // Constructs Finger table for a specified layer
-func (ws *WhanauServer) ConstructFingers(layer int, rf int) []Finger {
+func (ws *WhanauServer) ConstructFingers(layer int, rf int, steps int) []Finger {
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0)
 	for i := 0; i < rf; i++ {
-		steps := W // TODO: set to global W parameter
 		args := &RandomWalkArgs{steps}
 		reply := &RandomWalkReply{}
 
 		// Keep trying until succeed or timeout
-		// TODO add timeout later
+		//counter := 0
 		for reply.Err != OK {
-			//DPrintf("random walk")
 			ws.RandomWalk(args, reply)
+			//counter++
 		}
+
 		server := reply.Server
 
-		//DPrintf("randserver: %s", server)
 		// get id of server using rpc call to that server
 		getIdArg := &GetIdArgs{layer}
 		getIdReply := &GetIdReply{}
 		ok := false
 
 		// block until succeeds
-		// TODO add timeout later
+		//counter = 0
 		for !ok || (getIdReply.Err != OK) {
 			DPrintf("rpc to getid of %s from ConstructFingers %s layer %d", server, ws.myaddr, layer)
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
+			//counter++
 		}
 
-		finger := Finger{getIdReply.Key, server}
-		fingers = append(fingers, finger)
+		if getIdReply.Err == OK {
+			finger := Finger{getIdReply.Key, server}
+			fingers = append(fingers, finger)
+		}
 	}
 
 	return fingers
@@ -547,12 +597,12 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	return nil
 }
 
-func (ws *WhanauServer) Successors(layer int) []Record {
+func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	var successors []Record
-	for i := 0; i < RS; i++ {
+	for i := 0; i < rs; i++ {
 		args := &RandomWalkArgs{}
-		args.Steps = STEPS
+		args.Steps = steps
 		reply := &RandomWalkReply{}
 		ws.RandomWalk(args, reply)
 
@@ -563,7 +613,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 			DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
 			ws.GetId(getIdArgs, getIdReply)
 
-			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, NUM_SUCCESSORS}
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, nsuccessors}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
 			for sampleSuccessorsReply.Err != OK {
 				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
@@ -575,7 +625,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 }
 
 // tell the server to shut itself down.
-func (ws *WhanauServer) kill() {
+func (ws *WhanauServer) Kill() {
 	ws.dead = true
 	ws.l.Close()
 	//	ws.px.Kill()
@@ -615,7 +665,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 			if err != nil && ws.dead == false {
 				fmt.Printf("ShardWS(%v) accept: %v\n", me, err.Error())
-				ws.kill()
+				ws.Kill()
 			}
 		}
 	}()

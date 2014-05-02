@@ -463,7 +463,7 @@ func testSuccessors(t *testing.T) {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-	const nservers = 50
+	const nservers = 100
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -491,7 +491,7 @@ func TestLookup(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
-	const nkeys = 50           // keys are strings from 0 to 99
+	const nkeys = 100           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
   keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)

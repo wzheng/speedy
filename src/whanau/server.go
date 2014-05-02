@@ -44,6 +44,18 @@ type WhanauServer struct {
 	view      int                       // the current view
 }
 
+// for testing
+func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
+  ws.kvstore[key] = value
+}
+
+func (ws *WhanauServer) GetDB() []Record {
+  return ws.db
+}
+
+func (ws *WhanauServer) GetSucc() [][]Record {
+  return ws.succ
+}
 func IsInList(val string, array []string) bool {
 	for _, v := range array {
 		if v == val {
@@ -606,7 +618,7 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 }
 
 // tell the server to shut itself down.
-func (ws *WhanauServer) kill() {
+func (ws *WhanauServer) Kill() {
 	ws.dead = true
 	ws.l.Close()
 	//	ws.px.Kill()
@@ -646,7 +658,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 			if err != nil && ws.dead == false {
 				fmt.Printf("ShardWS(%v) accept: %v\n", me, err.Error())
-				ws.kill()
+				ws.Kill()
 			}
 		}
 	}()

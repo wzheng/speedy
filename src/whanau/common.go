@@ -62,7 +62,7 @@ const (
 	//RD             = 5 // size of db sqrt(km)
 	//RF             = 5 // size of fingertable (per layer)
 	//RS             = 5 // size of succ records
-	//L              = 3 // number of layers log(km)
+	L              = 3 // number of layers log(km)
 	PaxosSize = 5
 	PaxosWalk = 5
 	//STEPS          = 2 // number of steps to take in random walk

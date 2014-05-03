@@ -264,6 +264,17 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	return nil
 }
 
+func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
+	key := args.Key
+	
+	// run the local RPC call to get the
+	lookup_args := &LookupArgs{}
+	lookup_reply := &LookupReply{}
+	
+	lookup_args.NLayers = L
+	ws.Lookup(args *LookupArgs, reply *LookupReply)
+}
+
 // Client-style lookup on neighboring servers.
 // routedFrom is supposed to prevent infinite lookup loops.
 // TODO Change to TrueValueType later
@@ -302,6 +313,9 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
 	// makes an RPC call to itself, this is kind of weird...
 
+	key := args.Key
+	value := args.Value
+
 	rpc_args := &LookupArgs{}
 	var rpc_reply LookupReply
 
@@ -310,10 +324,14 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	if ok {
 		if rpc_reply.Err == ErrNoKey {
 			// TODO: adds the key to its local pending put list
-
+			// TODO: what happens if a client makes a call to insert the same key
+			// to 2 different servers? or 2 different clients making 2 different
+			// calls to the same key?
+			pending[key] = value
 		} else {
 			// TODO: make a paxos request directly to one of the servers
-
+			// TODO: right now there's only a call for getting back the true value,
+			// refactor the code?
 		}
 	}
 

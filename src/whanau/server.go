@@ -48,6 +48,7 @@ type WhanauServer struct {
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 	view      int                       // the current view
+	master    []string                  // list of servers for the master cluster; these servers are also trusted
 }
 
 // for testing
@@ -272,7 +273,16 @@ func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookup
 	lookup_reply := &LookupReply{}
 	
 	lookup_args.NLayers = L
-	ws.Lookup(args *LookupArgs, reply *LookupReply)
+	lookup_args.Steps = W
+
+	ok := call(srv, "WhanauServer.Lookup", lookup_args, &lookup_reply)
+
+	if ok {
+		server_list := lookup_reply.Value
+		ret_value := ws.PaxosLookup(key, server_list)
+		reply.Err = OK
+		reply.Value = ret_value
+	}
 }
 
 // Client-style lookup on neighboring servers.
@@ -303,9 +313,9 @@ func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) er
 	return nil
 }
 
-func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
+func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) TrueValueType {
 	// TODO: needs to do a real paxos put
-	return nil
+	return ""
 }
 
 // TODO this eventually needs to become a real put
@@ -328,14 +338,14 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 			// to 2 different servers? or 2 different clients making 2 different
 			// calls to the same key?
 			pending[key] = value
+			reply.Err = ErrPending
 		} else {
 			// TODO: make a paxos request directly to one of the servers
-			// TODO: right now there's only a call for getting back the true value,
-			// refactor the code?
+			ret_value := ws.PaxosPut(key, value)
+			reply.Err = OK
 		}
 	}
 
-	reply.Err = OK
 	return nil
 }
 

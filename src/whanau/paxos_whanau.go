@@ -18,9 +18,12 @@ type WhanauPaxos struct {
 	px              *paxos.Paxos
 	handledRequests map[int64]interface{}
 
-	currSeq int // how far in the log are we?
-	logLock sync.Mutex
-	dbLock  sync.Mutex
+	currSeq  int // how far in the log are we?
+	logLock  sync.Mutex
+	dbLock   sync.Mutex
+	currView int
+
+	db map[KeyType]TrueValueType
 }
 
 type Op struct {
@@ -65,6 +68,136 @@ func (wp *WhanauPaxos) RunPaxos(op Op) int {
 
 	// let the shardmaster know what instance number we actually decided on
 	return currSeq
+}
+
+func (wp *WhanauPaxos) LogPut(args *PaxosPutArgs, reply *PaxosPutReply) {
+	wp.dbLock.Lock()
+	defer wp.dbLock.Unlock()
+
+	wp.db[args.Key] = args.Value
+}
+
+// This is a Get directly from the Paxos k/v store (as opposed to a
+// Lookup, that is routed along the Whanau layers).
+func (wp *WhanauPaxos) LogGet(args *PaxosGetArgs, reply *PaxosGetReply) {
+	wp.dbLock.Lock()
+	defer wp.dbLock.Unlock()
+
+	if getValue, ok := wp.db[args.Key]; ok {
+		reply.Err = OK
+		reply.Value = getValue
+	} else {
+		reply.Err = ErrNoKey
+		reply.Value = ""
+	}
+}
+
+// Fast forward the log from fromSeq up to toSeq, applying all the  updates.
+func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
+
+	for i := fromSeq; i <= toSeq; i++ {
+		decided, value := wp.px.Status(i)
+		for !decided {
+			// wait for instance to reach agreement
+			// TODO should time out after a while in case too many
+			// nodes have failed
+			time.Sleep(time.Millisecond * 50)
+			decided, value = wp.px.Status(i)
+		}
+
+		op := value.(Op)
+
+		_, handled := wp.handledRequests[op.RequestID]
+		if handled {
+			// don't re-serve the request, though this shouldn't
+			// be an issue
+			continue
+		}
+
+		if op.Type == PUT {
+			args := op.OpArgs.(PaxosPutArgs)
+			var reply PaxosPutReply
+			reply.Err = OK
+			wp.LogPut(&args, &reply)
+			wp.handledRequests[args.RequestID] = reply
+		} else if op.Type == GET {
+			args := op.OpArgs.(PaxosGetArgs)
+			var reply PaxosGetReply
+			reply.Err = OK
+			wp.LogGet(&args, &reply)
+			wp.handledRequests[args.RequestID] = reply
+		}
+
+	}
+}
+
+func (wp *WhanauPaxos) AgreeAndLogRequests(op Op) error {
+	agreedSeq := wp.RunPaxos(op)
+	wp.LogUpdates(wp.currSeq, agreedSeq)
+
+	// discard old instances
+	wp.px.Done(agreedSeq)
+	wp.currSeq = agreedSeq + 1
+
+	return nil
+}
+
+func (wp *WhanauPaxos) PaxosGetRPC(args *PaxosGetArgs,
+	reply *PaxosGetReply) error {
+	wp.logLock.Lock()
+	defer wp.logLock.Unlock()
+
+	// TODO check if this paxos group is responsible for this key
+
+	// Have we handled this request already?
+	if r, ok := wp.handledRequests[args.RequestID]; ok {
+		getreply := r.(PaxosGetReply)
+
+		if getreply.Err != ErrWrongGroup {
+			reply.Err = getreply.Err
+			reply.Value = getreply.Value
+
+			return nil
+		}
+	}
+
+	// Okay, try handling the request.
+	getop := Op{GET, *args, NRand(), args.RequestID}
+	wp.AgreeAndLogRequests(getop)
+
+	getreply := wp.handledRequests[args.RequestID].(PaxosGetReply)
+	reply.Err = getreply.Err
+	reply.Value = getreply.Value
+
+	return nil
+}
+
+func (wp *WhanauPaxos) PaxosPutRPC(args *PaxosPutArgs,
+	reply *PaxosPutReply) error {
+
+	wp.logLock.Lock()
+	defer wp.logLock.Unlock()
+
+	// TODO check if this paxos group is responsible for this key
+
+	// Have we handled this request already?
+	if r, ok := wp.handledRequests[args.RequestID]; ok {
+		putreply := r.(PaxosPutReply)
+
+		if putreply.Err != ErrWrongGroup {
+			reply.Err = putreply.Err
+			return nil
+		}
+	}
+
+	// Okay, try handling the request.
+	putop := Op{PUT, *args, NRand(), args.RequestID}
+	wp.AgreeAndLogRequests(putop)
+
+	putreply := wp.handledRequests[args.RequestID].(PaxosPutReply)
+	reply.Err = putreply.Err
+
+	return nil
 }
 
 func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,

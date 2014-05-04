@@ -72,16 +72,7 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
-func (ws *WhanauServer) PaxosGetRPC(args *PaxosGetArgs, reply *PaxosGetReply) error {
-	// starts a new paxos log entry
-	reply.Value = ""
-	return nil
-}
-
 func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
-	// TODO: make a call to a random server in the group
-	randIndex := rand.Intn(len(servers.Servers))
-	server := servers.Servers[randIndex]
 	var retries []string
 
 	args := &PaxosGetArgs{}
@@ -89,15 +80,10 @@ func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
 
 	args.Key = key
 
-	for {
+	for _, server := range servers {
 		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
 		if ok {
 			return reply.Value
-		} else {
-			// try another server
-			retries = append(retries, server)
-			randIndex = rand.Intn(len(servers.Servers))
-			server = servers.Servers[randIndex]
 		}
 	}
 
@@ -261,34 +247,6 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 		reply.Err = ErrNoKey
 	}
 
-	return nil
-}
-
-// Client-style lookup on neighboring servers.
-// routedFrom is supposed to prevent infinite lookup loops.
-// TODO Change to TrueValueType later
-/*
-func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueType {
-	args := &LookupArgs{}
-	args.Key = key
-	args.RoutedFrom = routedFrom
-	var reply LookupReply
-	for _, srv := range ws.neighbors {
-		if IsInList(srv, routedFrom) {
-			continue
-		}
-
-		ok := call(srv, "WhanauServer.Lookup", args, &reply)
-		if ok && (reply.Err == OK) {
-			return reply.Value
-		}
-	}
-
-	return ErrNoKey
-}
-*/
-func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
-	// this will initiate a new paxos call its paxos cluster
 	return nil
 }
 

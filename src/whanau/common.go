@@ -1,9 +1,20 @@
 package whanau
 
+import "math/big"
+import "crypto/rand"
+
+func NRand() int64 {
+	max := big.NewInt(int64(1) << 62)
+	bigx, _ := rand.Int(rand.Reader, max)
+	x := bigx.Int64()
+	return x
+}
+
 const (
-	OK          = "OK"
-	ErrNoKey    = "ErrNoKey"
-	ErrRandWalk = "ErrRandWalk"
+	OK            = "OK"
+	ErrNoKey      = "ErrNoKey"
+	ErrRandWalk   = "ErrRandWalk"
+	ErrWrongGroup = "ErrWrongGroup"
 )
 
 // for 2PC

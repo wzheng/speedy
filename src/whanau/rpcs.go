@@ -104,7 +104,8 @@ type PutIdReply struct {
 }
 
 type PaxosGetArgs struct {
-	Key KeyType
+	Key       KeyType
+	RequestID int64
 }
 
 type PaxosGetReply struct {
@@ -113,8 +114,9 @@ type PaxosGetReply struct {
 }
 
 type PaxosPutArgs struct {
-	Key   KeyType
-	Value TrueValueType
+	Key       KeyType
+	Value     TrueValueType
+	RequestID int64
 }
 
 type PaxosPutReply struct {

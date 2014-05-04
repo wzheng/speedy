@@ -74,14 +74,12 @@ func IsInList(val string, array []string) bool {
 }
 
 func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
-	var retries []string
-
 	args := &PaxosGetArgs{}
 	var reply PaxosGetReply
 
 	args.Key = key
 
-	for _, server := range servers {
+	for _, server := range servers.Servers {
 		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
 		if ok {
 			return reply.Value
@@ -252,8 +250,6 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 }
 
 func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
-	key := args.Key
-
 	// run the local RPC call to get the
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
@@ -261,14 +257,20 @@ func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookup
 	lookup_args.NLayers = L
 	lookup_args.Steps = W
 
+	srv := ""
+	// TODO srv?
 	ok := call(srv, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok {
-		server_list := lookup_reply.Value
-		ret_value := ws.PaxosLookup(key, server_list)
+		// server_list := lookup_reply.Value
+		// TODO ret_value
+		// ret_value := ws.PaxosLookup(args.Key, server_list)
+		var ret_value TrueValueType = ""
 		reply.Err = OK
 		reply.Value = ret_value
 	}
+
+	return nil
 }
 
 // Client-style lookup on neighboring servers.
@@ -301,7 +303,7 @@ func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) er
 
 func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
 	// TODO: needs to do a real paxos put
-	return ""
+	return nil
 }
 
 // TODO this eventually needs to become a real put
@@ -323,11 +325,12 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 			// TODO: what happens if a client makes a call to insert the same key
 			// to 2 different servers? or 2 different clients making 2 different
 			// calls to the same key?
-			pending[key] = value
+			ws.pending[key] = value
 			reply.Err = ErrPending
 		} else {
 			// TODO: make a paxos request directly to one of the servers
-			ret_value := ws.PaxosPut(key, value)
+			// TODO error?
+			ws.PaxosPut(key, value)
 			reply.Err = OK
 		}
 	}

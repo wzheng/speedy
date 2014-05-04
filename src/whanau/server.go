@@ -48,6 +48,7 @@ type WhanauServer struct {
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 	view      int                       // the current view
+	master    []string                  // list of servers for the master cluster; these servers are also trusted
 }
 
 // for testing
@@ -250,15 +251,66 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	return nil
 }
 
+func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
+	key := args.Key
+
+	// run the local RPC call to get the
+	lookup_args := &LookupArgs{}
+	lookup_reply := &LookupReply{}
+
+	lookup_args.NLayers = L
+	lookup_args.Steps = W
+
+	ok := call(srv, "WhanauServer.Lookup", lookup_args, &lookup_reply)
+
+	if ok {
+		server_list := lookup_reply.Value
+		ret_value := ws.PaxosLookup(key, server_list)
+		reply.Err = OK
+		reply.Value = ret_value
+	}
+}
+
+// Client-style lookup on neighboring servers.
+// routedFrom is supposed to prevent infinite lookup loops.
+// TODO Change to TrueValueType later
+/*
+func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueType {
+	args := &LookupArgs{}
+	args.Key = key
+	args.RoutedFrom = routedFrom
+	var reply LookupReply
+	for _, srv := range ws.neighbors {
+		if IsInList(srv, routedFrom) {
+			continue
+		}
+
+		ok := call(srv, "WhanauServer.Lookup", args, &reply)
+		if ok && (reply.Err == OK) {
+			return reply.Value
+		}
+	}
+
+	return ErrNoKey
+}
+*/
+func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
+	// this will initiate a new paxos call its paxos cluster
+	return nil
+}
+
 func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
 	// TODO: needs to do a real paxos put
-	return nil
+	return ""
 }
 
 // TODO this eventually needs to become a real put
 func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
 	// makes an RPC call to itself, this is kind of weird...
+
+	key := args.Key
+	value := args.Value
 
 	rpc_args := &LookupArgs{}
 	var rpc_reply LookupReply
@@ -268,14 +320,18 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 	if ok {
 		if rpc_reply.Err == ErrNoKey {
 			// TODO: adds the key to its local pending put list
-
+			// TODO: what happens if a client makes a call to insert the same key
+			// to 2 different servers? or 2 different clients making 2 different
+			// calls to the same key?
+			pending[key] = value
+			reply.Err = ErrPending
 		} else {
 			// TODO: make a paxos request directly to one of the servers
-
+			ret_value := ws.PaxosPut(key, value)
+			reply.Err = OK
 		}
 	}
 
-	reply.Err = OK
 	return nil
 }
 

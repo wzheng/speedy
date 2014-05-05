@@ -71,15 +71,6 @@ func (ws *WhanauServer) GetDB() []Record {
 func (ws *WhanauServer) GetSucc() [][]Record {
 	return ws.succ
 }
-func IsInList(val string, array []string) bool {
-	for _, v := range array {
-		if v == val {
-			return true
-		}
-	}
-
-	return false
-}
 
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
@@ -118,130 +109,6 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 	ws.pending[args.Key] = args.Value
 	reply.Err = ErrPending
 
-	return nil
-}
-
-// WHANAU LOOKUP HELPER METHODS
-
-// Returns randomly chosen finger and randomly chosen layer as part of lookup
-func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
-	// find all fingers from all layers such that the key falls between x0 and the finger id
-	candidateFingers := make([][]Finger, 0)
-	// maps index to nonempty layer number
-	layerMap := make([]int, 0)
-	counter := 0
-	for i := 0; i < nlayers; i++ {
-		DPrintf("ws.fingers[%d]: %s", i, ws.fingers[i])
-		for j := 0; j < len(ws.fingers[i]); j++ {
-
-			// compare x0 <= id <= key on a circle
-			id := ws.fingers[i][j].Id
-			if x0 <= key {
-				if x0 <= id && id <= key {
-					if len(candidateFingers) <= counter {
-						// only create non empty candidate fingers
-						newLayer := make([]Finger, 0)
-						candidateFingers = append(candidateFingers, newLayer)
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-						layerMap = append(layerMap, i)
-						counter++
-					} else {
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-					}
-				}
-			} else {
-				// case where x0 > key, compare !(key < x < x0) --> x > x0 or x < key
-				if id >= x0 || id <= key {
-					if len(candidateFingers) <= counter {
-						// only create non empty candidate fingers
-						newLayer := make([]Finger, 0)
-						candidateFingers = append(candidateFingers, newLayer)
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-						layerMap = append(layerMap, i)
-						counter++
-					} else {
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-					}
-				}
-			}
-		}
-	}
-
-	DPrintf("len(candidateFingers): %d, len(layerMap): %d", len(candidateFingers), len(layerMap))
-	// pick random layer out of nonempty candidate fingers
-	if len(candidateFingers) > 0 {
-		randIndex := rand.Intn(len(candidateFingers))
-		finger := candidateFingers[randIndex][rand.Intn(len(candidateFingers[randIndex]))]
-		return finger, layerMap[randIndex]
-	}
-
-	// if can't find any, randomly choose layer and randomly return finger
-	// TODO probably shouldn't get here?
-	randLayer := rand.Intn(len(ws.fingers))
-	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
-	return randfinger, randLayer
-}
-
-// Query for a key in the successor table
-func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
-	DPrintf("In Query of server %s", ws.myaddr)
-	layer := args.Layer
-	key := args.Key
-	valueIndex := sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
-		return ws.succ[layer][valueIndex].Key >= key
-	})
-
-	if valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
-		DPrintf("In Query: found the key!!!!")
-		reply.Value = ws.succ[layer][valueIndex].Value
-		DPrintf("reply.Value: %s", reply.Value)
-		reply.Err = OK
-	} else {
-		DPrintf("In Query: did not find key, reply.Value: %s reply.Value.Servers == nil %s", reply.Value, reply.Value.Servers == nil)
-		reply.Err = ErrNoKey
-	}
-	return nil
-}
-
-// Try finds the value associated with the key
-func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
-	key := args.Key
-	nlayers := args.NLayers
-	DPrintf("In Try RPC, trying key: %s", key)
-	fingerLength := len(ws.fingers[0])
-	j := sort.Search(fingerLength, func(i int) bool {
-		return ws.fingers[0][i].Id >= key
-	})
-	j = j % fingerLength
-	if j < 0 {
-		j = j + fingerLength
-	}
-	j = (j + fingerLength - 1) % fingerLength
-	count := 0
-	queryArgs := &QueryArgs{}
-	queryReply := &QueryReply{}
-	for queryReply.Err != OK && count < TIMEOUT {
-		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, nlayers)
-		queryArgs.Key = key
-		queryArgs.Layer = i
-		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
-		j = j - 1
-		j = j % fingerLength
-		if j < 0 {
-			j = j + fingerLength
-		}
-
-		count++
-	}
-
-	if queryReply.Err == OK {
-		DPrintf("Found key in Try!")
-		value := queryReply.Value
-		reply.Value = value
-		reply.Err = OK
-	} else {
-		reply.Err = ErrNoKey
-	}
 	return nil
 }
 
@@ -321,78 +188,83 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 	return nil
 }
 
-// Random walk
-func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-	steps := args.Steps
-	// pick a random neighbor
-	randIndex := rand.Intn(len(ws.neighbors))
-	neighbor := ws.neighbors[randIndex]
-	if steps == 1 {
-		reply.Server = neighbor
-		reply.Err = OK
+func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
+	reply *InitPaxosClusterReply) error {
+	if args.Phase == PhaseOne {
+		reply.Reply = Commit
 	} else {
-		args := &RandomWalkArgs{}
-		args.Steps = steps - 1
-		var rpc_reply RandomWalkReply
-		ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
-		if ok && (rpc_reply.Err == OK) {
-			reply.Server = rpc_reply.Server
-			reply.Err = OK
+		if args.Action == Commit {
+			for k, _ := range args.KeyMap {
+				var value ValueType
+				value.Servers = args.Servers
+				ws.kvstore[k] = value
+			}
+		} else {
+			// do nothing?
 		}
 	}
 
+	reply.Err = OK
 	return nil
 }
 
-// Gets the ID from node's local id table
-func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
-	layer := args.Layer
-	//DPrintf("In getid, len(ws.ids): %d layer: %d", len(ws.ids), layer)
-	// gets the id associated with a layer
-	if 0 <= layer && layer < len(ws.ids) {
-		id := ws.ids[layer]
-		reply.Key = id
-		reply.Err = OK
+func (ws *WhanauServer) ConstructPaxosCluster() []string {
+
+	var cluster []string
+
+	randIndex := rand.Intn(len(ws.neighbors))
+	neighbor := ws.neighbors[randIndex]
+
+	// pick several random walk nodes to join the Paxos cluster
+	for i := 0; i < PaxosSize; i++ {
+		args := &RandomWalkArgs{}
+		args.Steps = PaxosWalk
+		var reply RandomWalkReply
+		ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
+		if ok && (reply.Err == OK) {
+			cluster = append(cluster, reply.Server)
+		}
 	}
-	return nil
-}
 
-// Whanau Routing Protocal methods
+	// initiate 2PC with all the nodes in the tentative paxos cluster
+	// pass key-value information in the second phase, if it's okay to commit
 
-// TODO
-// Populates routing table
-// nlayers = number of layers
-// rf = size of finger table
-// w = number of steps in random walk
-// rd = size of database
-// rs = number of nodes to collect samples from
-// t = number of successors returned from sample per node
-func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int) {
-	DPrintf("In Setup of server %s", ws.myaddr)
+	var if_commit = true
 
-	// fill up db by randomly sampling records from random walks
-	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-	ws.db = ws.SampleRecords(rd, w)
-
-	// reset ids, fingers, succ
-	ws.ids = make([]KeyType, 0)
-	ws.fingers = make([][]Finger, 0)
-	ws.succ = make([][]Record, 0)
-	for i := 0; i < nlayers; i++ {
-		// populate tables in layers
-		ws.ids = append(ws.ids, ws.ChooseID(i))
-		//fmt.Printf("Finished ChooseID of server %s, layer %d\n", ws.myaddr, i)
-		curFingerTable := ws.ConstructFingers(i, rf, w)
-		ByFinger(FingerId).Sort(curFingerTable)
-		ws.fingers = append(ws.fingers, curFingerTable)
-
-		//fmt.Printf("Finished ConstructFingers of server %s, layer %d\n", ws.myaddr, i)
-		curSuccessorTable := ws.Successors(i, w, rs, t)
-		By(RecordKey).Sort(curSuccessorTable)
-		ws.succ = append(ws.succ, curSuccessorTable)
-
-		//fmt.Printf("Finished SuccessorTable of server %s, layer %d\n", ws.myaddr, i)
+	for c := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseOne
+		args.Action = ""
+		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+			if reply.Reply == Reject {
+				if_commit = false
+				break
+			}
+		}
 	}
+
+	// Send commit message to every server, along with the key
+	for c := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseTwo
+
+		if if_commit {
+			args.Action = Commit
+		} else {
+			args.Action = Abort
+		}
+
+		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+		}
+	}
+
+	return cluster
 }
 
 // Server for Sybil nodes
@@ -508,75 +380,6 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
 		return randFinger.Id
 	}
-}
-
-// Defines ordering of Record args
-type By func(r1, r2 *Record) bool
-type ByFinger func(f1, f2 *Finger) bool
-
-// Sort uses By to sort the Record slice
-func (by By) Sort(records []Record) {
-	rs := &recordSorter{
-		records: records,
-		by:      by,
-	}
-	sort.Sort(rs)
-}
-
-// sort uses By to sort fingers by id
-func (by ByFinger) Sort(fingers []Finger) {
-	fs := &fingerSorter{
-		fingers: fingers,
-		by:      by,
-	}
-	sort.Sort(fs)
-}
-
-// recordSorter joins a By function and a slice of Records to be sorted.
-type recordSorter struct {
-	records []Record
-	by      func(r1, r2 *Record) bool // Closure used in the Less method.
-}
-
-// fingerSorter joins a By function and a slice of Fingers to be sorted.
-type fingerSorter struct {
-	fingers []Finger
-	by      func(f1, f2 *Finger) bool // Closure used in the Less method
-}
-
-// Len is part of sort.Interface.
-func (s *recordSorter) Len() int {
-	return len(s.records)
-}
-
-func (s *fingerSorter) Len() int {
-	return len(s.fingers)
-}
-
-// Swap is part of sort.Interface.
-func (s *recordSorter) Swap(i, j int) {
-	s.records[i], s.records[j] = s.records[j], s.records[i]
-}
-
-func (s *fingerSorter) Swap(i, j int) {
-	s.fingers[i], s.fingers[j] = s.fingers[j], s.fingers[i]
-}
-
-// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
-func (s *recordSorter) Less(i, j int) bool {
-	return s.by(&s.records[i], &s.records[j])
-}
-
-func (s *fingerSorter) Less(i, j int) bool {
-	return s.by(&s.fingers[i], &s.fingers[j])
-}
-
-var RecordKey = func(r1, r2 *Record) bool {
-	return r1.Key < r2.Key
-}
-
-var FingerId = func(f1, f2 *Finger) bool {
-	return f1.Id < f2.Id
 }
 
 // Gets successors that are nearest each key

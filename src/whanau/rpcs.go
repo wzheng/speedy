@@ -133,6 +133,25 @@ type PaxosPutReply struct {
 	Err Err
 }
 
+type WhanauServerPaxosGetArgs struct {
+	Key       KeyType
+}
+
+type WhanauServerPaxosGetReply struct {
+	Value TrueValueType
+	Err   Err
+}
+
+type WhanauServerPaxosPutArgs struct {
+	Key       KeyType
+	Value     TrueValueType
+}
+
+type WhanauServerPaxosPutReply struct {
+	Err   Err
+}
+
+
 type StartSetupArgs struct {
 	MasterServer string
 }

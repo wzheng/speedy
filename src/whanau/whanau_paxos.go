@@ -13,6 +13,7 @@ type WhanauPaxos struct {
 	mu   sync.Mutex
 	me   int
 	dead bool // for testing
+	myaddr string
 
 	px              *paxos.Paxos
 	handledRequests map[int64]interface{}

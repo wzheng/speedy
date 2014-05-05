@@ -37,22 +37,27 @@ type WhanauServer struct {
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
-	paxosInstances map[string]WhanauPaxos
+	// WhanauPaxos instance handles communication with other replicas
+	paxosInstances map[KeyType]WhanauPaxos
 
 	//// Routing variables ////
-	neighbors []string                  // list of servers this server can talk to
-	kvstore   map[KeyType]ValueType     // k/v table used for routing
-	pkvstore  map[KeyType]TrueValueType
-	ids       []KeyType                 // contains id of each layer
-	fingers   [][]Finger                // (id, server name) pairs
-	succ      [][]Record                // contains successor records for each layer
-	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	neighbors []string              // list of servers this server can talk to
+	kvstore   map[KeyType]ValueType // k/v table used for routing
+	ids       []KeyType             // contains id of each layer
+	fingers   [][]Finger            // (id, server name) pairs
+	succ      [][]Record            // contains successor records for each layer
+	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
 
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
-	pending map[KeyType]TrueValueType // this is a list of pending writes
+	pending   map[KeyType]TrueValueType // this is a list of pending writes
+}
+
+type WhanauSybilServer struct {
+	WhanauServer
+	sybilNeighbors []WhanauSybilServer
 }
 
 // for testing
@@ -67,158 +72,50 @@ func (ws *WhanauServer) GetDB() []Record {
 func (ws *WhanauServer) GetSucc() [][]Record {
 	return ws.succ
 }
-func IsInList(val string, array []string) bool {
-	for _, v := range array {
-		if v == val {
-			return true
-		}
-	}
 
-	return false
-}
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) PaxosGetRPC(args *PaxosGetArgs,
+	reply *PaxosGetReply) error {
 
-func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
-	args := &PaxosGetArgs{}
-	var reply PaxosGetReply
-
-	args.Key = key
-
-	for _, server := range servers.Servers {
-		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
-		if ok {
-			return reply.Value
-		}
-	}
-
-	return ""
-}
-
-// WHANAU LOOKUP HELPER METHODS
-
-// Returns randomly chosen finger and randomly chosen layer as part of lookup
-func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
-	// find all fingers from all layers such that the key falls between x0 and the finger id
-	candidateFingers := make([][]Finger, 0)
-	// maps index to nonempty layer number
-	layerMap := make([]int, 0)
-	counter := 0
-	for i := 0; i < nlayers; i++ {
-		DPrintf("ws.fingers[%d]: %s", i, ws.fingers[i])
-		for j := 0; j < len(ws.fingers[i]); j++ {
-
-			// compare x0 <= id <= key on a circle
-			id := ws.fingers[i][j].Id
-			if x0 <= key {
-				if x0 <= id && id <= key {
-					if len(candidateFingers) <= counter {
-						// only create non empty candidate fingers
-						newLayer := make([]Finger, 0)
-						candidateFingers = append(candidateFingers, newLayer)
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-						layerMap = append(layerMap, i)
-						counter++
-					} else {
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-					}
-				}
-			} else {
-				// case where x0 > key, compare !(key < x < x0) --> x > x0 or x < key
-				if id >= x0 || id <= key {
-					if len(candidateFingers) <= counter {
-						// only create non empty candidate fingers
-						newLayer := make([]Finger, 0)
-						candidateFingers = append(candidateFingers, newLayer)
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-						layerMap = append(layerMap, i)
-						counter++
-					} else {
-						candidateFingers[counter] = append(candidateFingers[counter], ws.fingers[i][j])
-					}
-				}
-			}
-		}
-	}
-
-	DPrintf("len(candidateFingers): %d, len(layerMap): %d", len(candidateFingers), len(layerMap))
-	// pick random layer out of nonempty candidate fingers
-	if len(candidateFingers) > 0 {
-		randIndex := rand.Intn(len(candidateFingers))
-		finger := candidateFingers[randIndex][rand.Intn(len(candidateFingers[randIndex]))]
-		return finger, layerMap[randIndex]
-	}
-
-	// if can't find any, randomly choose layer and randomly return finger
-	// TODO probably shouldn't get here?
-	randLayer := rand.Intn(len(ws.fingers))
-	randfinger := ws.fingers[randLayer][rand.Intn(len(ws.fingers[randLayer]))]
-	return randfinger, randLayer
-}
-
-// Query for a key in the successor table
-func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
-	DPrintf("In Query of server %s", ws.myaddr)
-	layer := args.Layer
-	key := args.Key
-	valueIndex := sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
-		return ws.succ[layer][valueIndex].Key >= key
-	})
-
-	if valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
-		DPrintf("In Query: found the key!!!!")
-		reply.Value = ws.succ[layer][valueIndex].Value
-		DPrintf("reply.Value: %s", reply.Value)
-		reply.Err = OK
-	} else {
-		DPrintf("In Query: did not find key, reply.Value: %s reply.Value.Servers == nil %s", reply.Value, reply.Value.Servers == nil)
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
 		reply.Err = ErrNoKey
+		return nil
 	}
+
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosGet(args, reply)
+
 	return nil
 }
 
-// Try finds the value associated with the key
-func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
-	key := args.Key
-	nlayers := args.NLayers
-	DPrintf("In Try RPC, trying key: %s", key)
-	fingerLength := len(ws.fingers[0])
-	j := sort.Search(fingerLength, func(i int) bool {
-		return ws.fingers[0][i].Id >= key
-	})
-	j = j % fingerLength
-	if j < 0 {
-		j = j + fingerLength
-	}
-	j = (j + fingerLength - 1) % fingerLength
-	count := 0
-	queryArgs := &QueryArgs{}
-	queryReply := &QueryReply{}
-	for queryReply.Err != OK && count < TIMEOUT {
-		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, nlayers)
-		queryArgs.Key = key
-		queryArgs.Layer = i
-		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
-		j = j - 1
-		j = j % fingerLength
-		if j < 0 {
-			j = j + fingerLength
-		}
-
-		count++
-	}
-
-	if queryReply.Err == OK {
-		DPrintf("Found key in Try!")
-		value := queryReply.Value
-		reply.Value = value
-		reply.Err = OK
-	} else {
+// RPC to actually do a Put on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs,
+	reply *PaxosPutReply) error {
+	// this will initiate a new paxos call its paxos cluster
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
 		reply.Err = ErrNoKey
+		return nil
 	}
+
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosPut(args, reply)
+
 	return nil
 }
 
-// TODO this eventually needs to become a real lookup
-// Returns paxos cluster for given key
+func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
+	reply *PendingReply) error {
+	ws.pending[args.Key] = args.Value
+	reply.Err = ErrPending
+
+	return nil
+}
+
+// Returns paxos cluster for given key.
+// Called by servers to figure out which paxos cluster
+// to get the true value from.
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
 	nlayers := args.NLayers
@@ -242,7 +139,6 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	}
 
 	if tryReply.Err == OK {
-		//fmt.Printf("found key after %d tries\n", count)
 		value := tryReply.Value
 		reply.Value = value
 		reply.Err = OK
@@ -253,163 +149,134 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	return nil
 }
 
-func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
-	// run the local RPC call to get the
-	lookup_args := &LookupArgs{}
-	lookup_reply := &LookupReply{}
-
-	lookup_args.NLayers = L
-	lookup_args.Steps = W
-
-	ok := call(ws.myaddr, "WhanauServer.Lookup", lookup_args, &lookup_reply)
-
-	if ok {
-		server_list := lookup_reply.Value
-		var ret_value TrueValueType = ws.PaxosGet(args.Key, server_list)
-		reply.Err = OK
-		reply.Value = ret_value
-	}
-
-	return nil
-}
-
-// Client-style lookup on neighboring servers.
-// routedFrom is supposed to prevent infinite lookup loops.
-// TODO Change to TrueValueType later
-/*
-func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueType {
-	args := &LookupArgs{}
-	args.Key = key
-	args.RoutedFrom = routedFrom
-	var reply LookupReply
-	for _, srv := range ws.neighbors {
-		if IsInList(srv, routedFrom) {
-			continue
-		}
-
-		ok := call(srv, "WhanauServer.Lookup", args, &reply)
-		if ok && (reply.Err == OK) {
-			return reply.Value
-		}
-	}
-
-	return ErrNoKey
-}
-*/
-func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
-	// this will initiate a new paxos call its paxos cluster
-	return nil
-}
-
-func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
-	// TODO: needs to do a real paxos put
-	return nil
-}
-
-// TODO this eventually needs to become a real put
-func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
-	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
-	// makes an RPC call to itself, this is kind of weird...
-
+// Get the value for a particular key.
+// Runs Lookup to find the appropriate Paxos cluster, then
+// calls Get on that cluster.
+// TODO needs to check if wrong view/group
+// Sybil node lookup returns false value with some probability
+func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
-	value := args.Value
+	steps := args.Steps
 
-	rpc_args := &LookupArgs{}
-	var rpc_reply LookupReply
+	r := rand.New(rand.NewSource(99))
+	prob := r.Float32()
+	if prob > 0.6 {
+		reply.Err = ErrNoKey
+	} else {
+		valueIndex := sort.Search(len(ws.db), func(valueIndex int) bool {
+			return ws.db[valueIndex].Key >= key
+		})
 
-	ok := call(ws.myaddr, "WhanauServer.Lookup", rpc_args, rpc_reply)
-
-	if ok {
-		if rpc_reply.Err == ErrNoKey {
-			// TODO: adds the key to its local pending put list
-			// TODO: what happens if a client makes a call to insert the same key
-			// to 2 different servers? or 2 different clients making 2 different
-			// calls to the same key?
-			ws.pending[key] = value
-			reply.Err = ErrPending
-		} else {
-			// TODO: make a paxos request directly to one of the servers
-			// TODO error?
-			ws.PaxosPut(key, value)
+		if valueIndex < len(ws.db) && ws.db[valueIndex].Key == key {
+			reply.Value = ws.db[valueIndex].Value
 			reply.Err = OK
+		} else {
+			if steps > 0 {
+				for i := 0; i < len(ws.neighbors); i++ {
+					lookupArgs := &LookupArgs{}
+					lookupArgs.Key = key
+					lookupArgs.Steps = steps - 1
+					call(ws.sybilNeighbors[i].myaddr, "WhanauSybilServer.Lookup", lookupArgs, reply)
+					if reply.Err == OK {
+						break
+					}
+				}
+			} else {
+				reply.Err = ErrNoKey
+			}
 		}
 	}
-
 	return nil
 }
 
-// Random walk
-func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-	steps := args.Steps
-	// pick a random neighbor
+func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
+	reply *InitPaxosClusterReply) error {
+	if args.Phase == PhaseOne {
+		reply.Reply = Commit
+	} else {
+		if args.Action == Commit {
+			for k, _ := range args.KeyMap {
+				var value ValueType
+				value.Servers = args.Servers
+				ws.kvstore[k] = value
+			}
+		} else {
+			// do nothing?
+		}
+	}
+
+	reply.Err = OK
+	return nil
+}
+
+func (ws *WhanauServer) ConstructPaxosCluster() []string {
+
+	var cluster []string
+
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
-	if steps == 1 {
-		reply.Server = neighbor
-		reply.Err = OK
-	} else {
+
+	// pick several random walk nodes to join the Paxos cluster
+	for i := 0; i < PaxosSize; i++ {
 		args := &RandomWalkArgs{}
-		args.Steps = steps - 1
-		var rpc_reply RandomWalkReply
-		ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
-		if ok && (rpc_reply.Err == OK) {
-			reply.Server = rpc_reply.Server
-			reply.Err = OK
+		args.Steps = PaxosWalk
+		var reply RandomWalkReply
+		ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
+		if ok && (reply.Err == OK) {
+			cluster = append(cluster, reply.Server)
 		}
 	}
 
-	return nil
-}
+	// initiate 2PC with all the nodes in the tentative paxos cluster
+	// pass key-value information in the second phase, if it's okay to commit
 
-// Gets the ID from node's local id table
-func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
-	layer := args.Layer
-	//DPrintf("In getid, len(ws.ids): %d layer: %d", len(ws.ids), layer)
-	// gets the id associated with a layer
-	if 0 <= layer && layer < len(ws.ids) {
-		id := ws.ids[layer]
-		reply.Key = id
-		reply.Err = OK
+	var if_commit = true
+
+	for c := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseOne
+		args.Action = ""
+		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+			if reply.Reply == Reject {
+				if_commit = false
+				break
+			}
+		}
 	}
-	return nil
+
+	// Send commit message to every server, along with the key
+	for c := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseTwo
+
+		if if_commit {
+			args.Action = Commit
+		} else {
+			args.Action = Abort
+		}
+
+		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+		}
+	}
+
+	return cluster
 }
 
-// Whanau Routing Protocal methods
+// Server for Sybil nodes
+func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []WhanauSybilServer) {
+	DPrintf("In Setup of Sybil server %s", ws.myaddr)
 
-// TODO
-// Populates routing table
-// nlayers = number of layers
-// rf = size of finger table
-// w = number of steps in random walk
-// rd = size of database
-// rs = number of nodes to collect samples from
-// t = number of successors returned from sample per node
-func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int) {
-	DPrintf("In Setup of server %s", ws.myaddr)
-
-	// fill up db by randomly sampling records from random walks
-	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
+	// Fill up table but might not use values
 	ws.db = ws.SampleRecords(rd, w)
 
-	// reset ids, fingers, succ
-	ws.ids = make([]KeyType, 0)
-	ws.fingers = make([][]Finger, 0)
-	ws.succ = make([][]Record, 0)
-	for i := 0; i < nlayers; i++ {
-		// populate tables in layers
-		ws.ids = append(ws.ids, ws.ChooseID(i))
-		//fmt.Printf("Finished ChooseID of server %s, layer %d\n", ws.myaddr, i)
-		curFingerTable := ws.ConstructFingers(i, rf, w)
-		ByFinger(FingerId).Sort(curFingerTable)
-		ws.fingers = append(ws.fingers, curFingerTable)
-
-		//fmt.Printf("Finished ConstructFingers of server %s, layer %d\n", ws.myaddr, i)
-		curSuccessorTable := ws.Successors(i, w, rs, t)
-		By(RecordKey).Sort(curSuccessorTable)
-		ws.succ = append(ws.succ, curSuccessorTable)
-
-		//fmt.Printf("Finished SuccessorTable of server %s, layer %d\n", ws.myaddr, i)
-	}
+	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
+	ws.sybilNeighbors = neighbors
 }
 
 // return random Key/value record from local storage
@@ -516,75 +383,6 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 	}
 }
 
-// Defines ordering of Record args
-type By func(r1, r2 *Record) bool
-type ByFinger func(f1, f2 *Finger) bool
-
-// Sort uses By to sort the Record slice
-func (by By) Sort(records []Record) {
-	rs := &recordSorter{
-		records: records,
-		by:      by,
-	}
-	sort.Sort(rs)
-}
-
-// sort uses By to sort fingers by id
-func (by ByFinger) Sort(fingers []Finger) {
-	fs := &fingerSorter{
-		fingers: fingers,
-		by:      by,
-	}
-	sort.Sort(fs)
-}
-
-// recordSorter joins a By function and a slice of Records to be sorted.
-type recordSorter struct {
-	records []Record
-	by      func(r1, r2 *Record) bool // Closure used in the Less method.
-}
-
-// fingerSorter joins a By function and a slice of Fingers to be sorted.
-type fingerSorter struct {
-	fingers []Finger
-	by      func(f1, f2 *Finger) bool // Closure used in the Less method
-}
-
-// Len is part of sort.Interface.
-func (s *recordSorter) Len() int {
-	return len(s.records)
-}
-
-func (s *fingerSorter) Len() int {
-	return len(s.fingers)
-}
-
-// Swap is part of sort.Interface.
-func (s *recordSorter) Swap(i, j int) {
-	s.records[i], s.records[j] = s.records[j], s.records[i]
-}
-
-func (s *fingerSorter) Swap(i, j int) {
-	s.fingers[i], s.fingers[j] = s.fingers[j], s.fingers[i]
-}
-
-// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
-func (s *recordSorter) Less(i, j int) bool {
-	return s.by(&s.records[i], &s.records[j])
-}
-
-func (s *fingerSorter) Less(i, j int) bool {
-	return s.by(&s.fingers[i], &s.fingers[j])
-}
-
-var RecordKey = func(r1, r2 *Record) bool {
-	return r1.Key < r2.Key
-}
-
-var FingerId = func(f1, f2 *Finger) bool {
-	return f1.Id < f2.Id
-}
-
 // Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
 	By(RecordKey).Sort(ws.db)
@@ -641,12 +439,11 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 	return successors
 }
 
-
 // each server changes its current state, and sends the setup messages
 // to all of its neighbors
 func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply) error {
 	ws.mu.Lock()
-	if (ws.state == Normal) {
+	if ws.state == Normal {
 		ws.state = PreSetup
 	}
 	ws.mu.Unlock()
@@ -657,11 +454,11 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 		rpc_reply := &StartSetupReply{}
 		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
 		if ok {
-			
+
 		}
 	}
-	
-	if (ws.state == PreSetup) {
+
+	if ws.state == PreSetup {
 		// send its pending keys to one of the random master nodes
 		for {
 			randIndex := rand.Intn(len(ws.master))
@@ -693,12 +490,11 @@ func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, rep
 	return nil
 }
 
-
-// this function shoud be run in a separate thread 
+// this function shoud be run in a separate thread
 // by each master server
 func (ws *WhanauServer) InitiateSetup() {
 	for {
-		if (ws.state == Normal) {
+		if ws.state == Normal {
 			// send a start setup message to each one of its neighbors
 			for _, srv := range ws.neighbors {
 				args := &StartSetupArgs{ws.myaddr}
@@ -722,14 +518,14 @@ func (ws *WhanauServer) Kill() {
 }
 
 // TODO servers is for a paxos cluster
-func StartServer(servers []string, me int, myaddr string, neighbors []string) *WhanauServer {
+func StartServer(servers []string, me int, myaddr string,
+	neighbors []string) *WhanauServer {
 	ws := new(WhanauServer)
 	ws.me = me
 	ws.myaddr = myaddr
 	ws.neighbors = neighbors
 
 	ws.kvstore = make(map[KeyType]ValueType)
-	ws.pkvstore = make(map[KeyType]TrueValueType)
 	ws.state = Normal
 
 	rpcs := rpc.NewServer()

@@ -64,16 +64,78 @@ func (ck *Clerk) Lookup(key KeyType) ValueType {
 	return ValueType{}
 }
 
+func (ck *Clerk) Get(key KeyType) TrueValueType {
+	lookup_args := &LookupArgs{}
+	lookup_reply := &LookupReply{}
+
+	lookup_args.NLayers = L
+	lookup_args.Steps = W
+
+	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
+
+	if ok && (lookup_reply.Err != ErrNoKey) {
+		server_list := lookup_reply.Value
+		get_args := &PaxosGetArgs{}
+		var get_reply PaxosGetReply
+
+		get_args.Key = key
+		get_args.RequestID = NRand()
+
+		for _, server := range server_list.Servers {
+			ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
+				&get_reply)
+			if ok && (get_reply.Err != ErrNoKey) {
+				return get_reply.Value
+			}
+		}
+	}
+
+	return ""
+}
+
 // TODO this eventually needs to become a real put
 // TODO hashing for debugging?
 func (ck *Clerk) Put(key KeyType, value TrueValueType) string {
-	args := &PutArgs{}
-	args.Key = key
-	args.Value = value
-	var reply PutReply
-	ok := call(ck.server, "WhanauServer.Put", args, &reply)
-	if ok && (reply.Err == OK) {
-		return ""
+	lookup_args := &LookupArgs{}
+	var lookup_reply LookupReply
+
+	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, lookup_reply)
+
+	if ok {
+		if lookup_reply.Err == ErrNoKey {
+			// TODO: adds the key to its local pending put list
+			// TODO: what happens if a client makes a call to insert
+			// the same key to 2 different servers? or 2 different clients
+			// making 2 different calls to the same key?
+			pending_args := &PendingArgs{}
+			var pending_reply PendingReply
+
+			add_ok := call(ck.server, "WhanauServer.AddPendingRPC",
+				pending_args, pending_reply)
+
+			if !add_ok {
+				// TODO error trying to add a pending request...?
+				return ""
+			}
+		} else {
+			// TODO: make a paxos request directly to one of the servers
+			// TODO error?
+			server_list := lookup_reply.Value
+			put_args := &PaxosPutArgs{}
+			var put_reply PaxosPutReply
+
+			put_args.Key = key
+			put_args.Value = value
+			put_args.RequestID = NRand()
+
+			for _, server := range server_list.Servers {
+				ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
+					&put_reply)
+				if ok && (put_reply.Err == OK) {
+					return ""
+				}
+			}
+		}
 	}
 
 	return ""

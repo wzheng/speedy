@@ -12,6 +12,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+  "crypto/rsa"
 )
 
 //import "builtin"
@@ -53,6 +54,10 @@ type WhanauServer struct {
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
+
+
+  //// DATA INTEGRITY FIELDS ////
+  secretKey   *rsa.PrivateKey
 }
 
 type WhanauSybilServer struct {

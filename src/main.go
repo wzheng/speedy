@@ -33,7 +33,7 @@ func cleanup(ws []*whanau.WhanauServer) {
 }
 
 /*
-func run_network() {
+func run_dht() {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 100
@@ -240,17 +240,28 @@ func main() {
   fmt.Printf("Verifying time: %s\n", elapsed)
 
   key := whanau.KeyType("testkey")
-  val := whanau.ValueType{[]string{"s1", "s2", "s3"}, nil}
+  val := whanau.ValueType{[]string{"s1", "s2", "s3"}, nil, &sk.PublicKey}
 
   sig, err1 := whanau.SignValue(key, val, sk)
   val.Sign = sig
   fmt.Println("sig", sig)
   fmt.Println("err1", err1)
-  if whanau.VerifyValue(key, val, &sk.PublicKey) {
+  if whanau.VerifyValue(key, val) {
     fmt.Println("value verified!")
   }
   val.Servers = []string{"sybil"}
-  if !whanau.VerifyValue(key, val, &sk.PublicKey) {
-    fmt.Println("modification detected!")
+  if !whanau.VerifyValue(key, val) {
+    fmt.Println("value modification detected!")
+  }
+
+  sk1, err1 := rsa.GenerateKey(rand.Reader, 2014);
+  if err1 != nil {
+    fmt.Println(err);
+    return;
+  }
+  val = whanau.ValueType{[]string{"s1", "s2", "s3"}, nil, &sk1.PublicKey}
+  val.Sign = sig
+  if !whanau.VerifyValue(key, val) {
+    fmt.Println("pk modification detected!")
   }
 }

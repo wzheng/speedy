@@ -2,6 +2,7 @@ package whanau
 
 import "math/big"
 import "crypto/rand"
+import "crypto/rsa"
 
 func NRand() int64 {
 	max := big.NewInt(int64(1) << 62)
@@ -58,6 +59,7 @@ type KeyType string
 type ValueType struct {
 	Servers []string
   Sign    []byte
+  PubKey  *rsa.PublicKey
 }
 
 type TrueValueType interface{}

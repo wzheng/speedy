@@ -135,7 +135,7 @@ func TestLookup(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
-	const nkeys = 10           // keys are strings from 0 to 99
+	const nkeys = 100           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 	keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)

@@ -131,3 +131,20 @@ type PaxosPutArgs struct {
 type PaxosPutReply struct {
 	Err Err
 }
+
+type StartSetupArgs struct {
+	MasterServer string
+}
+
+type StartSetupReply struct {
+	//PendingWrites map[KeyType]ValueType
+	Err Err
+}
+
+type ReceivePendingWritesArgs struct {
+	PendingWrites map[KeyType]TrueValueType
+}
+
+type ReceivePendingWritesReply struct {
+	Err Err
+}

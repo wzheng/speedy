@@ -34,11 +34,12 @@ const (
 )
 
 type State string
+
 // server states/phases
 const (
-	Normal = "Normal"
+	Normal   = "Normal"
 	PreSetup = "PreSetup"
-	Setup = "Setup"
+	Setup    = "Setup"
 )
 
 type Err string
@@ -58,7 +59,7 @@ type ValueType struct {
 	Servers []string
 }
 
-type TrueValueType string
+type TrueValueType interface{}
 
 // Key value pair
 type Record struct {

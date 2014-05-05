@@ -12,13 +12,14 @@ type LookupReply struct {
 	Value ValueType
 }
 
-type ClientLookupArgs struct {
-	Key        KeyType
+// A Put, pending the next Setup.
+type PendingArgs struct {
+	Key   KeyType
+	Value TrueValueType
 }
 
-type ClientLookupReply struct {
-	Err   Err
-	Value TrueValueType
+type PendingReply struct {
+	Err Err
 }
 
 // TODO hashing for debugging?

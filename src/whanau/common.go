@@ -33,6 +33,14 @@ const (
 	PhaseTwo = "p2"
 )
 
+type State string
+// server states/phases
+const (
+	Normal = "Normal"
+	PreSetup = "PreSetup"
+	Setup = "Setup"
+)
+
 type Err string
 
 // for Paxos

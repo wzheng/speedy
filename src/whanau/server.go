@@ -11,6 +11,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"time"
 )
 
 //import "builtin"
@@ -40,15 +41,17 @@ type WhanauServer struct {
 
 	//// Routing variables ////
 	neighbors []string                  // list of servers this server can talk to
-	pkvstore  map[KeyType]TrueValueType // local k/v table, used for Paxos
 	kvstore   map[KeyType]ValueType     // k/v table used for routing
+	pkvstore  map[KeyType]TrueValueType
 	ids       []KeyType                 // contains id of each layer
 	fingers   [][]Finger                // (id, server name) pairs
 	succ      [][]Record                // contains successor records for each layer
 	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
-	pending   map[KeyType]TrueValueType // this is a list of pending writes
-	view      int                       // the current view
+
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
+	is_master bool                      // whether the server itself is a master server
+	state     State                     // what phase the server is in
+	pending map[KeyType]TrueValueType // this is a list of pending writes
 }
 
 // for testing
@@ -257,15 +260,11 @@ func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookup
 	lookup_args.NLayers = L
 	lookup_args.Steps = W
 
-	srv := ""
-	// TODO srv?
-	ok := call(srv, "WhanauServer.Lookup", lookup_args, &lookup_reply)
+	ok := call(ws.myaddr, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok {
-		// server_list := lookup_reply.Value
-		// TODO ret_value
-		// ret_value := ws.PaxosLookup(args.Key, server_list)
-		var ret_value TrueValueType = ""
+		server_list := lookup_reply.Value
+		var ret_value TrueValueType = ws.PaxosGet(args.Key, server_list)
 		reply.Err = OK
 		reply.Value = ret_value
 	}
@@ -641,6 +640,79 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 	return successors
 }
 
+
+// each server changes its current state, and sends the setup messages
+// to all of its neighbors
+func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply) error {
+	ws.mu.Lock()
+	if (ws.state == Normal) {
+		ws.state = PreSetup
+	}
+	ws.mu.Unlock()
+
+	// forward this msg to all of its neighbors
+	for _, srv := range ws.neighbors {
+		rpc_args := &StartSetupArgs{args.MasterServer}
+		rpc_reply := &StartSetupReply{}
+		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
+		if ok {
+			
+		}
+	}
+	
+	if (ws.state == PreSetup) {
+		// send its pending keys to one of the random master nodes
+		for {
+			randIndex := rand.Intn(len(ws.master))
+			master_server := ws.master[randIndex]
+			rpc_args := &ReceivePendingWritesArgs{ws.pending}
+			rpc_reply := &ReceivePendingWritesReply{}
+			ok := call(master_server, "WhanauServer.ReceivePendingWrites", rpc_args, rpc_reply)
+			if ok {
+				if rpc_reply.Err == OK {
+					ws.mu.Lock()
+					ws.state = Setup
+					ws.mu.Unlock()
+					break
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, reply *ReceivePendingWritesReply) error {
+	// store the pending writes to its own pending
+	ws.mu.Lock()
+	for k, v := range args.PendingWrites {
+		ws.pending[k] = v
+	}
+	ws.mu.Unlock()
+	reply.Err = OK
+	return nil
+}
+
+
+// this function shoud be run in a separate thread 
+// by each master server
+func (ws *WhanauServer) InitiateSetup() {
+	for {
+		if (ws.state == Normal) {
+			// send a start setup message to each one of its neighbors
+			for _, srv := range ws.neighbors {
+				args := &StartSetupArgs{ws.myaddr}
+				reply := &StartSetupReply{}
+				ok := call(srv, "WhanauServer.StartSetup", args, reply)
+				if ok {
+					//pending_writes := reply.PendingWrites
+				}
+			}
+		}
+
+		time.Sleep(180 * time.Second)
+	}
+}
+
 // tell the server to shut itself down.
 func (ws *WhanauServer) Kill() {
 	ws.dead = true
@@ -657,8 +729,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 
 	ws.kvstore = make(map[KeyType]ValueType)
 	ws.pkvstore = make(map[KeyType]TrueValueType)
-
-	ws.view = 0
+	ws.state = Normal
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(ws)

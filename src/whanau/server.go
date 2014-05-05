@@ -237,7 +237,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
 		}
 	}
 
-	return ErrNoKey
+	return nil
 }
 
 func (ws *WhanauServer) PaxosPut(args *WhanauServerPaxosPutArgs, reply *WhanauServerPaxosPutReply) error {

@@ -37,7 +37,7 @@ type WhanauServer struct {
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
-	paxosInstances map[string]WhanauPaxos
+	paxosInstances map[KeyType]WhanauPaxos
 
 	//// Routing variables ////
 	neighbors []string                  // list of servers this server can talk to
@@ -51,7 +51,8 @@ type WhanauServer struct {
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
-	pending map[KeyType]TrueValueType // this is a list of pending writes
+	pending   map[KeyType]TrueValueType // this is a list of pending writes
+	reqID     int64
 }
 
 // for testing
@@ -76,15 +77,38 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
-func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
-	args := &PaxosGetArgs{}
-	var reply PaxosGetReply
+func (ws *WhanauServer) PaxosGetRPC(args *WhanauServerPaxosGetArgs, reply *WhanauServerPaxosGetReply) error {
+	// makes an RPC call to the local paxos instance
+	key := args.Key
 
-	args.Key = key
+	ws.mu.Lock()
+	ws.reqID += 1
+	ws.mu.Unlock()
+
+	rpc_args := &PaxosGetArgs{key, ws.reqID}
+	rpc_reply := &PaxosGetReply{}
+
+	paxos_inst := ws.paxosInstances[key]
+
+	ok := call(paxos_inst.myaddr, "WhanuPaxos.PaxosGetRPC", rpc_args, rpc_reply)
+	if ok {
+		if rpc_reply.Err == OK {
+			reply.Value = rpc_reply.Value
+		} 
+		reply.Err = rpc_reply.Err
+	}
+
+	return nil
+}
+
+func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
+
+	args := &WhanauServerPaxosGetArgs{key}
+	reply := &WhanauServerPaxosGetReply{}
 
 	for _, server := range servers.Servers {
-		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
-		if ok {
+		ok := call(server, "WhanauServer.PaxosGetRPC", args, reply)
+		if ok && reply.Err == OK {
 			return reply.Value
 		}
 	}
@@ -295,13 +319,28 @@ func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueTy
 	return ErrNoKey
 }
 */
-func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
-	// this will initiate a new paxos call its paxos cluster
-	return nil
-}
 
-func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
-	// TODO: needs to do a real paxos put
+func (ws *WhanauServer) PaxosPut(args *WhanauServerPaxosPutArgs, reply *WhanauServerPaxosPutReply) error {
+	
+	key := args.Key
+	value := args.Value
+
+	paxos_inst := ws.paxosInstances[key].myaddr
+	var req_id int64
+
+	ws.mu.Lock()
+	ws.reqID += 1
+	req_id = ws.reqID
+	ws.mu.Unlock()
+
+	rpc_args := &PaxosPutArgs{key, value, req_id}
+	rpc_reply := &PaxosPutReply{}
+	
+	ok := call(paxos_inst, "WhanauPaxos.PaxoPutRPC", rpc_args, rpc_reply)
+	if ok {
+		reply.Err = rpc_reply.Err
+	}
+	
 	return nil
 }
 
@@ -329,8 +368,16 @@ func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
 		} else {
 			// TODO: make a paxos request directly to one of the servers
 			// TODO error?
-			ws.PaxosPut(key, value)
-			reply.Err = OK
+			servers := rpc_reply.Value
+			for {
+				randInt := rand.Intn(len(servers.Servers))
+				a := &WhanauServerPaxosPutArgs{}
+				r := &WhanauServerPaxosPutReply{}
+				ok := call(servers.Servers[randInt], "WhanauServer.PaxosPut", a, r)
+				if ok {
+					reply.Err = r.Err
+				}
+			}
 		}
 	}
 
@@ -730,6 +777,7 @@ func StartServer(servers []string, me int, myaddr string, neighbors []string) *W
 	ws.kvstore = make(map[KeyType]ValueType)
 	ws.pkvstore = make(map[KeyType]TrueValueType)
 	ws.state = Normal
+	ws.reqID = 0
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(ws)

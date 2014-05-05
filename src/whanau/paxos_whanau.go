@@ -196,8 +196,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
 		reply.Reply = Commit
 	} else {
 		if args.Action == Commit {
-			for k, v := range args.KeyMap {
-				ws.pkvstore[k] = v
+			for k, _ := range args.KeyMap {
 				var value ValueType
 				value.Servers = args.Servers
 				ws.kvstore[k] = value
@@ -270,12 +269,18 @@ func (ws *WhanauServer) ConstructPaxosCluster() []string {
 	return cluster
 }
 
-func StartWhanauPaxos(servers []string, me int) *WhanauPaxos {
+func StartWhanauPaxos(servers []string, me int,
+	rpcs *rpc.Server) *WhanauPaxos {
 
 	wp := new(WhanauPaxos)
 
-	rpcs := rpc.NewServer()
-	rpcs.Register(wp)
+	if rpcs != nil {
+		// caller will create socket &c
+		rpcs.Register(wp)
+	} else {
+		rpcs := rpc.NewServer()
+		rpcs.Register(wp)
+	}
 
 	wp.handledRequests = make(map[int64]interface{})
 	wp.px = paxos.Make(servers, me, rpcs)

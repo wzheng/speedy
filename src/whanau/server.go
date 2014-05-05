@@ -37,16 +37,16 @@ type WhanauServer struct {
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
+	// WhanauPaxos instance handles communication with other replicas
 	paxosInstances map[KeyType]WhanauPaxos
 
 	//// Routing variables ////
 	neighbors []string              // list of servers this server can talk to
 	kvstore   map[KeyType]ValueType // k/v table used for routing
-	pkvstore  map[KeyType]TrueValueType
-	ids       []KeyType  // contains id of each layer
-	fingers   [][]Finger // (id, server name) pairs
-	succ      [][]Record // contains successor records for each layer
-	db        []Record   // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	ids       []KeyType             // contains id of each layer
+	fingers   [][]Finger            // (id, server name) pairs
+	succ      [][]Record            // contains successor records for each layer
+	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
 	is_master bool                      // whether the server itself is a master server
@@ -714,14 +714,14 @@ func (ws *WhanauServer) Kill() {
 }
 
 // TODO servers is for a paxos cluster
-func StartServer(servers []string, me int, myaddr string, neighbors []string) *WhanauServer {
+func StartServer(servers []string, me int, myaddr string,
+	neighbors []string) *WhanauServer {
 	ws := new(WhanauServer)
 	ws.me = me
 	ws.myaddr = myaddr
 	ws.neighbors = neighbors
 
 	ws.kvstore = make(map[KeyType]ValueType)
-	ws.pkvstore = make(map[KeyType]TrueValueType)
 	ws.state = Normal
 
 	rpcs := rpc.NewServer()

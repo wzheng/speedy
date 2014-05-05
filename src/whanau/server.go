@@ -113,6 +113,14 @@ func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs,
 	return nil
 }
 
+func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
+	reply *PendingReply) error {
+	ws.pending[args.Key] = args.Value
+	reply.Err = ErrPending
+
+	return nil
+}
+
 // WHANAU LOOKUP HELPER METHODS
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
@@ -310,74 +318,6 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 			}
 		}
 	}
-	return nil
-}
-
-func (ws *WhanauServer) Get(key KeyType) TrueValueType {
-	lookup_args := &LookupArgs{}
-	lookup_reply := &LookupReply{}
-
-	lookup_args.NLayers = L
-	lookup_args.Steps = W
-
-	ok := call(ws.myaddr, "WhanauServer.Lookup", lookup_args, &lookup_reply)
-
-	if ok {
-		server_list := lookup_reply.Value
-		get_args := &PaxosGetArgs{}
-		var get_reply PaxosGetReply
-
-		get_args.Key = key
-		get_args.RequestID = NRand()
-
-		for _, server := range server_list.Servers {
-			ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
-				&get_reply)
-			if ok && (get_reply.Err != ErrNoKey) {
-				return get_reply.Value
-			}
-		}
-	}
-
-	return ""
-}
-
-func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
-	lookup_args := &LookupArgs{}
-	var lookup_reply LookupReply
-
-	ok := call(ws.myaddr, "WhanauServer.Lookup", lookup_args, lookup_reply)
-
-	if ok {
-		if lookup_reply.Err == ErrNoKey {
-			// TODO: adds the key to its local pending put list
-			// TODO: what happens if a client makes a call to insert
-			// the same key to 2 different servers? or 2 different clients
-			// making 2 different calls to the same key?
-			ws.pending[args.Key] = args.Value
-			reply.Err = ErrPending
-		} else {
-			// TODO: make a paxos request directly to one of the servers
-			// TODO error?
-			server_list := lookup_reply.Value
-			put_args := &PaxosPutArgs{}
-			var put_reply PaxosPutReply
-
-			put_args.Key = args.Key
-			put_args.Value = args.Value
-			put_args.RequestID = NRand()
-
-			for _, server := range server_list.Servers {
-				ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
-					&put_reply)
-				if ok {
-					reply.Err = OK
-				}
-			}
-			reply.Err = OK
-		}
-	}
-
 	return nil
 }
 

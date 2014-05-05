@@ -12,6 +12,16 @@ type LookupReply struct {
 	Value ValueType
 }
 
+// A Put, pending the next Setup.
+type PendingArgs struct {
+	Key   KeyType
+	Value TrueValueType
+}
+
+type PendingReply struct {
+	Err Err
+}
+
 // TODO hashing for debugging?
 type PutArgs struct {
 	Key   KeyType

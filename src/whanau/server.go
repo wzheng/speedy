@@ -37,21 +37,21 @@ type WhanauServer struct {
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
-	paxosInstances map[string]WhanauPaxos
+	paxosInstances map[KeyType]WhanauPaxos
 
 	//// Routing variables ////
-	neighbors []string                  // list of servers this server can talk to
-	kvstore   map[KeyType]ValueType     // k/v table used for routing
+	neighbors []string              // list of servers this server can talk to
+	kvstore   map[KeyType]ValueType // k/v table used for routing
 	pkvstore  map[KeyType]TrueValueType
-	ids       []KeyType                 // contains id of each layer
-	fingers   [][]Finger                // (id, server name) pairs
-	succ      [][]Record                // contains successor records for each layer
-	db        []Record                  // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	ids       []KeyType  // contains id of each layer
+	fingers   [][]Finger // (id, server name) pairs
+	succ      [][]Record // contains successor records for each layer
+	db        []Record   // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
-	pending map[KeyType]TrueValueType // this is a list of pending writes
+	pending   map[KeyType]TrueValueType // this is a list of pending writes
 }
 
 // for testing
@@ -76,20 +76,36 @@ func IsInList(val string, array []string) bool {
 	return false
 }
 
-func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
-	args := &PaxosGetArgs{}
-	var reply PaxosGetReply
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) PaxosGetRPC(args *PaxosGetArgs,
+	reply *PaxosGetReply) error {
 
-	args.Key = key
-
-	for _, server := range servers.Servers {
-		ok := call(server, "WhanauServer.PaxosGet", args, &reply)
-		if ok {
-			return reply.Value
-		}
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
+		reply.Err = ErrNoKey
+		return nil
 	}
 
-	return ""
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosGet(args, reply)
+
+	return nil
+}
+
+// RPC to actually do a Put on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs,
+	reply *PaxosPutReply) error {
+	// this will initiate a new paxos call its paxos cluster
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
+		reply.Err = ErrNoKey
+		return nil
+	}
+
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosPut(args, reply)
+
+	return nil
 }
 
 // WHANAU LOOKUP HELPER METHODS
@@ -216,8 +232,9 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	return nil
 }
 
-// TODO this eventually needs to become a real lookup
-// Returns paxos cluster for given key
+// Returns paxos cluster for given key.
+// Called by servers to figure out which paxos cluster
+// to get the true value from.
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
 	nlayers := args.NLayers
@@ -241,7 +258,6 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	}
 
 	if tryReply.Err == OK {
-		//fmt.Printf("found key after %d tries\n", count)
 		value := tryReply.Value
 		reply.Value = value
 		reply.Err = OK
@@ -252,8 +268,11 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	return nil
 }
 
-func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
-	// run the local RPC call to get the
+// Get the value for a particular key.
+// Runs Lookup to find the appropriate Paxos cluster, then
+// calls Get on that cluster.
+// TODO needs to check if wrong view/group
+func (ws *WhanauServer) Get(key KeyType) TrueValueType {
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
 
@@ -264,72 +283,56 @@ func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookup
 
 	if ok {
 		server_list := lookup_reply.Value
-		var ret_value TrueValueType = ws.PaxosGet(args.Key, server_list)
-		reply.Err = OK
-		reply.Value = ret_value
-	}
+		get_args := &PaxosGetArgs{}
+		var get_reply PaxosGetReply
 
-	return nil
-}
+		get_args.Key = key
+		get_args.RequestID = NRand()
 
-// Client-style lookup on neighboring servers.
-// routedFrom is supposed to prevent infinite lookup loops.
-// TODO Change to TrueValueType later
-/*
-func (ws *WhanauServer) NeighborLookup(key KeyType, routedFrom []string) ValueType {
-	args := &LookupArgs{}
-	args.Key = key
-	args.RoutedFrom = routedFrom
-	var reply LookupReply
-	for _, srv := range ws.neighbors {
-		if IsInList(srv, routedFrom) {
-			continue
-		}
-
-		ok := call(srv, "WhanauServer.Lookup", args, &reply)
-		if ok && (reply.Err == OK) {
-			return reply.Value
+		for _, server := range server_list.Servers {
+			ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
+				&get_reply)
+			if ok && (get_reply.Err != ErrNoKey) {
+				return get_reply.Value
+			}
 		}
 	}
 
-	return ErrNoKey
-}
-*/
-func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs, reply *PaxosPutReply) error {
-	// this will initiate a new paxos call its paxos cluster
-	return nil
+	return ""
 }
 
-func (ws *WhanauServer) PaxosPut(key KeyType, value TrueValueType) error {
-	// TODO: needs to do a real paxos put
-	return nil
-}
-
-// TODO this eventually needs to become a real put
 func (ws *WhanauServer) Put(args *PutArgs, reply *PutReply) error {
-	// TODO: needs to 1. find the paxos cluster 2. do a paxos cluster put
-	// makes an RPC call to itself, this is kind of weird...
+	lookup_args := &LookupArgs{}
+	var lookup_reply LookupReply
 
-	key := args.Key
-	value := args.Value
-
-	rpc_args := &LookupArgs{}
-	var rpc_reply LookupReply
-
-	ok := call(ws.myaddr, "WhanauServer.Lookup", rpc_args, rpc_reply)
+	ok := call(ws.myaddr, "WhanauServer.Lookup", lookup_args, lookup_reply)
 
 	if ok {
-		if rpc_reply.Err == ErrNoKey {
+		if lookup_reply.Err == ErrNoKey {
 			// TODO: adds the key to its local pending put list
-			// TODO: what happens if a client makes a call to insert the same key
-			// to 2 different servers? or 2 different clients making 2 different
-			// calls to the same key?
-			ws.pending[key] = value
+			// TODO: what happens if a client makes a call to insert
+			// the same key to 2 different servers? or 2 different clients
+			// making 2 different calls to the same key?
+			ws.pending[args.Key] = args.Value
 			reply.Err = ErrPending
 		} else {
 			// TODO: make a paxos request directly to one of the servers
 			// TODO error?
-			ws.PaxosPut(key, value)
+			server_list := lookup_reply.Value
+			put_args := &PaxosPutArgs{}
+			var put_reply PaxosPutReply
+
+			put_args.Key = args.Key
+			put_args.Value = args.Value
+			put_args.RequestID = NRand()
+
+			for _, server := range server_list.Servers {
+				ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
+					&put_reply)
+				if ok {
+					reply.Err = OK
+				}
+			}
 			reply.Err = OK
 		}
 	}
@@ -640,12 +643,11 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 	return successors
 }
 
-
 // each server changes its current state, and sends the setup messages
 // to all of its neighbors
 func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply) error {
 	ws.mu.Lock()
-	if (ws.state == Normal) {
+	if ws.state == Normal {
 		ws.state = PreSetup
 	}
 	ws.mu.Unlock()
@@ -656,11 +658,11 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 		rpc_reply := &StartSetupReply{}
 		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
 		if ok {
-			
+
 		}
 	}
-	
-	if (ws.state == PreSetup) {
+
+	if ws.state == PreSetup {
 		// send its pending keys to one of the random master nodes
 		for {
 			randIndex := rand.Intn(len(ws.master))
@@ -692,12 +694,11 @@ func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, rep
 	return nil
 }
 
-
-// this function shoud be run in a separate thread 
+// this function shoud be run in a separate thread
 // by each master server
 func (ws *WhanauServer) InitiateSetup() {
 	for {
-		if (ws.state == Normal) {
+		if ws.state == Normal {
 			// send a start setup message to each one of its neighbors
 			for _, srv := range ws.neighbors {
 				args := &StartSetupArgs{ws.myaddr}

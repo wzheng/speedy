@@ -12,15 +12,6 @@ type LookupReply struct {
 	Value ValueType
 }
 
-type ClientLookupArgs struct {
-	Key        KeyType
-}
-
-type ClientLookupReply struct {
-	Err   Err
-	Value TrueValueType
-}
-
 // TODO hashing for debugging?
 type PutArgs struct {
 	Key   KeyType

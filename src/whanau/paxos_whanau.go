@@ -142,8 +142,7 @@ func (wp *WhanauPaxos) AgreeAndLogRequests(op Op) error {
 	return nil
 }
 
-func (wp *WhanauPaxos) PaxosGetRPC(args *PaxosGetArgs,
-	reply *PaxosGetReply) error {
+func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs, reply *PaxosGetReply) {
 	wp.logLock.Lock()
 	defer wp.logLock.Unlock()
 
@@ -156,8 +155,6 @@ func (wp *WhanauPaxos) PaxosGetRPC(args *PaxosGetArgs,
 		if getreply.Err != ErrWrongGroup {
 			reply.Err = getreply.Err
 			reply.Value = getreply.Value
-
-			return nil
 		}
 	}
 
@@ -168,13 +165,9 @@ func (wp *WhanauPaxos) PaxosGetRPC(args *PaxosGetArgs,
 	getreply := wp.handledRequests[args.RequestID].(PaxosGetReply)
 	reply.Err = getreply.Err
 	reply.Value = getreply.Value
-
-	return nil
 }
 
-func (wp *WhanauPaxos) PaxosPutRPC(args *PaxosPutArgs,
-	reply *PaxosPutReply) error {
-
+func (wp *WhanauPaxos) PaxosPut(args *PaxosPutArgs, reply *PaxosPutReply) {
 	wp.logLock.Lock()
 	defer wp.logLock.Unlock()
 
@@ -186,7 +179,6 @@ func (wp *WhanauPaxos) PaxosPutRPC(args *PaxosPutArgs,
 
 		if putreply.Err != ErrWrongGroup {
 			reply.Err = putreply.Err
-			return nil
 		}
 	}
 
@@ -196,8 +188,6 @@ func (wp *WhanauPaxos) PaxosPutRPC(args *PaxosPutArgs,
 
 	putreply := wp.handledRequests[args.RequestID].(PaxosPutReply)
 	reply.Err = putreply.Err
-
-	return nil
 }
 
 func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,

@@ -48,6 +48,7 @@ type KeyType string
 
 type ValueType struct {
 	Servers []string
+  Sign    []byte
 }
 
 type TrueValueType string

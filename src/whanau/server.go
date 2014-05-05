@@ -49,6 +49,8 @@ type WhanauServer struct {
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 	view      int                       // the current view
 	master    []string                  // list of servers for the master cluster; these servers are also trusted
+
+  //// Constant Parameters based on number of nodes ////
 }
 
 // for testing

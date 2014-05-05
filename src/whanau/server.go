@@ -54,6 +54,11 @@ type WhanauServer struct {
 	pending map[KeyType]TrueValueType // this is a list of pending writes
 }
 
+type WhanauSybilServer struct {
+    WhanauServer
+    sybilNeighbors []WhanauSybilServer
+}
+
 // for testing
 func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
 	ws.kvstore[key] = value
@@ -252,6 +257,42 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	return nil
 }
 
+// Sybil node lookup returns false value with some probability
+func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error {
+    key := args.Key
+    steps := args.Steps
+
+    r := rand.New(rand.NewSource(99))
+    prob := r.Float32()
+    if prob > 0.6 {
+        reply.Err = ErrNoKey
+    } else {
+	    valueIndex := sort.Search(len(ws.db), func(valueIndex int) bool {
+		    return ws.db[valueIndex].Key >= key
+	    });
+
+	    if valueIndex < len(ws.db) && ws.db[valueIndex].Key == key {
+		    reply.Value = ws.db[valueIndex].Value
+		    reply.Err = OK
+	    } else {
+            if steps > 0 {
+                for i := 0; i < len(ws.neighbors); i++ {
+                    lookupArgs := &LookupArgs{}
+                    lookupArgs.Key = key
+                    lookupArgs.Steps = steps - 1
+                    call(ws.sybilNeighbors[i].myaddr, "WhanauSybilServer.Lookup", lookupArgs, reply)
+                    if reply.Err == OK {
+                        break
+                    }
+                }
+            } else {
+                reply.Err = ErrNoKey
+            }
+	    }
+    }
+    return nil
+}
+
 func (ws *WhanauServer) ClientLookup(args *ClientLookupArgs, reply *ClientLookupReply) error {
 	// run the local RPC call to get the
 	lookup_args := &LookupArgs{}
@@ -409,6 +450,17 @@ func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int)
 
 		//fmt.Printf("Finished SuccessorTable of server %s, layer %d\n", ws.myaddr, i)
 	}
+}
+
+// Server for Sybil nodes
+func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors[]WhanauSybilServer) {
+    DPrintf("In Setup of Sybil server %s", ws.myaddr)
+
+    // Fill up table but might not use values
+    ws.db = ws.SampleRecords(rd, w)
+
+    // No need for other variables because Sybil nodes will be routing to other Sybil nodes
+    ws.sybilNeighbors = neighbors
 }
 
 // return random Key/value record from local storage
@@ -656,10 +708,10 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 		rpc_reply := &StartSetupReply{}
 		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
 		if ok {
-			
+
 		}
 	}
-	
+
 	if (ws.state == PreSetup) {
 		// send its pending keys to one of the random master nodes
 		for {
@@ -693,7 +745,7 @@ func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, rep
 }
 
 
-// this function shoud be run in a separate thread 
+// this function shoud be run in a separate thread
 // by each master server
 func (ws *WhanauServer) InitiateSetup() {
 	for {

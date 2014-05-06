@@ -90,8 +90,11 @@ func (ck *Clerk) Get(key KeyType) string {
           &get_reply)
         if ok && (get_reply.Err != ErrNoKey) {
           // TODO check data integrity
-
-          return get_reply.Value.TrueValue
+          if VerifyTrueValue(key, get_reply.Value) {
+            return get_reply.Value.TrueValue
+          } else {
+            return ErrFailVerify
+          }
         }
       }
 

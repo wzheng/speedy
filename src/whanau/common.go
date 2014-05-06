@@ -17,6 +17,7 @@ const (
 	ErrRandWalk   = "ErrRandWalk"
 	ErrWrongGroup = "ErrWrongGroup"
 	ErrPending    = "ErrPending"
+  ErrFailVerify = "ErrFailVerify"
 )
 
 // for 2PC
@@ -62,7 +63,11 @@ type ValueType struct {
   PubKey  *rsa.PublicKey
 }
 
-type TrueValueType interface{}
+type TrueValueType struct {
+  TrueValue string
+  Sign    []byte
+  PubKey  *rsa.PublicKey
+}
 
 // Key value pair
 type Record struct {

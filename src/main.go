@@ -264,4 +264,25 @@ func main() {
   if !whanau.VerifyValue(key, val) {
     fmt.Println("pk modification detected!")
   }
+
+  fmt.Println("Testing verification on true value type")
+  key1 := whanau.KeyType("testkey1")
+  val1 := whanau.TrueValueType{"testval", nil, &sk.PublicKey}
+  
+  sig2, _ := whanau.SignTrueValue(key1, val1, sk)
+  val1.Sign = sig2
+
+  if whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value verified!")
+  }
+  val1.TrueValue = "changed"
+  if !whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value modification detected!")
+  }
+  val1 = whanau.TrueValueType{"testval", nil, &sk1.PublicKey}
+  val1.Sign = sig2
+
+  if !whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value pk modification detected!")
+  }
 }

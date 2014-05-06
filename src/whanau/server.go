@@ -13,13 +13,14 @@ import (
 	"sync"
 	"time"
   "crypto/rsa"
+  crand "crypto/rand"
 )
 
 //import "builtin"
 
 //import "encoding/gob"
 
-const Debug = 0
+const Debug = 1
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -117,7 +118,8 @@ func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
 		}
 	}
 
-	return ""
+  // TODO fix
+	return TrueValueType{"", nil, nil}
 }
 
 
@@ -594,6 +596,14 @@ func StartServer(servers []string, me int, myaddr string,
 		log.Fatal("listen error: ", e)
 	}
 	ws.l = l
+
+  // Generate secret/public key
+  sk, err := rsa.GenerateKey(crand.Reader, 2014);
+
+  if err != nil {
+    log.Fatal("key generation err: ", err)
+  }
+  ws.secretKey = sk
 
 	go func() {
 		for ws.dead == false {

@@ -14,10 +14,6 @@ import (
 	"time"
 )
 
-//import "builtin"
-
-//import "encoding/gob"
-
 const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
@@ -48,11 +44,16 @@ type WhanauServer struct {
 	succ      [][]Record            // contains successor records for each layer
 	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
-	master    []string                  // list of servers for the master cluster; these servers are also trusted
+	masters    []string                  // list of servers for the master cluster; these servers are also trusted
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 	reqID     int64
+
+	// for master server only
+	all_pending_writes map[KeyType]TrueValueType     // all of the current pending writes that it has
+	key_to_server      map[KeyType]string            // the server for a particular key
+	new_paxos_clusters [][]string                    // all of the new paxos clusters constructed in the current view
 }
 
 type WhanauSybilServer struct {
@@ -132,10 +133,30 @@ func (ws *WhanauServer) PaxosPutRPC(args *PaxosPutArgs,
 	return nil
 }
 
+func (ws *WhanauServer) AddPendingRPCMaster(args *PendingArgs, reply *PendingReply) error {
+	ws.mu.Lock()
+	ws.pending[args.Key] = args.Value
+	ws.mu.Unlock()
+
+	reply.Err = OK
+}
+
 func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 	reply *PendingReply) error {
-	ws.pending[args.Key] = args.Value
-	reply.Err = ErrPending
+
+	// this will add a pending write to one of the master nodes
+
+	for _, server := range ws.masters {
+		rpc_reply := &PendingReply{}
+		ok := call(server, "WhanauServer.AddPendingRPCMaster", args, rpc_reply)
+		if ok {
+			if rpc_reply.Err == OK {
+				reply.Err = ErrPending
+			} else {
+				reply.Err = rpc_reply.Err
+			}
+		}
+	}
 
 	return nil
 }
@@ -216,8 +237,7 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 	return nil
 }
 
-func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
-	reply *InitPaxosClusterReply) error {
+func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
 	if args.Phase == PhaseOne {
 		reply.Reply = Commit
 	} else {
@@ -232,7 +252,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs,
 		}
 	}
 
-	return ErrNoKey
+	return nil
 }
 
 func (ws *WhanauServer) PaxosPut(args *WhanauServerPaxosPutArgs, reply *WhanauServerPaxosPutReply) error {
@@ -490,51 +510,91 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 	return successors
 }
 
+func (ws *WhanauServer) Setup() {
+	// During the Setup phase, the server needs to
+	// 1. construct a new paxos cluster, and transfer data as necessary
+	// 2. receive the pending writes from master
+	// 3. run the Whanau set up protocol
+	
+}
+
 // each server changes its current state, and sends the setup messages
 // to all of its neighbors
 func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply) error {
 	ws.mu.Lock()
 	if ws.state == Normal {
 		ws.state = PreSetup
+
+		// forward this msg to all of its neighbors
+		for _, srv := range ws.neighbors {
+			rpc_args := &StartSetupArgs{args.MasterServer}
+			rpc_reply := &StartSetupReply{}
+			ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
+			if ok {
+				
+			}
+		}
+
 	}
 	ws.mu.Unlock()
 
-	// forward this msg to all of its neighbors
-	for _, srv := range ws.neighbors {
-		rpc_args := &StartSetupArgs{args.MasterServer}
-		rpc_reply := &StartSetupReply{}
-		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
+	// wait until all of its current outstanding requests are done processing
+	// TODO: should keep a counter of all of the outstanding requests
+
+	// try to construct a new paxos cluster
+	new_cluster := ws.ConstructPaxosCluster()
+	// send this new cluster to 
+
+	for {
+		randInt := rand.Intn(len(ws.masters))
+		master_server := ws.masters[randInt]
+		
+		receive_paxos_args := &ReceiveNewPaxosClusterArgs{new_cluster}
+		receive_paxos_reply := &ReceiveNewPaxosClusterReply{}
+		
+		ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster", receive_paxos_args, receive_paxos_reply)
 		if ok {
-
-		}
-	}
-
-	if ws.state == PreSetup {
-		// send its pending keys to one of the random master nodes
-		for {
-			randIndex := rand.Intn(len(ws.master))
-			master_server := ws.master[randIndex]
-			rpc_args := &ReceivePendingWritesArgs{ws.pending}
-			rpc_reply := &ReceivePendingWritesReply{}
-			ok := call(master_server, "WhanauServer.ReceivePendingWrites", rpc_args, rpc_reply)
-			if ok {
-				if rpc_reply.Err == OK {
-					ws.mu.Lock()
-					ws.state = Setup
-					ws.mu.Unlock()
-					break
-				}
+			if reply.Err == OK {
+				break
 			}
 		}
 	}
+	
+	// enter the SETUP stage
+	ws.mu.Lock()
+	ws.state = SETUP
+	ws.mu.Unlock()
+
+	// wait some time for pending writes
+	// TODO: how long to actually wait...?
+
+	time.Sleep(180*time.Second)
+
+	// move on to the next stage
+	ws.Lock()
+	ws.state = WHANAU_SETUP
+	ws.Unlock()
+	
+	
 	return nil
 }
 
+func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
+	ws.new_paxos_clusters[args.Cluster] = true
+	reply.Err = OK
+}
+
 func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, reply *ReceivePendingWritesReply) error {
-	// store the pending writes to its own pending
+	// receive the pending writes, then process these pending writes
 	ws.mu.Lock()
 	for k, v := range args.PendingWrites {
-		ws.pending[k] = v
+		if server, ok := dict[k]; ok {
+			// send a put to that server
+			
+		} else {
+			// start a paxos agreement to agree on a server for a particular key
+			
+		}
 	}
 	ws.mu.Unlock()
 	reply.Err = OK
@@ -555,9 +615,13 @@ func (ws *WhanauServer) InitiateSetup() {
 					//pending_writes := reply.PendingWrites
 				}
 			}
+
+			ws.mu.Lock()
+			ws.state = PreSetup
+			ws.mu.Unlock()
 		}
 
-		time.Sleep(180 * time.Second)
+		time.Sleep(1800 * time.Second)
 	}
 }
 
@@ -570,7 +634,7 @@ func (ws *WhanauServer) Kill() {
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string,
-	neighbors []string) *WhanauServer {
+	neighbors []string, masters []string, is_master bool) *WhanauServer {
 	ws := new(WhanauServer)
 	ws.me = me
 	ws.myaddr = myaddr
@@ -579,6 +643,9 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.kvstore = make(map[KeyType]ValueType)
 	ws.state = Normal
 	ws.reqID = 0
+
+	ws.masters = masters
+	ws.is_master = is_master
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(ws)

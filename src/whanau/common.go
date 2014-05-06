@@ -38,8 +38,9 @@ type State string
 // server states/phases
 const (
 	Normal   = "Normal"
-	PreSetup = "PreSetup"
+	PreSetup = "PreSetup"	
 	Setup    = "Setup"
+	WhanauSetupt = "WhanauSetup"
 )
 
 type Err string

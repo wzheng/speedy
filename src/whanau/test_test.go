@@ -125,7 +125,7 @@ func TestLookup(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false)
 	}
 
 	var cka [nservers]*Clerk
@@ -319,7 +319,7 @@ func TestPutGet(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false)
 	}
 
 	var cka [nservers]*Clerk

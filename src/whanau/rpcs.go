@@ -168,3 +168,11 @@ type ReceivePendingWritesArgs struct {
 type ReceivePendingWritesReply struct {
 	Err Err
 }
+
+type ReceiveNewPaxosClusterArgs struct {
+	Cluster []string
+}
+
+type ReceiveNewPaxosClusterReply struct {
+	Err Err
+}

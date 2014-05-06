@@ -12,7 +12,12 @@ import (
 	"sort"
 	"sync"
 	"time"
+  "crypto/rsa"
+  crand "crypto/rand"
 )
+
+
+//import "encoding/gob"
 
 const Debug = 0
 
@@ -45,6 +50,7 @@ type WhanauServer struct {
 	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
 	masters    []string                  // list of servers for the master cluster; these servers are also trusted
+
 	is_master bool                      // whether the server itself is a master server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
@@ -54,6 +60,9 @@ type WhanauServer struct {
 	all_pending_writes map[KeyType]TrueValueType     // all of the current pending writes that it has
 	key_to_server      map[KeyType]string            // the server for a particular key
 	new_paxos_clusters [][]string                    // all of the new paxos clusters constructed in the current view
+
+  //// DATA INTEGRITY FIELDS ////
+  secretKey   *rsa.PrivateKey
 }
 
 type WhanauSybilServer struct {
@@ -113,7 +122,8 @@ func (ws *WhanauServer) PaxosGet(key KeyType, servers ValueType) TrueValueType {
 		}
 	}
 
-	return ""
+  // TODO fix
+	return TrueValueType{"", nil, nil}
 }
 
 
@@ -139,6 +149,7 @@ func (ws *WhanauServer) AddPendingRPCMaster(args *PendingArgs, reply *PendingRep
 	ws.mu.Unlock()
 
 	reply.Err = OK
+	return nil
 }
 
 func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
@@ -510,13 +521,6 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 	return successors
 }
 
-func (ws *WhanauServer) Setup() {
-	// During the Setup phase, the server needs to
-	// 1. construct a new paxos cluster, and transfer data as necessary
-	// 2. receive the pending writes from master
-	// 3. run the Whanau set up protocol
-	
-}
 
 // each server changes its current state, and sends the setup messages
 // to all of its neighbors
@@ -562,7 +566,7 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 	
 	// enter the SETUP stage
 	ws.mu.Lock()
-	ws.state = SETUP
+	ws.state = Setup
 	ws.mu.Unlock()
 
 	// wait some time for pending writes
@@ -571,26 +575,26 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 	time.Sleep(180*time.Second)
 
 	// move on to the next stage
-	ws.Lock()
-	ws.state = WHANAU_SETUP
-	ws.Unlock()
+	ws.mu.Lock()
+	ws.state = WhanauSetup
+	ws.mu.Unlock()
 	
 	
 	return nil
 }
 
 func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
-	ws.new_paxos_clusters[args.Cluster] = true
+	ws.new_paxos_clusters = append(ws.new_paxos_clusters, args.Cluster)
 	reply.Err = OK
+	return nil
 }
 
 func (ws *WhanauServer) ReceivePendingWrites(args *ReceivePendingWritesArgs, reply *ReceivePendingWritesReply) error {
 	// receive the pending writes, then process these pending writes
 	ws.mu.Lock()
-	for k, v := range args.PendingWrites {
-		if server, ok := dict[k]; ok {
-			// send a put to that server
-			
+	for k, _ := range args.PendingWrites {
+		if _, ok := ws.key_to_server[k]; ok {
+			// TODO: send a put to that server
 		} else {
 			// start a paxos agreement to agree on a server for a particular key
 			
@@ -656,6 +660,14 @@ func StartServer(servers []string, me int, myaddr string,
 		log.Fatal("listen error: ", e)
 	}
 	ws.l = l
+
+  // Generate secret/public key
+  sk, err := rsa.GenerateKey(crand.Reader, 2014);
+
+  if err != nil {
+    log.Fatal("key generation err: ", err)
+  }
+  ws.secretKey = sk
 
 	go func() {
 		for ws.dead == false {

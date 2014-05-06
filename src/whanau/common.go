@@ -2,6 +2,7 @@ package whanau
 
 import "math/big"
 import "crypto/rand"
+import "crypto/rsa"
 
 func NRand() int64 {
 	max := big.NewInt(int64(1) << 62)
@@ -16,6 +17,7 @@ const (
 	ErrRandWalk   = "ErrRandWalk"
 	ErrWrongGroup = "ErrWrongGroup"
 	ErrPending    = "ErrPending"
+  ErrFailVerify = "ErrFailVerify"
 )
 
 // for 2PC
@@ -40,7 +42,7 @@ const (
 	Normal   = "Normal"
 	PreSetup = "PreSetup"	
 	Setup    = "Setup"
-	WhanauSetupt = "WhanauSetup"
+	WhanauSetup = "WhanauSetup"
 )
 
 type Err string
@@ -58,9 +60,15 @@ type KeyType string
 
 type ValueType struct {
 	Servers []string
+  Sign    []byte
+  PubKey  *rsa.PublicKey
 }
 
-type TrueValueType interface{}
+type TrueValueType struct {
+  TrueValue string
+  Sign    []byte
+  PubKey  *rsa.PublicKey
+}
 
 // Key value pair
 type Record struct {

@@ -88,7 +88,7 @@ func (wp *WhanauPaxos) LogGet(args *PaxosGetArgs, reply *PaxosGetReply) {
 		reply.Value = getValue
 	} else {
 		reply.Err = ErrNoKey
-		reply.Value = ""
+		reply.Value = TrueValueType{"", nil, nil}
 	}
 }
 

@@ -1,13 +1,17 @@
 package main
 
-import "runtime"
+//import "runtime"
 import "strconv"
 import "os"
 import "fmt"
-import "math/rand"
-import "math"
+//import "math/rand"
+//import "math"
 import "time"
 import "./whanau"
+import "crypto"
+import "crypto/rsa"
+import "crypto/md5"
+import "crypto/rand"
 
 func port(tag string, host int) string {
 	s := "/var/tmp/824-"
@@ -28,7 +32,8 @@ func cleanup(ws []*whanau.WhanauServer) {
 	}
 }
 
-func main() {
+/*
+func run_dht() {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 100
@@ -51,13 +56,6 @@ func main() {
 
 		ws[i] = whanau.StartServer(kvh, i, kvh[i], neighbors)
 	}
-
-  /*
-	var cka [nservers]*whaClerk
-	for i := 0; i < nservers; i++ {
-		cka[i] = MakeClerk(kvh[i])
-	}
-  */
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
@@ -84,11 +82,6 @@ func main() {
 		}
 	}
 
-  /*
-  for i := 0; i < nservers; i++ {
-    fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-  }
-  */
 	// run setup in parallel
 	// parameters
 	constant := 5
@@ -119,14 +112,6 @@ func main() {
   elapsed := time.Since(start)
   fmt.Printf("Finished setup, time: %s\n", elapsed)
 
-  /*
-	for i := 0; i < nservers; i++ {
-		for j := 0; j < nlayers; j++ {
-      fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
-			fmt.Printf("ws[%d].succ[%d]: %s\n\n", i, j, ws[i].succ[j])
-		}
-	}
-  */
   fmt.Printf("Check key coverage in all dbs")
 
   keyset := make(map[whanau.KeyType]bool)
@@ -182,13 +167,7 @@ func main() {
   fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
   fmt.Printf("missing keys in succs: %s\n", missing_keys)
 	// check populated ids and fingers
-	/*
-		var x0 KeyType = "1"
-		var key KeyType = "3"
-		finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
-		fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
- */ 
-	
+
 	fmt.Printf("Checking Try for every key from every node\n")
 	numFound := 0
 	numTotal := 0
@@ -207,7 +186,6 @@ func main() {
 				value := lreply.Value
 				// compare string arrays...
 				if len(value.Servers) != len(records[key].Servers) {
-					//t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
 
 				  fmt.Printf("Wrong value returned: %s expected: %s\n", value, records[key])
 				}
@@ -223,6 +201,88 @@ func main() {
 	}
 
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
-  
-}
 
+}
+*/
+
+func main() {
+  hashMD5 := md5.New()
+  hashMD5.Write([]byte("test"))
+  Digest := hashMD5.Sum(nil)
+
+  start := time.Now()
+  sk, err := rsa.GenerateKey(rand.Reader, 2014);
+  elapsed := time.Since(start)
+  fmt.Printf("RSA Key Gen time: %s\n", elapsed)
+
+  if err != nil {
+    fmt.Println(err);
+    return;
+  }
+
+  err = sk.Validate();
+  if err != nil {
+    fmt.Println("Validation failed.", err);
+  }
+
+  start = time.Now()
+  Sign, Err := rsa.SignPKCS1v15(rand.Reader, sk, crypto.MD5, Digest)
+  elapsed = time.Since(start)
+  if Err != nil {
+    fmt.Println("signing error.", Err)
+  }
+  fmt.Printf("Signing time: %s\n", elapsed)
+
+
+  start = time.Now()
+  rsa.VerifyPKCS1v15(&sk.PublicKey, crypto.MD5, Digest, Sign)
+  elapsed = time.Since(start)
+  fmt.Printf("Verifying time: %s\n", elapsed)
+
+  key := whanau.KeyType("testkey")
+  val := whanau.ValueType{[]string{"s1", "s2", "s3"}, nil, &sk.PublicKey}
+
+  sig, err1 := whanau.SignValue(key, val, sk)
+  val.Sign = sig
+  fmt.Println("sig", sig)
+  fmt.Println("err1", err1)
+  if whanau.VerifyValue(key, val) {
+    fmt.Println("value verified!")
+  }
+  val.Servers = []string{"sybil"}
+  if !whanau.VerifyValue(key, val) {
+    fmt.Println("value modification detected!")
+  }
+
+  sk1, err1 := rsa.GenerateKey(rand.Reader, 2014);
+  if err1 != nil {
+    fmt.Println(err);
+    return;
+  }
+  val = whanau.ValueType{[]string{"s1", "s2", "s3"}, nil, &sk1.PublicKey}
+  val.Sign = sig
+  if !whanau.VerifyValue(key, val) {
+    fmt.Println("pk modification detected!")
+  }
+
+  fmt.Println("Testing verification on true value type")
+  key1 := whanau.KeyType("testkey1")
+  val1 := whanau.TrueValueType{"testval", nil, &sk.PublicKey}
+  
+  sig2, _ := whanau.SignTrueValue(key1, val1, sk)
+  val1.Sign = sig2
+
+  if whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value verified!")
+  }
+  val1.TrueValue = "changed"
+  if !whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value modification detected!")
+  }
+  val1 = whanau.TrueValueType{"testval", nil, &sk1.PublicKey}
+  val1.Sign = sig2
+
+  if !whanau.VerifyTrueValue(key1, val1) {
+    fmt.Println("true value pk modification detected!")
+  }
+}

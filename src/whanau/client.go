@@ -64,7 +64,7 @@ func (ck *Clerk) Lookup(key KeyType) ValueType {
 	return ValueType{}
 }
 
-func (ck *Clerk) Get(key KeyType) TrueValueType {
+func (ck *Clerk) Get(key KeyType) string {
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
 
@@ -74,20 +74,34 @@ func (ck *Clerk) Get(key KeyType) TrueValueType {
 	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok && (lookup_reply.Err != ErrNoKey) {
-		server_list := lookup_reply.Value
-		get_args := &PaxosGetArgs{}
-		var get_reply PaxosGetReply
 
-		get_args.Key = key
-		get_args.RequestID = NRand()
+    // Data verification to check for server list modification
+    if VerifyValue(key, lookup_reply.Value) {
 
-		for _, server := range server_list.Servers {
-			ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
-				&get_reply)
-			if ok && (get_reply.Err != ErrNoKey) {
-				return get_reply.Value
-			}
-		}
+      server_list := lookup_reply.Value
+      get_args := &PaxosGetArgs{}
+      var get_reply PaxosGetReply
+
+      get_args.Key = key
+      get_args.RequestID = NRand()
+
+      for _, server := range server_list.Servers {
+        ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
+          &get_reply)
+        if ok && (get_reply.Err != ErrNoKey) {
+          // TODO check data integrity
+          if VerifyTrueValue(key, get_reply.Value) {
+            return get_reply.Value.TrueValue
+          } else {
+            return ErrFailVerify
+          }
+        }
+      }
+
+    } else {
+      // TODO how to return verification error?
+      return ErrFailVerify
+    }
 	}
 
 	return ""

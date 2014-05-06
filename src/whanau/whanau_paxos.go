@@ -24,6 +24,10 @@ type WhanauPaxos struct {
 	currView int
 
 	db map[KeyType]TrueValueType
+
+	// only applicable if this server is a master
+	pwLock sync.Mutex
+	pending_writes map[PendingInsertsKey]string // this is a mapping from a pending write keys to servers
 }
 
 type Op struct {
@@ -92,6 +96,20 @@ func (wp *WhanauPaxos) LogGet(args *PaxosGetArgs, reply *PaxosGetReply) {
 	}
 }
 
+func (wp *WhanauPaxos) LogPending(args *PaxosPendingInsertsArgs, reply *PaxosPendingInsertsReply) {
+	wp.pwLock.Lock()
+	defer wp.pwLock.Unlock()
+
+	v, ok := wp.pending_writes[PendingInsertsKey{args.Key, args.View}]
+	if ok {
+		reply.Server = v
+		reply.Err = OK
+	} else {
+		wp.pending_writes[PendingInsertsKey{args.Key, args.View}] = args.Server
+		reply.Err = OK
+	}
+}
+
 // Fast forward the log from fromSeq up to toSeq, applying all the  updates.
 func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
 
@@ -126,6 +144,12 @@ func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
 			reply.Err = OK
 			wp.LogGet(&args, &reply)
 			wp.handledRequests[args.RequestID] = reply
+		} else if op.Type == PENDING {
+			args := op.OpArgs.(PaxosPendingInsertsArgs)
+			reply := PaxosPendingInsertsReply{}
+			reply.Err = OK
+			wp.LogPending(&args, &reply)
+			wp.handledRequests[args.RequestID] = reply
 		}
 
 	}
@@ -134,7 +158,6 @@ func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
 func (wp *WhanauPaxos) AgreeAndLogRequests(op Op) error {
 	agreedSeq := wp.RunPaxos(op)
 	wp.LogUpdates(wp.currSeq, agreedSeq)
-
 	// discard old instances
 	wp.px.Done(agreedSeq)
 	wp.currSeq = agreedSeq + 1
@@ -197,6 +220,34 @@ func (wp *WhanauPaxos) PaxosPut(args *PaxosPutArgs,
 	return nil
 }
 
+func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *PaxosPendingInsertsReply) error {
+
+	wp.logLock.Lock()
+	defer wp.logLock.Unlock()
+
+	// Have we handled this request already?
+	if r, ok := wp.handledRequests[args.RequestID]; ok {
+		pending_reply := r.(PaxosPendingInsertsReply)
+
+		if pending_reply.Err != ErrWrongGroup {
+			reply.Server = pending_reply.Server
+			reply.Err = pending_reply.Err
+			return nil
+		}
+	}
+
+	// Okay, try handling the request.
+	op := Op{PENDING, *args, NRand(), args.RequestID}
+	wp.AgreeAndLogRequests(op)
+
+	pending_reply := wp.handledRequests[args.RequestID].(PaxosPendingInsertsReply)
+
+	reply.Server = pending_reply.Server
+	reply.Err = pending_reply.Err
+
+	return nil
+}
+
 func StartWhanauPaxos(servers []string, me int,
 	rpcs *rpc.Server) *WhanauPaxos {
 
@@ -212,6 +263,7 @@ func StartWhanauPaxos(servers []string, me int,
 
 	wp.handledRequests = make(map[int64]interface{})
 	wp.px = paxos.Make(servers, me, rpcs)
-
+	wp.db = make(map[KeyType]TrueValueType)
+	wp.pending_writes = make(map[PendingInsertsKey]string)
 	return wp
 }

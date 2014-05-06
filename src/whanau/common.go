@@ -52,6 +52,7 @@ type Err string
 const (
 	GET = "Get"
 	PUT = "Put"
+	PENDING = "PendingWrite"
 )
 
 type Operation string
@@ -99,3 +100,9 @@ const (
 	//NUM_SUCCESSORS = 2 //number of successors obtained each step
 	TIMEOUT = 10 // number of times to try querying
 )
+
+
+type PendingInsertsKey struct {
+	Key KeyType
+	View int
+}

@@ -16,6 +16,7 @@ type LookupReply struct {
 type PendingArgs struct {
 	Key   KeyType
 	Value TrueValueType
+	Server string
 }
 
 type PendingReply struct {
@@ -131,6 +132,18 @@ type PaxosPutArgs struct {
 
 type PaxosPutReply struct {
 	Err Err
+}
+
+type PaxosPendingInsertsArgs struct {
+	Key         KeyType
+	View        int
+	Server      string
+	RequestID   int64
+}
+
+type PaxosPendingInsertsReply struct {
+	Server      string
+	Err         Err
 }
 
 type WhanauServerPaxosGetArgs struct {

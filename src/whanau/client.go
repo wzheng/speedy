@@ -75,11 +75,11 @@ func (ck *Clerk) FindAndVerifyServers(key KeyType) ([]string, Err) {
 	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok && (lookup_reply.Err != ErrNoKey) {
-		if VerifyValue(key, lookup_reply.Value) {
-			return lookup_reply.Value.Servers, OK
-		} else {
-			return nil, ErrFailVerify
-		}
+		//if VerifyValue(key, lookup_reply.Value) {
+		return lookup_reply.Value.Servers, OK
+		//} else {
+		//		return nil, ErrFailVerify
+		//}
 	} else if lookup_reply.Err == ErrNoKey {
 		return nil, ErrNoKey
 	}
@@ -110,7 +110,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 }
 
 // Put on the server list the client has provided.
-func (ck *Clerk) Put(key KeyType, value string, server_list []string) Err {
+func (ck *Clerk) Put(key KeyType, value string, originator string, server_list []string) Err {
 	// TODO: make a paxos request directly to one of the servers
 	// TODO error?
 	put_args := &ClientPutArgs{}
@@ -118,6 +118,7 @@ func (ck *Clerk) Put(key KeyType, value string, server_list []string) Err {
 
 	put_args.Key = key
 	put_args.Value = value
+	put_args.Originator = originator
 	put_args.RequestID = NRand()
 
 	for _, server := range server_list {
@@ -164,7 +165,7 @@ func (ck *Clerk) ClientPut(key KeyType, value string) Err {
 			return ""
 		}
 	} else if err != ErrFailVerify {
-		put_err := ck.Put(key, value, server_list)
+		put_err := ck.Put(key, value, ck.server, server_list)
 		return put_err
 	} else {
 		return err

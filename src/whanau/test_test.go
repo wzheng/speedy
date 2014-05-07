@@ -8,8 +8,8 @@ import "fmt"
 import "math/rand"
 import "math"
 import "time"
-//import crand "crypto/rand"
-//import "crypto/rsa"
+import crand "crypto/rand"
+import "crypto/rsa"
 
 func port(tag string, host int) string {
 	s := "/var/tmp/824-"
@@ -336,86 +336,86 @@ func testGetId(server string, layer int) KeyType {
 
 // }
 
-// func TestDataIntegrityBasic(t *testing.T) {
-// 	runtime.GOMAXPROCS(4)
+func TestDataIntegrityBasic(t *testing.T) {
+	runtime.GOMAXPROCS(4)
 
-// 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Data Integrity Functions")
-//   sk, err := rsa.GenerateKey(crand.Reader, 2014);
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Data Integrity Functions")
+	sk, err := rsa.GenerateKey(crand.Reader, 2014)
 
-//   if err != nil {
-//     t.Fatalf("key gen err", err)
-//   }
+	if err != nil {
+		t.Fatalf("key gen err", err)
+	}
 
-//   err = sk.Validate();
-//   if err != nil {
-//     t.Fatalf("Validation failed.", err);
-//   }
+	err = sk.Validate()
+	if err != nil {
+		t.Fatalf("Validation failed.", err)
+	}
 
+	//key := KeyType("testkey")
+	//val := ValueType{[]string{"s1", "s2", "s3"}, nil, &sk.PublicKey}
 
-//   key := KeyType("testkey")
-//   val := ValueType{[]string{"s1", "s2", "s3"}, nil, &sk.PublicKey}
+	//sig, err1 := SignValue(key, val, sk)
+	//val.Sign = sig
 
-//   sig, err1 := SignValue(key, val, sk)
-//   val.Sign = sig
+	/*
+	  if VerifyValue(key, val) {
+	    fmt.Println("value verified!")
+	  } else {
+	   t.Fatalf("Value not verified =(")
+	  }
 
-//   if VerifyValue(key, val) {
-//     fmt.Println("value verified!")
-//   } else {
-//     t.Fatalf("Value not verified =(")
-//   }
+	  val.Servers = []string{"sybil"}
+	  if !VerifyValue(key, val) {
+	    fmt.Println("value modification detected!")
+	  } else {
+	    t.Fatalf("Value modification not detected")
+	  }
 
-//   val.Servers = []string{"sybil"}
-//   if !VerifyValue(key, val) {
-//     fmt.Println("value modification detected!")
-//   } else {
-//     t.Fatalf("Value modification not detected")
-//   }
+	  sk1, err1 := rsa.GenerateKey(crand.Reader, 2014);
+	  if err1 != nil {
+	    t.Fatalf("key generation error %s", err)
+	  }
+	  val = ValueType{[]string{"s1", "s2", "s3"}, nil, &sk1.PublicKey}
+	  val.Sign = sig
+	  if !VerifyValue(key, val) {
+	    fmt.Println("pk modification detected!")
+	  }
+	*/
 
-//   sk1, err1 := rsa.GenerateKey(crand.Reader, 2014);
-//   if err1 != nil {
-//     t.Fatalf("key generation error %s", err)
-//   }
-//   val = ValueType{[]string{"s1", "s2", "s3"}, nil, &sk1.PublicKey}
-//   val.Sign = sig
-//   if !VerifyValue(key, val) {
-//     fmt.Println("pk modification detected!")
-//   }
+	sk1, _ := rsa.GenerateKey(crand.Reader, 2014)
+	fmt.Println("Testing verification on true value type")
+	//key1 := KeyType("testkey1")
+	val1 := TrueValueType{"testval", "srv1", nil, &sk.PublicKey}
 
-//   fmt.Println("Testing verification on true value type")
-//   key1 := KeyType("testkey1")
-//   val1 := TrueValueType{"testval", nil, &sk.PublicKey}
+	sig2, _ := SignTrueValue(val1, sk)
+	val1.Sign = sig2
 
-//   sig2, _ := SignTrueValue(key1, val1, sk)
-//   val1.Sign = sig2
+	if VerifyTrueValue(val1) {
+		fmt.Println("true value verified!")
+	} else {
+		t.Fatalf("TrueValue couldn't verify")
+	}
 
-//   if VerifyTrueValue(key1, val1) {
-//     fmt.Println("true value verified!")
-//   } else {
-//     t.Fatalf("TrueValue couldn't verify")
-//   }
+	val1.TrueValue = "changed"
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value modification detected!")
+	} else {
+		t.Fatalf("True value modification not detected")
+	}
 
-//   val1.TrueValue = "changed"
-//   if !VerifyTrueValue(key1, val1) {
-//     fmt.Println("true value modification detected!")
-//   } else {
-//     t.Fatalf("True value modification not detected")
-//   }
+	val1 = TrueValueType{"testval", "srv1", nil, &sk1.PublicKey}
+	val1.Sign = sig2
 
-//   val1 = TrueValueType{"testval", nil, &sk1.PublicKey}
-//   val1.Sign = sig2
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value pk modification detected!")
+	} else {
+		t.Fatalf("True value PK modification not detected")
+	}
 
-//   if !VerifyTrueValue(key1, val1) {
-//     fmt.Println("true value pk modification detected!")
-//   } else {
-//     t.Fatalf("True value PK modification not detected")
-//   }
-
-
-// }
-
+}
 
 func TestRealGetAndPut(t *testing.T) {
-	
+
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
@@ -459,32 +459,32 @@ func TestRealGetAndPut(t *testing.T) {
 	counter := 0
 	// hard code in records for each server
 	for i := 0; i < nservers; i++ {
-		
+
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
 		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
 		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
 		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
-	
+
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
 			var key KeyType = KeyType(strconv.Itoa(counter))
 			keys = append(keys, key)
 			counter++
-			val := ValueType{paxos_cluster, nil, &ws[i].secretKey.PublicKey}
+			val := ValueType{paxos_cluster}
 			// randomly pick 5 servers
 			for kp := 0; kp < PaxosSize; kp++ {
 				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
 			}
 			records[key] = val
 			ws[i].kvstore[key] = val
-			
+
 			ws[i].paxosInstances[key] = *wp0
 			ws[(i+1)%nservers].paxosInstances[key] = *wp1
 			ws[(i+2)%nservers].paxosInstances[key] = *wp2
-			
-			wp0.db[key] = TrueValueType{"hello", nil, &ws[i].secretKey.PublicKey}
-			wp1.db[key] = TrueValueType{"hello", nil, &ws[(i+1)%nservers].secretKey.PublicKey}
-			wp2.db[key] = TrueValueType{"hello", nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+
+			wp0.db[key] = TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
+			wp1.db[key] = TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			wp2.db[key] = TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
 		}
 	}
 
@@ -520,7 +520,7 @@ func TestRealGetAndPut(t *testing.T) {
 	// start clients
 
 	cl := MakeClerk(kvh[0])
-	
+
 	fmt.Printf("Try to do a lookup from client\n")
 
 	value := cl.Get("0", []string{kvh[0]})

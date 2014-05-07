@@ -151,9 +151,10 @@ type ClientGetReply struct {
 }
 
 type ClientPutArgs struct {
-	Key       KeyType
-	Value     string
-	RequestID int64
+	Key        KeyType
+	Value      string
+	RequestID  int64
+	Originator string // server where put request originates
 }
 
 type ClientPutReply struct {

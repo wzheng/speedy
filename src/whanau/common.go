@@ -62,14 +62,15 @@ type KeyType string
 
 type ValueType struct {
 	Servers []string
-	Sign    []byte
-	PubKey  *rsa.PublicKey
+	//Sign    []byte
+	//PubKey  *rsa.PublicKey
 }
 
 type TrueValueType struct {
-	TrueValue string
-	Sign      []byte
-	PubKey    *rsa.PublicKey
+	TrueValue  string
+	Originator string
+	Sign       []byte // sign(TrueValue || Originator || PubKey)
+	PubKey     *rsa.PublicKey
 }
 
 // Key value pair

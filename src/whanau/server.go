@@ -35,7 +35,7 @@ type WhanauServer struct {
 	myaddr string
 	dead   bool // for testing
 	reqID  int64
-	rpc       *rpc.Server
+	rpc    *rpc.Server
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
@@ -99,7 +99,7 @@ func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 	instance := ws.paxosInstances[args.Key]
 	instance.PaxosGet(&get_args, &get_reply)
 
-	if VerifyTrueValue(get_args.Key, get_reply.Value) {
+	if VerifyTrueValue(get_reply.Value) {
 		reply.Value = get_reply.Value.TrueValue
 		reply.Err = OK
 	} else {
@@ -118,7 +118,7 @@ func (ws *WhanauServer) PaxosPutRPC(args *ClientPutArgs,
 		return nil
 	}
 
-	put_valuetype := TrueValueType{args.Value, nil, nil}
+	put_valuetype := TrueValueType{args.Value, args.Originator, nil, nil}
 
 	put_args := PaxosPutArgs{args.Key, put_valuetype, args.RequestID}
 	var put_reply PaxosPutReply
@@ -270,7 +270,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *Init
 
 			for k, v := range args.KeyMap {
 				ws.mu.Lock()
-				ws.kvstore[k] = ValueType{servers, nil, &ws.secretKey.PublicKey}
+				ws.kvstore[k] = ValueType{servers}
 				wp := StartWhanauPaxos(servers, index, nil)
 				ws.paxosInstances[k] = *wp
 				ws.paxosInstances[k].db[k] = v
@@ -578,8 +578,8 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 
 func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
 	ws.new_paxos_clusters = append(ws.new_paxos_clusters, args.Cluster)
-	
-	// go through the dictionary to see if 
+
+	// go through the dictionary to see if
 
 	reply.Err = OK
 	return nil

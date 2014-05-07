@@ -10,9 +10,9 @@ import "math"
 import "net/rpc"
 
 type WhanauPaxos struct {
-	mu   sync.Mutex
-	me   int
-	dead bool // for testing
+	mu     sync.Mutex
+	me     int
+	dead   bool // for testing
 	myaddr string
 
 	px              *paxos.Paxos
@@ -26,7 +26,7 @@ type WhanauPaxos struct {
 	db map[KeyType]TrueValueType
 
 	// only applicable if this server is a master
-	pwLock sync.Mutex
+	pwLock         sync.Mutex
 	pending_writes map[PendingInsertsKey]string // this is a mapping from a pending write keys to servers
 }
 
@@ -92,7 +92,7 @@ func (wp *WhanauPaxos) LogGet(args *PaxosGetArgs, reply *PaxosGetReply) {
 		reply.Value = getValue
 	} else {
 		reply.Err = ErrNoKey
-		reply.Value = TrueValueType{"", nil, nil}
+		reply.Value = TrueValueType{"", "", nil, nil}
 	}
 }
 

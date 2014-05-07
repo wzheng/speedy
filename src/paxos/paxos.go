@@ -415,7 +415,7 @@ func Make(peers []string, me int, rpcs *rpc.Server) *Paxos {
 		px.done_values[peer] = -1
 	}
 	px.min_done = -1
-	px.seq = -1
+	px.seq = 0
 
 	if rpcs != nil {
 		// caller will create socket &c

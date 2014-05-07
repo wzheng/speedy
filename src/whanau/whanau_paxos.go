@@ -8,6 +8,8 @@ import "time"
 import "sync"
 import "math"
 import "net/rpc"
+import "encoding/gob"
+import "fmt"
 
 type WhanauPaxos struct {
 	mu   sync.Mutex
@@ -112,7 +114,6 @@ func (wp *WhanauPaxos) LogPending(args *PaxosPendingInsertsArgs, reply *PaxosPen
 
 // Fast forward the log from fromSeq up to toSeq, applying all the  updates.
 func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
-
 	for i := fromSeq; i <= toSeq; i++ {
 		decided, value := wp.px.Status(i)
 		for !decided {
@@ -183,6 +184,7 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 		}
 	}
 
+
 	// Okay, try handling the request.
 	getop := Op{GET, *args, NRand(), args.RequestID}
 	wp.AgreeAndLogRequests(getop)
@@ -190,6 +192,8 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 	getreply := wp.handledRequests[args.RequestID].(PaxosGetReply)
 	reply.Err = getreply.Err
 	reply.Value = getreply.Value
+
+	fmt.Printf("get got value %v\n", getreply.Value)
 	return nil
 }
 
@@ -265,5 +269,15 @@ func StartWhanauPaxos(servers []string, me int,
 	wp.px = paxos.Make(servers, me, rpcs)
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)
+	wp.currSeq = 0
+
+	gob.Register(Op{})
+	gob.Register(PaxosGetArgs{})
+	gob.Register(PaxosPutArgs{})
+	gob.Register(PaxosGetReply{})
+	gob.Register(PaxosPutReply{})
+	gob.Register(PaxosPendingInsertsArgs{})
+	gob.Register(PaxosPendingInsertsReply{})
+
 	return wp
 }

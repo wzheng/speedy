@@ -5,6 +5,7 @@ package whanau
 import (
 	crand "crypto/rand"
 	"crypto/rsa"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"math/rand"
@@ -14,7 +15,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"encoding/gob"
 )
 
 //import "encoding/gob"
@@ -121,6 +121,10 @@ func (ws *WhanauServer) PaxosPutRPC(args *ClientPutArgs,
 	}
 
 	put_valuetype := TrueValueType{args.Value, args.Originator, nil, nil}
+
+	// Sign true value using my secret key
+	sig, _ := SignTrueValue(put_valuetype, ws.secretKey)
+	put_valuetype.Sign = sig
 
 	put_args := PaxosPutArgs{args.Key, put_valuetype, args.RequestID}
 	var put_reply PaxosPutReply

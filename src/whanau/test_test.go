@@ -159,11 +159,11 @@ func TestLookup(t *testing.T) {
 		}
 	}
 
-  /*
-	for i := 0; i < nservers; i++ {
-		fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-	}
-  */
+	/*
+		for i := 0; i < nservers; i++ {
+			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+		}
+	*/
 	// run setup in parallel
 	// parameters
 	constant := 5
@@ -194,19 +194,19 @@ func TestLookup(t *testing.T) {
 	elapsed := time.Since(start)
 	fmt.Printf("Finished setup, time: %s\n", elapsed)
 
-  /*
-	for i := 0; i < nservers; i++ {
-		fmt.Println("")
-		//fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
+	/*
+		for i := 0; i < nservers; i++ {
+			fmt.Println("")
+			//fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
 
-		fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
-		for j := 1; j < nlayers; j++ {
-			fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
-			fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
-			//fmt.Printf("ws[%d].succ[%d]: %s\n", i, j, ws[i].succ[j])
+			fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
+			for j := 1; j < nlayers; j++ {
+				fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
+				fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
+				//fmt.Printf("ws[%d].succ[%d]: %s\n", i, j, ws[i].succ[j])
+			}
 		}
-	}
-  */
+	*/
 
 	fmt.Printf("Check key coverage in all dbs\n")
 
@@ -307,7 +307,7 @@ func TestLookup(t *testing.T) {
 func TestPutGet(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-  fmt.Printf("\033[95m%s\033[0m\n", "Test: Basic PutGet")
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Basic PutGet")
 	const nservers = 10
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -340,85 +340,51 @@ func TestDataIntegrityBasic(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Data Integrity Functions")
-  sk, err := rsa.GenerateKey(crand.Reader, 2014);
+	sk, err := rsa.GenerateKey(crand.Reader, 2014)
 
-  if err != nil {
-    t.Fatalf("key gen err", err)
-  }
+	if err != nil {
+		t.Fatalf("key gen err", err)
+	}
 
-  err = sk.Validate();
-  if err != nil {
-    t.Fatalf("Validation failed.", err);
-  }
+	err = sk.Validate()
+	if err != nil {
+		t.Fatalf("Validation failed.", err)
+	}
 
+	fmt.Println("Testing verification on true value type")
+	val1 := TrueValueType{"testval", "srv1", nil, &sk.PublicKey}
 
-  /*
-  key := KeyType("testkey")
-  val := ValueType{[]string{"s1", "s2", "s3"}, nil, &sk.PublicKey}
+	sig2, _ := SignTrueValue(val1, sk)
+	val1.Sign = sig2
 
-  sig, err1 := SignValue(key, val, sk)
-  val.Sign = sig
+	if VerifyTrueValue(val1) {
+		fmt.Println("true value verified!")
+	} else {
+		t.Fatalf("TrueValue couldn't verify")
+	}
 
-  if VerifyValue(key, val) {
-    fmt.Println("value verified!")
-  } else {
-    t.Fatalf("Value not verified =(")
-  }
+	val1.TrueValue = "changed"
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value modification detected!")
+	} else {
+		t.Fatalf("True value modification not detected")
+	}
 
-  val.Servers = []string{"sybil"}
-  if !VerifyValue(key, val) {
-    fmt.Println("value modification detected!")
-  } else {
-    t.Fatalf("Value modification not detected")
-  }
+	sk1, _ := rsa.GenerateKey(crand.Reader, 2014)
 
-  sk1, err1 := rsa.GenerateKey(crand.Reader, 2014);
-  if err1 != nil {
-    t.Fatalf("key generation error %s", err)
-  }
-  val = ValueType{[]string{"s1", "s2", "s3"}, nil, &sk1.PublicKey}
-  val.Sign = sig
-  if !VerifyValue(key, val) {
-    fmt.Println("pk modification detected!")
-  }
-  */
+	val1 = TrueValueType{"testval", "srv1", nil, &sk1.PublicKey}
+	val1.Sign = sig2
 
-  fmt.Println("Testing verification on true value type")
-  val1 := TrueValueType{"testval", "srv1", nil, &sk.PublicKey}
-
-  sig2, _ := SignTrueValue(val1, sk)
-  val1.Sign = sig2
-
-  if VerifyTrueValue(val1) {
-    fmt.Println("true value verified!")
-  } else {
-    t.Fatalf("TrueValue couldn't verify")
-  }
-
-  val1.TrueValue = "changed"
-  if !VerifyTrueValue(val1) {
-    fmt.Println("true value modification detected!")
-  } else {
-    t.Fatalf("True value modification not detected")
-  }
-
-  sk1, _ := rsa.GenerateKey(crand.Reader, 2014);
-
-  val1 = TrueValueType{"testval", "srv1", nil, &sk1.PublicKey}
-  val1.Sign = sig2
-
-  if !VerifyTrueValue(val1) {
-    fmt.Println("true value pk modification detected!")
-  } else {
-    t.Fatalf("True value PK modification not detected")
-  }
-
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value pk modification detected!")
+	} else {
+		t.Fatalf("True value PK modification not detected")
+	}
 
 }
 
-
 func TestRealGetAndPut(t *testing.T) {
-	
+
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
@@ -485,17 +451,17 @@ func TestRealGetAndPut(t *testing.T) {
 
 			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
 			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
-      val0.Sign = sig0
+			val0.Sign = sig0
 			wp0.db[key] = val0
-			
+
 			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
 			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
-      val1.Sign = sig1
+			val1.Sign = sig1
 			wp1.db[key] = val1
-			
+
 			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
 			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
-      val2.Sign = sig2
+			val2.Sign = sig2
 			wp2.db[key] = val2
 		}
 	}
@@ -539,7 +505,7 @@ func TestRealGetAndPut(t *testing.T) {
 	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
 
 	cl := MakeClerk(kvh[0])
-	
+
 	fmt.Printf("Try to do a lookup from client\n")
 
 	value := cl.ClientGet("0")

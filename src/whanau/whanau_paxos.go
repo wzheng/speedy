@@ -184,7 +184,6 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 		}
 	}
 
-
 	// Okay, try handling the request.
 	getop := Op{GET, *args, NRand(), args.RequestID}
 	wp.AgreeAndLogRequests(getop)

@@ -65,7 +65,7 @@ func (ck *Clerk) Lookup(key KeyType) ValueType {
 }
 
 // Perform Lookup to figure out which servers to Put to or Get from.
-func (ck *Clerk) FindAndVerifyServers(key KeyType) ([]string, Err) {
+func (ck *Clerk) FindServers(key KeyType) ([]string, Err) {
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
 
@@ -92,7 +92,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	get_args.Key = key
 	get_args.RequestID = NRand()
 
-	for _, server := range server_list {		
+	for _, server := range server_list {
 		fmt.Printf("Get(): calling server %s\n", server)
 		ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
 			&get_reply)
@@ -132,7 +132,7 @@ func (ck *Clerk) Put(key KeyType, value string, originator string, server_list [
 
 // Client wrapper for Get.
 func (ck *Clerk) ClientGet(key KeyType) string {
-	server_list, err := ck.FindAndVerifyServers(key)
+	server_list, err := ck.FindServers(key)
 	fmt.Printf("server_list: %v\n", server_list)
 	if err == OK {
 		val := ck.Get(key, server_list)
@@ -146,7 +146,7 @@ func (ck *Clerk) ClientGet(key KeyType) string {
 // If the key doesn't yet exist on the network, add it to pending
 // requests.
 func (ck *Clerk) ClientPut(key KeyType, value string) Err {
-	server_list, err := ck.FindAndVerifyServers(key)
+	server_list, err := ck.FindServers(key)
 
 	if err == ErrNoKey {
 		// TODO: adds the key to its local pending put list
@@ -163,11 +163,9 @@ func (ck *Clerk) ClientPut(key KeyType, value string) Err {
 			// TODO error trying to add a pending request...?
 			return ""
 		}
-	} else if err != ErrFailVerify {
+	} else {
 		put_err := ck.Put(key, value, ck.server, server_list)
 		return put_err
-	} else {
-		return err
 	}
 
 	return ""

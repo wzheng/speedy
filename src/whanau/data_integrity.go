@@ -12,39 +12,6 @@ import "crypto/rand"
 // http://golang.org/pkg/crypto/rsa/#VerifyPKCS1v15
 
 // value has value and public key, but Sign field is not populated yet
-// Not needed
-/*
-func SignValue(key KeyType, value ValueType, secretKey *rsa.PrivateKey) ([]byte, error) {
-
-  hashMD5 := md5.New()
-
-  // concatenate key, value, and public key to bind them all together
-  // sign s
-  s := string(key) + strings.Join(value.Servers, string(",")) + value.PubKey.N.String() + strconv.Itoa(value.PubKey.E)
-  hashMD5.Write([]byte(s))
-  digest := hashMD5.Sum(nil)
-
-  sk, err := rsa.GenerateKey(rand.Reader, 2014);
-
-  if err != nil {
-    fmt.Println(err);
-  }
-
-  err = sk.Validate();
-  if err != nil {
-    fmt.Println("Validation failed.", err);
-  }
-
-  sig, sigErr := rsa.SignPKCS1v15(rand.Reader, secretKey, crypto.MD5, digest)
-
-  if sigErr != nil {
-    fmt.Println("Signing failed.", err);
-  }
-
-  return sig, sigErr
-}
-*/
-
 func SignTrueValue(value TrueValueType, secretKey *rsa.PrivateKey) ([]byte, error) {
 
 	hashMD5 := md5.New()
@@ -63,31 +30,6 @@ func SignTrueValue(value TrueValueType, secretKey *rsa.PrivateKey) ([]byte, erro
 
 	return sig, sigErr
 }
-
-// Not needed
-/*
-func VerifyValue(key KeyType, value ValueType) bool {
-
-  if (value.Sign == nil) || (value.PubKey == nil) {
-    return false
-  }
-
-  hashMD5 := md5.New()
-
-  // concatenate key, value, and public key to bind them all together
-  // sign s
-  s := string(key) + strings.Join(value.Servers, string(",")) + value.PubKey.N.String() + strconv.Itoa(value.PubKey.E)
-  hashMD5.Write([]byte(s))
-  digest := hashMD5.Sum(nil)
-
-  err := rsa.VerifyPKCS1v15(value.PubKey, crypto.MD5, digest, value.Sign)
-  if err != nil {
-    return false
-  }
-
-  return true;
-}
-*/
 
 func VerifyTrueValue(value TrueValueType) bool {
 

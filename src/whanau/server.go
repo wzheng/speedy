@@ -35,6 +35,7 @@ type WhanauServer struct {
 	myaddr string
 	dead   bool // for testing
 	reqID  int64
+	rpc       *rpc.Server
 
 	//// Paxos variables ////
 	// map of key -> local WhanauPaxos instance handling the key
@@ -577,6 +578,9 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 
 func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
 	ws.new_paxos_clusters = append(ws.new_paxos_clusters, args.Cluster)
+	
+	// go through the dictionary to see if 
+
 	reply.Err = OK
 	return nil
 }
@@ -623,8 +627,10 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.masters = masters
 	ws.is_master = is_master
 
-	rpcs := rpc.NewServer()
-	rpcs.Register(ws)
+	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
+
+	ws.rpc = rpc.NewServer()
+	ws.rpc.Register(ws)
 
 	os.Remove(servers[me])
 	l, e := net.Listen("unix", servers[me])
@@ -646,7 +652,7 @@ func StartServer(servers []string, me int, myaddr string,
 			conn, err := ws.l.Accept()
 			// removed unreliable code for now
 			if err == nil && ws.dead == false {
-				go rpcs.ServeConn(conn)
+				go ws.rpc.ServeConn(conn)
 			} else if err == nil {
 				conn.Close()
 			}

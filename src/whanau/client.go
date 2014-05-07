@@ -107,29 +107,6 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	return ""
 }
 
-// Put on the server list the client has provided.
-func (ck *Clerk) Put(key KeyType, value string, originator string, server_list []string) Err {
-	// TODO: make a paxos request directly to one of the servers
-	// TODO error?
-	put_args := &ClientPutArgs{}
-	var put_reply ClientPutReply
-
-	put_args.Key = key
-	put_args.Value = value
-	put_args.Originator = originator
-	put_args.RequestID = NRand()
-
-	for _, server := range server_list {
-		ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
-			&put_reply)
-		if ok && (put_reply.Err == OK) {
-			return OK
-		}
-	}
-
-	return ErrRPCCall
-}
-
 // Client wrapper for Get.
 func (ck *Clerk) ClientGet(key KeyType) string {
 	server_list, err := ck.FindServers(key)
@@ -146,26 +123,13 @@ func (ck *Clerk) ClientGet(key KeyType) string {
 // If the key doesn't yet exist on the network, add it to pending
 // requests.
 func (ck *Clerk) ClientPut(key KeyType, value string) Err {
-	server_list, err := ck.FindServers(key)
+	args := &WhanauPutRPCArgs{key, value}
+	reply := &WhanauPutRPCReply{}
 
-	if err == ErrNoKey {
-		// TODO: adds the key to its local pending put list
-		// TODO: what happens if a client makes a call to insert
-		// the same key to 2 different servers? or 2 different clients
-		// making 2 different calls to the same key?
-		pending_args := &PendingArgs{}
-		var pending_reply PendingReply
+	ok := call(ck.server, "WhanauServer.WhanauPutRPC", args, reply)
 
-		add_ok := call(ck.server, "WhanauServer.AddPendingRPC",
-			pending_args, pending_reply)
-
-		if !add_ok {
-			// TODO error trying to add a pending request...?
-			return ""
-		}
-	} else {
-		put_err := ck.Put(key, value, ck.server, server_list)
-		return put_err
+	if ok {
+		return reply.Err
 	}
 
 	return ""

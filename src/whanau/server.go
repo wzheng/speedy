@@ -120,13 +120,14 @@ func (ws *WhanauServer) PaxosPutRPC(args *ClientPutArgs,
 		return nil
 	}
 
-	put_valuetype := TrueValueType{args.Value, args.Originator, nil, nil}
+	//put_valuetype := TrueValueType{args.Value, args.Originator, nil, nil}
 
 	// Sign true value using my secret key
-	sig, _ := SignTrueValue(put_valuetype, ws.secretKey)
-	put_valuetype.Sign = sig
+	//fmt.Println("put_valuetype %v", put_valuetype)
+	//sig, _ := SignTrueValue(put_valuetype, ws.secretKey)
+	//put_valuetype.Sign = sig
 
-	put_args := PaxosPutArgs{args.Key, put_valuetype, args.RequestID}
+	put_args := PaxosPutArgs{args.Key, args.Value, args.RequestID}
 	var put_reply PaxosPutReply
 
 	instance := ws.paxosInstances[args.Key]
@@ -691,5 +692,63 @@ func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
 	//ws.ids[args.Layer] = args.Key
 	ws.ids = append(ws.ids, args.Key)
 	reply.Err = OK
+	return nil
+}
+
+func (ws *WhanauServer) WhanauPutRPC(args *WhanauPutRPCArgs, reply *WhanauPutRPCReply) error {
+
+	key := args.Key
+	v := args.Value
+
+	value := TrueValueType{v, ws.myaddr, nil, &ws.secretKey.PublicKey}
+	value.Sign, _ = SignTrueValue(value, ws.secretKey)
+
+	lookup_args := &LookupArgs{}
+	lookup_reply := &LookupReply{}
+
+	lookup_args.Key = key
+	lookup_args.NLayers = L
+	lookup_args.Steps = W
+
+	var err Err
+	var servers []string
+
+	ws.Lookup(lookup_args, lookup_reply)
+
+	if lookup_reply.Err != ErrNoKey {
+		servers = lookup_reply.Value.Servers
+	}
+	err = lookup_reply.Err
+
+	if err == ErrNoKey {
+		// TODO: adds the key to its local pending put list
+		// TODO: what happens if a client makes a call to insert
+		// the same key to 2 different servers? or 2 different clients
+		// making 2 different calls to the same key?
+		pending_args := &PendingArgs{key, value, ws.myaddr}
+		pending_reply := &PendingReply{}
+
+		ws.AddPendingRPC(pending_args, pending_reply)
+
+	} else {
+
+		var req int64
+
+		ws.mu.Lock()
+		ws.reqID += 1
+		req = ws.reqID
+		ws.mu.Unlock()
+
+		cpargs := &ClientPutArgs{key, value, req, ws.myaddr}
+		cpreply := &ClientPutReply{}
+
+		randIdx := rand.Intn(len(servers))
+
+		ok := call(servers[randIdx], "WhanauServer.PaxosPutRPC", cpargs, cpreply)
+		if ok {
+			reply.Err = cpreply.Err
+		}
+	}
+
 	return nil
 }

@@ -152,7 +152,7 @@ type ClientGetReply struct {
 
 type ClientPutArgs struct {
 	Key        KeyType
-	Value      string
+	Value      TrueValueType
 	RequestID  int64
 	Originator string // server where put request originates
 }
@@ -183,5 +183,14 @@ type ReceiveNewPaxosClusterArgs struct {
 }
 
 type ReceiveNewPaxosClusterReply struct {
+	Err Err
+}
+
+type WhanauPutRPCArgs struct {
+	Key   KeyType
+	Value string
+}
+
+type WhanauPutRPCReply struct {
 	Err Err
 }

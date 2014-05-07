@@ -510,4 +510,11 @@ func TestRealGetAndPut(t *testing.T) {
 
 	value := cl.ClientGet("0")
 	fmt.Printf("value is %s\n", value)
+
+	// test single value put -- an update, NOT an insert!
+
+	cl.ClientPut("0", "helloworld")
+	value = cl.ClientGet("0")
+
+	fmt.Printf("After put: value is %v\n", value)
 }

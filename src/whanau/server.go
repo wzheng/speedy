@@ -14,6 +14,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"encoding/gob"
 )
 
 //import "encoding/gob"
@@ -87,7 +88,7 @@ func (ws *WhanauServer) GetSucc() [][]Record {
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
 func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
-	reply *ClientGetReply) {
+	reply *ClientGetReply) error {
 
 	if _, ok := ws.paxosInstances[args.Key]; !ok {
 		reply.Err = ErrNoKey
@@ -106,6 +107,7 @@ func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 		reply.Value = ""
 		reply.Err = ErrFailVerify
 	}
+	return nil
 }
 
 // RPC to actually do a Put on the server's WhanauPaxos cluster.
@@ -631,6 +633,15 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.rpc = rpc.NewServer()
 	ws.rpc.Register(ws)
+
+	gob.Register(LookupArgs{})
+	gob.Register(LookupReply{})
+	gob.Register(PendingArgs{})
+	gob.Register(PendingReply{})
+	gob.Register(PaxosGetArgs{})
+	gob.Register(PaxosGetReply{})
+	gob.Register(PaxosPutArgs{})
+	gob.Register(PaxosPutReply{})
 
 	os.Remove(servers[me])
 	l, e := net.Listen("unix", servers[me])

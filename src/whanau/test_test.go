@@ -473,11 +473,9 @@ func TestRealGetAndPut(t *testing.T) {
 			var key KeyType = KeyType(strconv.Itoa(counter))
 			keys = append(keys, key)
 			counter++
+
+			fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
 			val := ValueType{paxos_cluster}
-			// randomly pick 5 servers
-			for kp := 0; kp < PaxosSize; kp++ {
-				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
-			}
 			records[key] = val
 			ws[i].kvstore[key] = val
 
@@ -485,9 +483,20 @@ func TestRealGetAndPut(t *testing.T) {
 			ws[(i+1)%nservers].paxosInstances[key] = *wp1
 			ws[(i+2)%nservers].paxosInstances[key] = *wp2
 
-			wp0.db[key] = TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
-			wp1.db[key] = TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
-			wp2.db[key] = TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
+			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
+      val0.Sign = sig0
+			wp0.db[key] = val0
+			
+			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+      val1.Sign = sig1
+			wp1.db[key] = val1
+			
+			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+      val2.Sign = sig2
+			wp2.db[key] = val2
 		}
 	}
 
@@ -499,6 +508,8 @@ func TestRealGetAndPut(t *testing.T) {
 	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
+
+	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
 
 	c := make(chan bool) // writes true of done
 	fmt.Printf("Starting setup\n")
@@ -522,10 +533,15 @@ func TestRealGetAndPut(t *testing.T) {
 
 	// start clients
 
+	largs := &LookupArgs{"0", nlayers, w, nil}
+	lreply := &LookupReply{}
+	ws[3].Lookup(largs, lreply)
+	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
+
 	cl := MakeClerk(kvh[0])
 	
 	fmt.Printf("Try to do a lookup from client\n")
 
-	value := cl.Get("0", []string{kvh[0]})
+	value := cl.ClientGet("0")
 	fmt.Printf("value is %s\n", value)
 }

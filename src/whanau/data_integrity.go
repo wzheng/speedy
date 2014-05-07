@@ -55,21 +55,10 @@ func SignTrueValue(value TrueValueType, secretKey *rsa.PrivateKey) ([]byte, erro
 	hashMD5.Write([]byte(s))
 	digest := hashMD5.Sum(nil)
 
-	sk, err := rsa.GenerateKey(rand.Reader, 2014)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = sk.Validate()
-	if err != nil {
-		fmt.Println("Validation failed.", err)
-	}
-
 	sig, sigErr := rsa.SignPKCS1v15(rand.Reader, secretKey, crypto.MD5, digest)
 
 	if sigErr != nil {
-		fmt.Println("Signing failed.", err)
+		fmt.Println("Signing failed.", sigErr)
 	}
 
 	return sig, sigErr

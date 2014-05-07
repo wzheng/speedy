@@ -69,17 +69,14 @@ func (ck *Clerk) FindAndVerifyServers(key KeyType) ([]string, Err) {
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
 
+	lookup_args.Key = key
 	lookup_args.NLayers = L
 	lookup_args.Steps = W
 
 	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok && (lookup_reply.Err != ErrNoKey) {
-		//if VerifyValue(key, lookup_reply.Value) {
 		return lookup_reply.Value.Servers, OK
-		//} else {
-		//		return nil, ErrFailVerify
-		//}
 	} else if lookup_reply.Err == ErrNoKey {
 		return nil, ErrNoKey
 	}
@@ -95,7 +92,8 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	get_args.Key = key
 	get_args.RequestID = NRand()
 
-	for _, server := range server_list {
+	for _, server := range server_list {		
+		fmt.Printf("Get(): calling server %s\n", server)
 		ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
 			&get_reply)
 		if ok && (get_reply.Err != ErrNoKey) &&
@@ -135,6 +133,7 @@ func (ck *Clerk) Put(key KeyType, value string, originator string, server_list [
 // Client wrapper for Get.
 func (ck *Clerk) ClientGet(key KeyType) string {
 	server_list, err := ck.FindAndVerifyServers(key)
+	fmt.Printf("server_list: %v\n", server_list)
 	if err == OK {
 		val := ck.Get(key, server_list)
 		return val

@@ -50,30 +50,27 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 // rd = size of database
 // rs = number of nodes to collect samples from
 // t = number of successors returned from sample per node
-func (ws *WhanauServer) Setup(nlayers int, rf int, w int, rd int, rs int, t int) {
+func (ws *WhanauServer) Setup() {
 	DPrintf("In Setup of server %s", ws.myaddr)
 
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-	ws.db = ws.SampleRecords(rd, w)
+	ws.db = ws.SampleRecords(ws.rd, ws.w)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
 	ws.succ = make([][]Record, 0)
-	for i := 0; i < nlayers; i++ {
+	for i := 0; i < ws.nlayers; i++ {
 		// populate tables in layers
 		ws.ids = append(ws.ids, ws.ChooseID(i))
-		//fmt.Printf("Finished ChooseID of server %s, layer %d\n", ws.myaddr, i)
-		curFingerTable := ws.ConstructFingers(i, rf, w)
+		curFingerTable := ws.ConstructFingers(i)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
 
-		//fmt.Printf("Finished ConstructFingers of server %s, layer %d\n", ws.myaddr, i)
-		curSuccessorTable := ws.Successors(i, w, rs, t)
+		curSuccessorTable := ws.Successors(i)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 
-		//fmt.Printf("Finished SuccessorTable of server %s, layer %d\n", ws.myaddr, i)
 	}
 }

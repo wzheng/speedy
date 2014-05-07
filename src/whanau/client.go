@@ -70,8 +70,6 @@ func (ck *Clerk) FindServers(key KeyType) ([]string, Err) {
 	lookup_reply := &LookupReply{}
 
 	lookup_args.Key = key
-	lookup_args.NLayers = L
-	lookup_args.Steps = W
 
 	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 

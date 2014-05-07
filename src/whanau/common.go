@@ -86,21 +86,11 @@ type Finger struct {
 }
 
 // Global Parameters
-const (
-	// n = number of honest nodes
-	// m = O(n) number of honest edges
-	// k = number of keys/node
 
-	W = 10 // mixing time of honest region
-	//RD             = 5 // size of db sqrt(km)
-	//RF             = 5 // size of fingertable (per layer)
-	//RS             = 5 // size of succ records
-	L         = 11 // number of layers log(km)
+const (
 	PaxosSize = 5
 	PaxosWalk = 5
-	//STEPS          = 2 // number of steps to take in random walk
-	//NUM_SUCCESSORS = 2 //number of successors obtained each step
-	TIMEOUT = 10 // number of times to try querying
+	TIMEOUT   = 10 // number of times to try querying
 )
 
 type PendingInsertsKey struct {

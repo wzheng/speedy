@@ -110,6 +110,19 @@ func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
+	const nkeys = 20           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -127,7 +140,8 @@ func TestLookup(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false)
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false,
+			nlayers, nfingers, w, rd, rs, ts)
 	}
 
 	var cka [nservers]*Clerk
@@ -137,8 +151,6 @@ func TestLookup(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup")
 
-	const nkeys = 20           // keys are strings from 0 to 99
-	const k = nkeys / nservers // keys per node
 	keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)
 	counter := 0
@@ -158,29 +170,17 @@ func TestLookup(t *testing.T) {
 			ws[i].kvstore[key] = val
 		}
 	}
-
 	/*
 		for i := 0; i < nservers; i++ {
 			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
 		}
 	*/
-	// run setup in parallel
-	// parameters
-	constant := 5
-	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
-	nfingers := constant * int(math.Sqrt(k*nservers))
-	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := constant                                   // number of successors sampled per node
-
 	c := make(chan bool) // writes true of done
 	fmt.Printf("Starting setup\n")
 	start := time.Now()
 	for i := 0; i < nservers; i++ {
 		go func(srv int) {
-			DPrintf("running ws[%d].Setup", srv)
-			ws[srv].Setup(nlayers, nfingers, w, rd, rs, ts)
+			ws[srv].Setup()
 			c <- true
 		}(i)
 	}
@@ -276,7 +276,7 @@ func TestLookup(t *testing.T) {
 		for j := 0; j < len(keys); j++ {
 			key := KeyType(keys[j])
 			ctr++
-			largs := &LookupArgs{key, nlayers, w, nil}
+			largs := &LookupArgs{key, nil}
 			lreply := &LookupReply{}
 			ws[i].Lookup(largs, lreply)
 			if lreply.Err != OK {
@@ -309,6 +309,19 @@ func TestPutGet(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Basic PutGet")
 	const nservers = 10
+	const nkeys = 20           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -326,7 +339,8 @@ func TestPutGet(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false)
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false,
+			nlayers, nfingers, w, rd, rs, ts)
 	}
 
 	var cka [nservers]*Clerk
@@ -388,6 +402,20 @@ func TestRealGetAndPut(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
+	const nkeys = 20           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
+	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	defer cleanup(ws)
@@ -408,9 +436,11 @@ func TestRealGetAndPut(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true)
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true,
+				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false)
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false,
+				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
 
@@ -421,8 +451,6 @@ func TestRealGetAndPut(t *testing.T) {
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup")
 
-	const nkeys = 20           // keys are strings from 0 to 99
-	const k = nkeys / nservers // keys per node
 	keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)
 	counter := 0
@@ -466,24 +494,13 @@ func TestRealGetAndPut(t *testing.T) {
 		}
 	}
 
-	// parameters
-	constant := 5
-	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
-	nfingers := constant * int(math.Sqrt(k*nservers))
-	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := constant                                   // number of successors sampled per node
-
-	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
-
 	c := make(chan bool) // writes true of done
 	fmt.Printf("Starting setup\n")
 	start := time.Now()
 	for i := 0; i < nservers; i++ {
 		go func(srv int) {
 			DPrintf("running ws[%d].Setup", srv)
-			ws[srv].Setup(nlayers, nfingers, w, rd, rs, ts)
+			ws[srv].Setup()
 			c <- true
 		}(i)
 	}
@@ -499,7 +516,7 @@ func TestRealGetAndPut(t *testing.T) {
 
 	// start clients
 
-	largs := &LookupArgs{"0", nlayers, w, nil}
+	largs := &LookupArgs{"0", nil}
 	lreply := &LookupReply{}
 	ws[3].Lookup(largs, lreply)
 	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)

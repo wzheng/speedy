@@ -88,7 +88,7 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 // Try finds the value associated with the key
 func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	key := args.Key
-	nlayers := args.NLayers
+	nlayers := ws.nlayers
 	DPrintf("In Try RPC, trying key: %s", key)
 	fingerLength := len(ws.fingers[0])
 	j := sort.Search(fingerLength, func(i int) bool {

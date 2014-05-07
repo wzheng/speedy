@@ -65,6 +65,18 @@ type WhanauServer struct {
 
 	//// DATA INTEGRITY FIELDS ////
 	secretKey *rsa.PrivateKey
+
+	//// Parameters for routing ////
+	// n = number of honest nodes
+	// m = O(n) number of honest edges
+	// k = number of keys/node
+
+	nlayers int // nlayers = number of layers, O(log(km))
+	rf      int // rf = size of finger table, O(sqrt(km))
+	w       int // w = number of steps in random walk, mixing time
+	rd      int // rd = size of database, O(sqrt(km))
+	rs      int // rs = number of nodes to collect samples from, O(sqrt(km))
+	t       int // t = number of successors returned from sample per node, less than rs
 }
 
 type WhanauSybilServer struct {
@@ -189,13 +201,12 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 // to get the true value from.
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
-	nlayers := args.NLayers
-	steps := args.Steps
+	steps := ws.w
 
 	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
 	addr := ws.myaddr
 	count := 0
-	tryArgs := &TryArgs{key, nlayers}
+	tryArgs := &TryArgs{key}
 	tryReply := &TryReply{}
 
 	for tryReply.Err != OK && count < TIMEOUT {
@@ -227,7 +238,7 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 // Sybil node lookup returns false value with some probability
 func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	key := args.Key
-	steps := args.Steps
+	steps := ws.w
 
 	r := rand.New(rand.NewSource(99))
 	prob := r.Float32()
@@ -246,7 +257,7 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 				for i := 0; i < len(ws.neighbors); i++ {
 					lookupArgs := &LookupArgs{}
 					lookupArgs.Key = key
-					lookupArgs.Steps = steps - 1
+					//lookupArgs.Steps = steps - 1
 					call(ws.sybilNeighbors[i].myaddr, "WhanauSybilServer.Lookup", lookupArgs, reply)
 					if reply.Err == OK {
 						break
@@ -408,12 +419,12 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 }
 
 // Constructs Finger table for a specified layer
-func (ws *WhanauServer) ConstructFingers(layer int, rf int, steps int) []Finger {
+func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0)
-	for i := 0; i < rf; i++ {
-		args := &RandomWalkArgs{steps}
+	for i := 0; i < ws.rf; i++ {
+		args := &RandomWalkArgs{ws.w}
 		reply := &RandomWalkReply{}
 
 		// Keep trying until succeed or timeout
@@ -470,12 +481,11 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	By(RecordKey).Sort(ws.db)
 
 	key := args.Key
-	t := args.T
 	var records []Record
 	curCount := 0
 	curRecord := 0
-	if t <= len(ws.db) {
-		for curCount < t {
+	if ws.t <= len(ws.db) {
+		for curCount < ws.t {
 			if ws.db[curRecord].Key >= key {
 				records = append(records, ws.db[curRecord])
 				curCount++
@@ -494,12 +504,12 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	return nil
 }
 
-func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int) []Record {
+func (ws *WhanauServer) Successors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	var successors []Record
-	for i := 0; i < rs; i++ {
+	for i := 0; i < ws.rs; i++ {
 		args := &RandomWalkArgs{}
-		args.Steps = steps
+		args.Steps = ws.w
 		reply := &RandomWalkReply{}
 		ws.RandomWalk(args, reply)
 
@@ -510,7 +520,7 @@ func (ws *WhanauServer) Successors(layer int, steps int, rs int, nsuccessors int
 			DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
 			ws.GetId(getIdArgs, getIdReply)
 
-			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key, nsuccessors}
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
 			for sampleSuccessorsReply.Err != OK {
 				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
@@ -621,7 +631,9 @@ func (ws *WhanauServer) Kill() {
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string,
-	neighbors []string, masters []string, is_master bool) *WhanauServer {
+	neighbors []string, masters []string, is_master bool,
+	nlayers int, rf int, w int, rd int, rs int, t int) *WhanauServer {
+
 	ws := new(WhanauServer)
 	ws.me = me
 	ws.myaddr = myaddr
@@ -633,6 +645,14 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.masters = masters
 	ws.is_master = is_master
+
+	// whanau routing parameters
+	ws.nlayers = nlayers
+	ws.rf = rf
+	ws.w = w
+	ws.rd = rd
+	ws.rs = rs
+	ws.t = t
 
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
 
@@ -707,8 +727,6 @@ func (ws *WhanauServer) WhanauPutRPC(args *WhanauPutRPCArgs, reply *WhanauPutRPC
 	lookup_reply := &LookupReply{}
 
 	lookup_args.Key = key
-	lookup_args.NLayers = L
-	lookup_args.Steps = W
 
 	var err Err
 	var servers []string

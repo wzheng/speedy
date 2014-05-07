@@ -17,7 +17,8 @@ const (
 	ErrRandWalk   = "ErrRandWalk"
 	ErrWrongGroup = "ErrWrongGroup"
 	ErrPending    = "ErrPending"
-  ErrFailVerify = "ErrFailVerify"
+	ErrFailVerify = "ErrFailVerify"
+	ErrRPCCall    = "ErrRPCCall" // equivalent to "!ok" in call()
 )
 
 // for 2PC
@@ -39,9 +40,9 @@ type State string
 
 // server states/phases
 const (
-	Normal   = "Normal"
-	PreSetup = "PreSetup"	
-	Setup    = "Setup"
+	Normal      = "Normal"
+	PreSetup    = "PreSetup"
+	Setup       = "Setup"
 	WhanauSetup = "WhanauSetup"
 )
 
@@ -50,8 +51,8 @@ type Err string
 // for Paxos
 
 const (
-	GET = "Get"
-	PUT = "Put"
+	GET     = "Get"
+	PUT     = "Put"
 	PENDING = "PendingWrite"
 )
 
@@ -61,14 +62,14 @@ type KeyType string
 
 type ValueType struct {
 	Servers []string
-  Sign    []byte
-  PubKey  *rsa.PublicKey
+	Sign    []byte
+	PubKey  *rsa.PublicKey
 }
 
 type TrueValueType struct {
-  TrueValue string
-  Sign    []byte
-  PubKey  *rsa.PublicKey
+	TrueValue string
+	Sign      []byte
+	PubKey    *rsa.PublicKey
 }
 
 // Key value pair
@@ -101,8 +102,7 @@ const (
 	TIMEOUT = 10 // number of times to try querying
 )
 
-
 type PendingInsertsKey struct {
-	Key KeyType
+	Key  KeyType
 	View int
 }

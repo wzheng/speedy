@@ -14,19 +14,13 @@ type LookupReply struct {
 
 // A Put, pending the next Setup.
 type PendingArgs struct {
-	Key   KeyType
-	Value TrueValueType
+	Key    KeyType
+	Value  TrueValueType
 	Server string
 }
 
 type PendingReply struct {
 	Err Err
-}
-
-// TODO hashing for debugging?
-type PutArgs struct {
-	Key   KeyType
-	Value TrueValueType
 }
 
 type PutReply struct {
@@ -135,35 +129,36 @@ type PaxosPutReply struct {
 }
 
 type PaxosPendingInsertsArgs struct {
-	Key         KeyType
-	View        int
-	Server      string
-	RequestID   int64
+	Key       KeyType
+	View      int
+	Server    string
+	RequestID int64
 }
 
 type PaxosPendingInsertsReply struct {
-	Server      string
-	Err         Err
+	Server string
+	Err    Err
 }
 
-type WhanauServerPaxosGetArgs struct {
+type ClientGetArgs struct {
 	Key       KeyType
+	RequestID int64
 }
 
-type WhanauServerPaxosGetReply struct {
-	Value TrueValueType
+type ClientGetReply struct {
+	Value string
 	Err   Err
 }
 
-type WhanauServerPaxosPutArgs struct {
+type ClientPutArgs struct {
 	Key       KeyType
-	Value     TrueValueType
+	Value     string
+	RequestID int64
 }
 
-type WhanauServerPaxosPutReply struct {
-	Err   Err
+type ClientPutReply struct {
+	Err Err
 }
-
 
 type StartSetupArgs struct {
 	MasterServer string

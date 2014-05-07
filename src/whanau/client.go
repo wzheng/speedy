@@ -64,7 +64,8 @@ func (ck *Clerk) Lookup(key KeyType) ValueType {
 	return ValueType{}
 }
 
-func (ck *Clerk) Get(key KeyType) string {
+// Perform Lookup to figure out which servers to Put to or Get from.
+func (ck *Clerk) FindAndVerifyServers(key KeyType) ([]string, Err) {
 	lookup_args := &LookupArgs{}
 	lookup_reply := &LookupReply{}
 
@@ -74,82 +75,99 @@ func (ck *Clerk) Get(key KeyType) string {
 	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, &lookup_reply)
 
 	if ok && (lookup_reply.Err != ErrNoKey) {
+		if VerifyValue(key, lookup_reply.Value) {
+			return lookup_reply.Value.Servers, OK
+		} else {
+			return nil, ErrFailVerify
+		}
+	} else if lookup_reply.Err == ErrNoKey {
+		return nil, ErrNoKey
+	}
 
-    // Data verification to check for server list modification
-    if VerifyValue(key, lookup_reply.Value) {
+	return nil, ErrRPCCall
+}
 
-      server_list := lookup_reply.Value
-      get_args := &PaxosGetArgs{}
-      var get_reply PaxosGetReply
+// Get on the server list the client has provided.
+func (ck *Clerk) Get(key KeyType, server_list []string) string {
+	get_args := &ClientGetArgs{}
+	var get_reply ClientGetReply
 
-      get_args.Key = key
-      get_args.RequestID = NRand()
+	get_args.Key = key
+	get_args.RequestID = NRand()
 
-      for _, server := range server_list.Servers {
-        ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
-          &get_reply)
-        if ok && (get_reply.Err != ErrNoKey) {
-          // TODO check data integrity
-          if VerifyTrueValue(key, get_reply.Value) {
-            return get_reply.Value.TrueValue
-          } else {
-            return ErrFailVerify
-          }
-        }
-      }
+	for _, server := range server_list {
+		ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
+			&get_reply)
+		if ok && (get_reply.Err != ErrNoKey) &&
+			(get_reply.Err != ErrFailVerify) {
+			// TODO check data integrity
+			return get_reply.Value
+		}
+	}
 
-    } else {
-      // TODO how to return verification error?
-      return ErrFailVerify
-    }
+	// TODO how to return verification error?
+	return ""
+}
+
+// Put on the server list the client has provided.
+func (ck *Clerk) Put(key KeyType, value string, server_list []string) Err {
+	// TODO: make a paxos request directly to one of the servers
+	// TODO error?
+	put_args := &ClientPutArgs{}
+	var put_reply ClientPutReply
+
+	put_args.Key = key
+	put_args.Value = value
+	put_args.RequestID = NRand()
+
+	for _, server := range server_list {
+		ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
+			&put_reply)
+		if ok && (put_reply.Err == OK) {
+			return OK
+		}
+	}
+
+	return ErrRPCCall
+}
+
+// Client wrapper for Get.
+func (ck *Clerk) ClientGet(key KeyType) string {
+	server_list, err := ck.FindAndVerifyServers(key)
+	if err == OK {
+		val := ck.Get(key, server_list)
+		return val
 	}
 
 	return ""
 }
 
-// TODO this eventually needs to become a real put
-// TODO hashing for debugging?
-func (ck *Clerk) Put(key KeyType, value TrueValueType) string {
-	lookup_args := &LookupArgs{}
-	var lookup_reply LookupReply
+// Client wrapper for Put.
+// If the key doesn't yet exist on the network, add it to pending
+// requests.
+func (ck *Clerk) ClientPut(key KeyType, value string) Err {
+	server_list, err := ck.FindAndVerifyServers(key)
 
-	ok := call(ck.server, "WhanauServer.Lookup", lookup_args, lookup_reply)
+	if err == ErrNoKey {
+		// TODO: adds the key to its local pending put list
+		// TODO: what happens if a client makes a call to insert
+		// the same key to 2 different servers? or 2 different clients
+		// making 2 different calls to the same key?
+		pending_args := &PendingArgs{}
+		var pending_reply PendingReply
 
-	if ok {
-		if lookup_reply.Err == ErrNoKey {
-			// TODO: adds the key to its local pending put list
-			// TODO: what happens if a client makes a call to insert
-			// the same key to 2 different servers? or 2 different clients
-			// making 2 different calls to the same key?
-			pending_args := &PendingArgs{}
-			var pending_reply PendingReply
+		add_ok := call(ck.server, "WhanauServer.AddPendingRPC",
+			pending_args, pending_reply)
 
-			add_ok := call(ck.server, "WhanauServer.AddPendingRPC",
-				pending_args, pending_reply)
-
-			if !add_ok {
-				// TODO error trying to add a pending request...?
-				return ""
-			}
-		} else {
-			// TODO: make a paxos request directly to one of the servers
-			// TODO error?
-			server_list := lookup_reply.Value
-			put_args := &PaxosPutArgs{}
-			var put_reply PaxosPutReply
-
-			put_args.Key = key
-			put_args.Value = value
-			put_args.RequestID = NRand()
-
-			for _, server := range server_list.Servers {
-				ok := call(server, "WhanauServer.PaxosPutRPC", put_args,
-					&put_reply)
-				if ok && (put_reply.Err == OK) {
-					return ""
-				}
-			}
+		if !add_ok {
+			// TODO error trying to add a pending request...?
+			return ""
 		}
+	} else if err != ErrFailVerify {
+		put_err := ck.Put(key, value, server_list)
+		return put_err
+	} else {
+		return err
 	}
 
 	return ""

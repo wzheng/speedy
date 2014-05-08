@@ -109,8 +109,8 @@ func TestBasic(t *testing.T) {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
-	const nservers = 100
-	const nkeys = 100           // keys are strings from 0 to 99
+	const nservers = 10
+	const nkeys = 10          // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
 	// run setup in parallel

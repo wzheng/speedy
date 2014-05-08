@@ -536,7 +536,6 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	By(RecordKey).Sort(ws.db)
 
 	key := args.Key
-	var records []Record
   records := make([]Record, 0, ws.t * 2)
 	curCount := 0
 	curRecord := 0

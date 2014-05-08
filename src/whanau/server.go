@@ -422,7 +422,7 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
-	fingers := make([]Finger, 0)
+	fingers := make([]Finger, 0, ws.rf * 2)
 	for i := 0; i < ws.rf; i++ {
 		args := &RandomWalkArgs{ws.w}
 		reply := &RandomWalkReply{}
@@ -482,6 +482,7 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 
 	key := args.Key
 	var records []Record
+  records := make([]Record, 0, ws.t * 2)
 	curCount := 0
 	curRecord := 0
 	if ws.t <= len(ws.db) {
@@ -506,7 +507,9 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 
 func (ws *WhanauServer) Successors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
-	var successors []Record
+	//var successors []Record
+  // overallocate memory for array
+  successors := make([]Record, 0, ws.rs * ws.t * 2)
 	for i := 0; i < ws.rs; i++ {
 		args := &RandomWalkArgs{}
 		args.Steps = ws.w

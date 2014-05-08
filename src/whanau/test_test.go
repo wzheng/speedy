@@ -107,21 +107,21 @@ func TestBasic(t *testing.T) {
 */
 
 func TestLookup(t *testing.T) {
-	runtime.GOMAXPROCS(4)
+	runtime.GOMAXPROCS(8)
 
 	const nservers = 10
-	const nkeys = 10          // keys are strings from 0 to 99
+	const nkeys = 50           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
 	// run setup in parallel
 	// parameters
 	constant := 5
-	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
-	nfingers := constant * int(math.Sqrt(k*nservers))
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
 	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := constant                                   // number of successors sampled per node
+	ts := 5                                          // number of successors sampled per node
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -280,7 +280,7 @@ func TestLookup(t *testing.T) {
 			lreply := &LookupReply{}
 			ws[i].Lookup(largs, lreply)
 			if lreply.Err != OK {
-				fmt.Printf("Did not find key: %s\n", key)
+				//fmt.Printf("Did not find key: %s\n", key)
 			} else {
 				value := lreply.Value
 				// compare string arrays...
@@ -289,7 +289,7 @@ func TestLookup(t *testing.T) {
 				}
 				for k := 0; k < len(value.Servers); k++ {
 					if value.Servers[k] != records[key].Servers[k] {
-						t.Fatalf("Wrong value returned: %s expected: %s", value, records[key])
+						t.Fatalf("Wrong value returned for key(%s): %s expected: %s", key, value, records[key])
 					}
 				}
 				numFound++
@@ -299,6 +299,7 @@ func TestLookup(t *testing.T) {
 	}
 
 	fmt.Printf("numFound: %d\n", numFound)
+	fmt.Printf("total keys: %d\n", nkeys)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
 
 }

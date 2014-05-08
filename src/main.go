@@ -34,7 +34,7 @@ func cleanup(ws []*whanau.WhanauServer) {
 
 
 func main() {
-	runtime.GOMAXPROCS(4)
+	runtime.GOMAXPROCS(8)
 
 	const nservers = 100
 	const nkeys = 100           // keys are strings from 0 to 99

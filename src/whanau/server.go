@@ -411,7 +411,7 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
-	fingers := make([]Finger, 0, ws.rf * 2)
+	fingers := make([]Finger, 0, ws.rf*2)
 	for i := 0; i < ws.rf; i++ {
 		args := &RandomWalkArgs{ws.w}
 		reply := &RandomWalkReply{}
@@ -448,69 +448,69 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 }
 
 // Start a Sybil server
-func StartSybilServer(servers []string, myaddr string, me int, neighbors []string, sybilNeighbors []string, masters []string, is_master bool,rd int, w int) *WhanauSybilServer{
-    ws := new(WhanauSybilServer)
-    ws.myaddr = myaddr
-    ws.sybilNeighbors = sybilNeighbors
+func StartSybilServer(servers []string, myaddr string, me int, neighbors []string, sybilNeighbors []string, masters []string, is_master bool, rd int, w int) *WhanauSybilServer {
+	ws := new(WhanauSybilServer)
+	ws.myaddr = myaddr
+	ws.sybilNeighbors = sybilNeighbors
 
-    ws.is_master = is_master
-    ws.neighbors = neighbors
-    ws.masters = masters
+	ws.is_master = is_master
+	ws.neighbors = neighbors
+	ws.masters = masters
 
-    ws.kvstore = make(map[KeyType]ValueType)
-    ws.state = Normal
-    ws.reqID = 0
+	ws.kvstore = make(map[KeyType]ValueType)
+	ws.state = Normal
+	ws.reqID = 0
 
-    // Sybil routing layers
-    ws.rd = rd
-    ws.w = w
+	// Sybil routing layers
+	ws.rd = rd
+	ws.w = w
 
-    ws.paxosInstances = make(map[KeyType]WhanauPaxos)
+	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
 
-    ws.rpc = rpc.NewServer()
-    ws.rpc.Register(ws)
+	ws.rpc = rpc.NewServer()
+	ws.rpc.Register(ws)
 
-    gob.Register(LookupArgs{})
-    gob.Register(LookupReply{})
-    gob.Register(PendingArgs{})
-    gob.Register(PendingReply{})
-    gob.Register(PaxosGetArgs{})
-    gob.Register(PaxosGetReply{})
-    gob.Register(PaxosPutArgs{})
-    gob.Register(PaxosPutReply{})
+	gob.Register(LookupArgs{})
+	gob.Register(LookupReply{})
+	gob.Register(PendingArgs{})
+	gob.Register(PendingReply{})
+	gob.Register(PaxosGetArgs{})
+	gob.Register(PaxosGetReply{})
+	gob.Register(PaxosPutArgs{})
+	gob.Register(PaxosPutReply{})
 
-    os.Remove(servers[me])
-    l, e := net.Listen("unix", servers[me])
-    if e != nil {
-        log.Fatal("listen error: ", e)
-    }
-    ws.l = l
+	os.Remove(servers[me])
+	l, e := net.Listen("unix", servers[me])
+	if e != nil {
+		log.Fatal("listen error: ", e)
+	}
+	ws.l = l
 
-    // Generate secret/public key
-    sk, err := rsa.GenerateKey(crand.Reader, 2014)
+	// Generate secret/public key
+	sk, err := rsa.GenerateKey(crand.Reader, 2014)
 
-    if err != nil {
-        log.Fatal("key generation err: ", err)
-    }
-    ws.secretKey = sk
+	if err != nil {
+		log.Fatal("key generation err: ", err)
+	}
+	ws.secretKey = sk
 
-    go func() {
-        for ws.dead == false {
-            conn, err := ws.l.Accept()
-            if err == nil && ws.dead == false {
-                go ws.rpc.ServeConn(conn)
-            } else if err == nil {
-                conn.Close()
-            }
+	go func() {
+		for ws.dead == false {
+			conn, err := ws.l.Accept()
+			if err == nil && ws.dead == false {
+				go ws.rpc.ServeConn(conn)
+			} else if err == nil {
+				conn.Close()
+			}
 
-            if err != nil && ws.dead == false {
-                fmt.Printf("ShardWS(%v) accept: %v\n", me, err.Error())
-                ws.Kill()
-            }
-        }
-    }()
+			if err != nil && ws.dead == false {
+				fmt.Printf("ShardWS(%v) accept: %v\n", me, err.Error())
+				ws.Kill()
+			}
+		}
+	}()
 
-    return ws
+	return ws
 }
 
 // Choose id for specified layer
@@ -536,7 +536,7 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	By(RecordKey).Sort(ws.db)
 
 	key := args.Key
-  records := make([]Record, 0, ws.t * 2)
+	records := make([]Record, 0, ws.t*2)
 	curCount := 0
 	curRecord := 0
 	if ws.t <= len(ws.db) {
@@ -562,8 +562,8 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 func (ws *WhanauServer) Successors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	//var successors []Record
-  // overallocate memory for array
-  successors := make([]Record, 0, ws.rs * ws.t * 2)
+	// overallocate memory for array
+	successors := make([]Record, 0, ws.rs*ws.t*2)
 	for i := 0; i < ws.rs; i++ {
 		args := &RandomWalkArgs{}
 		args.Steps = ws.w
@@ -572,12 +572,14 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 
 		if reply.Err == OK {
 			vj := reply.Server
-			getIdArgs := &GetIdArgs{layer}
-			getIdReply := &GetIdReply{}
-			DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
-			ws.GetId(getIdArgs, getIdReply)
+			/*
+				getIdArgs := &GetIdArgs{layer}
+				getIdReply := &GetIdReply{}
+				DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
+				ws.GetId(getIdArgs, getIdReply)
+			*/
 
-			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key}
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{ws.ids[layer]}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
 			for sampleSuccessorsReply.Err != OK {
 				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)

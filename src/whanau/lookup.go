@@ -4,6 +4,7 @@ package whanau
 
 import "math/rand"
 import "sort"
+import "fmt"
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
@@ -66,7 +67,6 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 
 // Query for a key in the successor table
 func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
-	DPrintf("In Query of server %s", ws.myaddr)
 	layer := args.Layer
 	key := args.Key
 	valueIndex := sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
@@ -79,7 +79,6 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 		DPrintf("reply.Value: %s", reply.Value)
 		reply.Err = OK
 	} else {
-		DPrintf("In Query: did not find key, reply.Value: %s reply.Value.Servers == nil %s", reply.Value, reply.Value.Servers == nil)
 		reply.Err = ErrNoKey
 	}
 	return nil
@@ -90,6 +89,15 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	key := args.Key
 	nlayers := ws.nlayers
 	DPrintf("In Try RPC, trying key: %s", key)
+
+	// Lookup in local kvstore (pg 60 of thesis)
+	if val, ok := ws.kvstore[key]; ok {
+		fmt.Printf("local look up found %s\n", key)
+		reply.Value = val
+		reply.Err = OK
+		return nil
+	}
+
 	fingerLength := len(ws.fingers[0])
 	j := sort.Search(fingerLength, func(i int) bool {
 		return ws.fingers[0][i].Id >= key

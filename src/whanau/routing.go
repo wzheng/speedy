@@ -75,7 +75,6 @@ func (ws *WhanauServer) Setup() {
 	}
 }
 
-
 // Server for Sybil nodes
 func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []string) {
 	DPrintf("In Setup of Sybil server %s", ws.myaddr)
@@ -86,4 +85,3 @@ func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []string) {
 	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
 	ws.sybilNeighbors = neighbors
 }
-

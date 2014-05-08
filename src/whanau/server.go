@@ -81,7 +81,7 @@ type WhanauServer struct {
 
 type WhanauSybilServer struct {
 	WhanauServer
-	sybilNeighbors []WhanauSybilServer
+	sybilNeighbors []string // List of all other sybil servers
 }
 
 // for testing
@@ -258,7 +258,7 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 					lookupArgs := &LookupArgs{}
 					lookupArgs.Key = key
 					//lookupArgs.Steps = steps - 1
-					call(ws.sybilNeighbors[i].myaddr, "WhanauSybilServer.Lookup", lookupArgs, reply)
+					call(ws.sybilNeighbors[i], "WhanauSybilServer.Lookup", lookupArgs, reply)
 					if reply.Err == OK {
 						break
 					}
@@ -361,17 +361,6 @@ func (ws *WhanauServer) ConstructPaxosCluster() []string {
 	return cluster
 }
 
-// Server for Sybil nodes
-func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []WhanauSybilServer) {
-	DPrintf("In Setup of Sybil server %s", ws.myaddr)
-
-	// Fill up table but might not use values
-	ws.db = ws.SampleRecords(rd, w)
-
-	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
-	ws.sybilNeighbors = neighbors
-}
-
 // return random Key/value record from local storage
 func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecordReply) error {
 	randIndex := rand.Intn(len(ws.kvstore))
@@ -456,6 +445,72 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 	}
 
 	return fingers
+}
+
+// Start a Sybil server
+func StartSybilServer(servers []string, myaddr string, me int, neighbors []string, sybilNeighbors []string, masters []string, is_master bool,rd int, w int) *WhanauSybilServer{
+    ws := new(WhanauSybilServer)
+    ws.myaddr = myaddr
+    ws.sybilNeighbors = sybilNeighbors
+
+    ws.is_master = is_master
+    ws.neighbors = neighbors
+    ws.masters = masters
+
+    ws.kvstore = make(map[KeyType]ValueType)
+    ws.state = Normal
+    ws.reqID = 0
+
+    // Sybil routing layers
+    ws.rd = rd
+    ws.w = w
+
+    ws.paxosInstances = make(map[KeyType]WhanauPaxos)
+
+    ws.rpc = rpc.NewServer()
+    ws.rpc.Register(ws)
+
+    gob.Register(LookupArgs{})
+    gob.Register(LookupReply{})
+    gob.Register(PendingArgs{})
+    gob.Register(PendingReply{})
+    gob.Register(PaxosGetArgs{})
+    gob.Register(PaxosGetReply{})
+    gob.Register(PaxosPutArgs{})
+    gob.Register(PaxosPutReply{})
+
+    os.Remove(servers[me])
+    l, e := net.Listen("unix", servers[me])
+    if e != nil {
+        log.Fatal("listen error: ", e)
+    }
+    ws.l = l
+
+    // Generate secret/public key
+    sk, err := rsa.GenerateKey(crand.Reader, 2014)
+
+    if err != nil {
+        log.Fatal("key generation err: ", err)
+    }
+    ws.secretKey = sk
+
+    go func() {
+        for ws.dead == false {
+            conn, err := ws.l.Accept()
+            if err == nil && ws.dead == false {
+                go ws.rpc.ServeConn(conn)
+            } else if err == nil {
+                conn.Close()
+            }
+
+            if err != nil && ws.dead == false {
+                fmt.Printf("ShardWS(%v) accept: %v\n", me, err.Error())
+                ws.Kill()
+            }
+        }
+    }()
+
+    return ws
 }
 
 // Choose id for specified layer

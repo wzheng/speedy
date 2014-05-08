@@ -74,3 +74,16 @@ func (ws *WhanauServer) Setup() {
 
 	}
 }
+
+
+// Server for Sybil nodes
+func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []string) {
+	DPrintf("In Setup of Sybil server %s", ws.myaddr)
+
+	// Fill up table but might not use values
+	ws.db = ws.SampleRecords(rd, w)
+
+	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
+	ws.sybilNeighbors = neighbors
+}
+

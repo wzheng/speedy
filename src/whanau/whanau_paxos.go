@@ -192,7 +192,6 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 	reply.Err = getreply.Err
 	reply.Value = getreply.Value
 
-	fmt.Printf("get got value %v\n", getreply.Value)
 	return nil
 }
 
@@ -224,7 +223,6 @@ func (wp *WhanauPaxos) PaxosPut(args *PaxosPutArgs,
 }
 
 func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *PaxosPendingInsertsReply) error {
-
 	wp.logLock.Lock()
 	defer wp.logLock.Unlock()
 
@@ -248,6 +246,8 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Server = pending_reply.Server
 	reply.Err = pending_reply.Err
 
+	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
+
 	return nil
 }
 
@@ -269,6 +269,7 @@ func StartWhanauPaxos(servers []string, me int,
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)
 	wp.currSeq = 0
+	wp.currView = 0
 
 	gob.Register(Op{})
 	gob.Register(PaxosGetArgs{})

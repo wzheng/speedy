@@ -744,14 +744,14 @@ func TestPendingWrites(t *testing.T) {
 	
 	time.Sleep(5 * time.Second)
 
-//	fmt.Printf("Starting setup from masters\n")
+	fmt.Printf("Starting setup from masters\n")
 
-// 	go ws[0].InitiateSetup()
-// 	go ws[1].InitiateSetup()
-// 	go ws[2].InitiateSetup()
+	go ws[0].InitiateSetup()
+	go ws[1].InitiateSetup()
+	go ws[2].InitiateSetup()
 
-// 	time.Sleep(30*time.Second)
+	time.Sleep(30*time.Second)
 	
-// 	value = cl.ClientGet("40")
-// 	fmt.Printf("After setup: value is %v\n", value)	
+	value = cl.ClientGet("40")
+	fmt.Printf("After setup: value is %v\n", value)	
 }

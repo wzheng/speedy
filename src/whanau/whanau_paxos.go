@@ -108,6 +108,7 @@ func (wp *WhanauPaxos) LogPending(args *PaxosPendingInsertsArgs, reply *PaxosPen
 		reply.Err = OK
 	} else {
 		wp.pending_writes[PendingInsertsKey{args.Key, args.View}] = args.Server
+		reply.Server = args.Server
 		reply.Err = OK
 	}
 }

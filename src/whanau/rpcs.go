@@ -176,6 +176,7 @@ type ReceivePendingWritesReply struct {
 }
 
 type ReceiveNewPaxosClusterArgs struct {
+	Server string
 	Cluster []string
 }
 

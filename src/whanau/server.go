@@ -453,16 +453,16 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
     if (ws.is_sybil) {
-        return ws.HonestConstructFingers(layer)
-    } else {
         return ws.SybilConstructFingers(layer)
+    } else {
+        return ws.HonestConstructFingers(layer)
     }
 }
 
 // honest node construct fingers
 func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
-	fingers := make([]Finger, 0)
+	fingers := make([]Finger, 0, ws.rf*2)
 	for i := 0; i < ws.rf; i++ {
 		args := &RandomWalkArgs{ws.w}
 		reply := &RandomWalkReply{}
@@ -573,10 +573,11 @@ func StartSybilServer(servers []string, myaddr string, me int, neighbors []strin
 
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
+    DPrintf("Currently choosing id: %s", ws.myaddr)
     if (ws.is_sybil) {
-        return ws.HonestChooseID(layer)
-    } else {
         return ws.SybilChooseID()
+    } else {
+        return ws.HonestChooseID(layer)
     }
 }
 
@@ -607,7 +608,7 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 	By(RecordKey).Sort(ws.db)
 
 	key := args.Key
-	var records []Record
+	records := make([]Record, 0, ws.t*2)
 	curCount := 0
 	curRecord := 0
 	if ws.t <= len(ws.db) {
@@ -632,16 +633,18 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 
 func (ws *WhanauServer) Successors(layer int) []Record {
     if (ws.is_sybil) {
-        return ws.HonestSuccessors(layer)
-    } else {
         return ws.SybilSuccessors(layer)
+    } else {
+        return ws.HonestSuccessors(layer)
     }
 }
 
 // Honest successors
 func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
-	var successors []Record
+	//var successors []Record
+	// overallocate memory for array
+	successors := make([]Record, 0, ws.rs*ws.t*2)
 	for i := 0; i < ws.rs; i++ {
 		args := &RandomWalkArgs{}
 		args.Steps = ws.w
@@ -650,12 +653,14 @@ func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 
 		if reply.Err == OK {
 			vj := reply.Server
-			getIdArgs := &GetIdArgs{layer}
-			getIdReply := &GetIdReply{}
-			DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
-			ws.GetId(getIdArgs, getIdReply)
+			/*
+				getIdArgs := &GetIdArgs{layer}
+				getIdReply := &GetIdReply{}
+				DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
+				ws.GetId(getIdArgs, getIdReply)
+			*/
 
-			sampleSuccessorsArgs := &SampleSuccessorsArgs{getIdReply.Key}
+			sampleSuccessorsArgs := &SampleSuccessorsArgs{ws.ids[layer]}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
 			for sampleSuccessorsReply.Err != OK {
 				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
@@ -786,6 +791,7 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.masters = masters
 	ws.is_master = is_master
+    ws.is_sybil = is_sybil
 
 	// whanau routing parameters
 	ws.nlayers = nlayers

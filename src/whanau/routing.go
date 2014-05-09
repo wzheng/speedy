@@ -2,19 +2,36 @@
 
 package whanau
 
+//import "fmt"
 import "math/rand"
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
 	steps := args.Steps
-	// pick a random neighbor
+    var randomWalkReply RandomWalkReply
+    if (ws.is_sybil) {
+        randomWalkReply = ws.SybilRandomWalk()
+    } else {
+        //fmt.Printf("Doing an honest random walk")
+        randomWalkReply = ws.HonestRandomWalk(steps)
+    }
+	reply.Server = randomWalkReply.Server
+    reply.Err = randomWalkReply.Err
+    //fmt.Printf("Random walk reply: %s", randomWalkReply)
+    return nil
+}
+
+// Random walk for honest nodes
+func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
+	var reply RandomWalkReply
+    // pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
 	if steps == 1 {
 		reply.Server = neighbor
 		reply.Err = OK
 	} else {
-		args := &RandomWalkArgs{}
+		args := RandomWalkArgs{}
 		args.Steps = steps - 1
 		var rpc_reply RandomWalkReply
 		ok := call(neighbor, "WhanauServer.RandomWalk", args, &rpc_reply)
@@ -23,8 +40,12 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 			reply.Err = OK
 		}
 	}
+    return reply
+}
 
-	return nil
+// Random walk for sybil nodes
+func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
+    return RandomWalkReply{"Sybil server!", ErrNoKey}
 }
 
 // Gets the ID from node's local id table
@@ -42,6 +63,49 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 
 // Whanau Routing Protocal methods
 
+// Setup for honest nodes
+func (ws *WhanauServer) SetupHonest(){
+	//DPrintf("In Setup of honest server %s", ws.myaddr)
+    DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+	// fill up db by randomly sampling records from random walks
+	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
+    ws.db = ws.SampleRecords(ws.rd, ws.w)
+
+	// reset ids, fingers, succ
+	ws.ids = make([]KeyType, 0)
+	ws.fingers = make([][]Finger, 0)
+	ws.succ = make([][]Record, 0)
+	for i := 0; i < ws.nlayers; i++ {
+		// populate tables in layers
+        //fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
+		ws.ids = append(ws.ids, ws.ChooseID(i))
+        //fmt.Printf("Choosing Fingers: %s", ws.ConstructFingers(i))
+		curFingerTable := ws.ConstructFingers(i)
+		ByFinger(FingerId).Sort(curFingerTable)
+		ws.fingers = append(ws.fingers, curFingerTable)
+
+        //fmt.Printf("Choosing successors: %s", ws.Successors(i))
+		curSuccessorTable := ws.Successors(i)
+		By(RecordKey).Sort(curSuccessorTable)
+		ws.succ = append(ws.succ, curSuccessorTable)
+
+	}
+    //fmt.Printf("Server ids: %s", ws.ids)
+    //fmt.Printf("Server fingers: %s", ws.fingers)
+    //fmt.Printf("Server successors: %s", ws.succ)
+}
+
+// Server for Sybil nodes
+func (ws *WhanauServer) SetupSybil() {
+	DPrintf("In Setup of Sybil server %s", ws.myaddr)
+
+	// reset ids, fingers, succ...etc.
+    ws.db = make([]Record, 0)
+	ws.ids = make([]KeyType, 0)
+	ws.fingers = make([][]Finger, 0)
+	ws.succ = make([][]Record, 0)
+}
+
 // TODO
 // Populates routing table
 // nlayers = number of layers
@@ -51,37 +115,12 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 // rs = number of nodes to collect samples from
 // t = number of successors returned from sample per node
 func (ws *WhanauServer) Setup() {
-	DPrintf("In Setup of server %s", ws.myaddr)
-
-	// fill up db by randomly sampling records from random walks
-	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-	ws.db = ws.SampleRecords(ws.rd, ws.w)
-
-	// reset ids, fingers, succ
-	ws.ids = make([]KeyType, 0)
-	ws.fingers = make([][]Finger, 0)
-	ws.succ = make([][]Record, 0)
-	for i := 0; i < ws.nlayers; i++ {
-		// populate tables in layers
-		ws.ids = append(ws.ids, ws.ChooseID(i))
-		curFingerTable := ws.ConstructFingers(i)
-		ByFinger(FingerId).Sort(curFingerTable)
-		ws.fingers = append(ws.fingers, curFingerTable)
-
-		curSuccessorTable := ws.Successors(i)
-		By(RecordKey).Sort(curSuccessorTable)
-		ws.succ = append(ws.succ, curSuccessorTable)
-
-	}
+    //fmt.Printf("In setup of honest node: %s", ws.is_sybil)
+    if (ws.is_sybil) {
+        ws.SetupSybil()
+    } else {
+        //fmt.Printf("Setting up honest server: %s", "honest server REALLY")
+        ws.SetupHonest()
+    }
 }
 
-// Server for Sybil nodes
-func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []string) {
-	DPrintf("In Setup of Sybil server %s", ws.myaddr)
-
-	// Fill up table but might not use values
-	ws.db = ws.SampleRecords(rd, w)
-
-	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
-	ws.sybilNeighbors = neighbors
-}

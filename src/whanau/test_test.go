@@ -106,7 +106,7 @@ func TestBasic(t *testing.T) {
 }
 */
 
-func TestLookup(t *testing.T) {
+/*func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
@@ -140,7 +140,7 @@ func TestLookup(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false,
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -301,7 +301,7 @@ func TestLookup(t *testing.T) {
 	fmt.Printf("numFound: %d\n", numFound)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
 
-}
+}*/
 
 // Test a basic put/get using paxos without checking lookup integrity
 func TestPutGet(t *testing.T) {
@@ -339,7 +339,7 @@ func TestPutGet(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false,
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -436,10 +436,10 @@ func TestRealGetAndPut(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -535,3 +535,57 @@ func TestRealGetAndPut(t *testing.T) {
 
 	fmt.Printf("After put: value is %v\n", value)
 }
+
+// Test doesn't work, wrote it for subclassing sybil nodes
+/*
+func TestRealGetAndPutWithSybils(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 10
+	const nkeys = 20           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+    const nsybilservers = 10
+    const sybilConnectionProb = 0.7
+
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
+	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+    var ksvh []string = make([]string, nsybilservers)
+    var wss []*WhanauSybilServer = make([]*WhanauSybilServer, nsybilservers)
+    var sybilnormalneighbors [nsybilservers][]string
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+    for i := nservers; i < nsybilservers + nservers; i++ {
+        ksvh[i-nservers] = port("basic", i)
+    }
+
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+        rand.Seed(time.Now().UTC().UnixNano())
+
+        for k := 0; k < nsybilservers; k++ {
+            prob := rand.Float32()
+*/

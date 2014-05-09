@@ -12,7 +12,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	"sort"
+	//"sort"
 	"sync"
 	"time"
 )
@@ -54,6 +54,7 @@ type WhanauServer struct {
 	masters []string // list of servers for the master cluster; these servers are also trusted
 
 	is_master bool                      // whether the server itself is a master server
+    is_sybil  bool                      // whether the server is a sybil server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 
@@ -86,7 +87,9 @@ type WhanauSybilServer struct {
 
 // for testing
 func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
-	ws.kvstore[key] = value
+    if (!ws.is_sybil) {
+	    ws.kvstore[key] = value
+    }
 }
 
 func (ws *WhanauServer) GetDB() []Record {
@@ -200,12 +203,27 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 // Called by servers to figure out which paxos cluster
 // to get the true value from.
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
-	key := args.Key
-	steps := ws.w
+    var lookupReply LookupReply
+    if (!ws.is_sybil) {
+	    key := args.Key
+	    steps := ws.w
+        lookupReply = ws.HonestLookup(key, steps)
+    } else {
+        lookupReply = ws.SybilLookup()
+    }
+    reply.Value = lookupReply.Value
+    reply.Err = lookupReply.Err
+    return nil
+}
 
+// Helper method for honest lookup
+func (ws *WhanauServer) HonestLookup(key KeyType, steps int) LookupReply {
 	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
-	addr := ws.myaddr
+    reply := LookupReply{}
+
+    addr := ws.myaddr
 	count := 0
+
 	tryArgs := &TryArgs{key}
 	tryReply := &TryReply{}
 
@@ -227,10 +245,16 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	} else {
 		reply.Err = ErrNoKey
 	}
-
-	return nil
+    return reply
 }
 
+// Helper method for sybil lookup
+func (ws *WhanauServer) SybilLookup() LookupReply {
+    reply := LookupReply{}
+    reply.Err = ErrNoKey
+    return reply
+}
+/*
 // Get the value for a particular key.
 // Runs Lookup to find the appropriate Paxos cluster, then
 // calls Get on that cluster.
@@ -269,7 +293,7 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 		}
 	}
 	return nil
-}
+}*/
 
 func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
 	if args.Phase == PhaseOne {
@@ -363,6 +387,19 @@ func (ws *WhanauServer) ConstructPaxosCluster() []string {
 
 // return random Key/value record from local storage
 func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecordReply) error {
+    var samplereply SampleRecordReply
+    if (ws.is_sybil) {
+        samplereply = ws.SybilSampleRecord()
+    } else {
+        samplereply = ws.HonestSampleRecord()
+    }
+    reply.Record = samplereply.Record
+    reply.Err = samplereply.Err
+    return nil
+}
+
+// honest node samplerecord
+func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
 	randIndex := rand.Intn(len(ws.kvstore))
 	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
@@ -371,10 +408,16 @@ func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecord
 	key := keys[randIndex]
 	value := ws.kvstore[key]
 	record := Record{key, value}
+	return SampleRecordReply{record, OK}
+}
 
-	reply.Record = record
-	reply.Err = OK
-	return nil
+// sybil node samplerecord
+func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
+    key := KeyType("This is a Sybil key")
+    value := make([]string, 0)
+    value = append(value, "HA")
+    record := Record{key, ValueType{value}}
+    return SampleRecordReply{record, OK}
 }
 
 // Returns a list of records sampled randomly from local kv store
@@ -409,7 +452,15 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
+    if (ws.is_sybil) {
+        return ws.HonestConstructFingers(layer)
+    } else {
+        return ws.SybilConstructFingers(layer)
+    }
+}
 
+// honest node construct fingers
+func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0)
 	for i := 0; i < ws.rf; i++ {
@@ -447,6 +498,13 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 	return fingers
 }
 
+// sybil node construct fingers
+func (ws *WhanauServer) SybilConstructFingers(layer int) []Finger {
+    fingers := make([]Finger, 0)
+    return fingers
+}
+
+/*
 // Start a Sybil server
 func StartSybilServer(servers []string, myaddr string, me int, neighbors []string, sybilNeighbors []string, masters []string, is_master bool,rd int, w int) *WhanauSybilServer{
     ws := new(WhanauSybilServer)
@@ -511,11 +569,19 @@ func StartSybilServer(servers []string, myaddr string, me int, neighbors []strin
     }()
 
     return ws
-}
+}*/
 
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
+    if (ws.is_sybil) {
+        return ws.HonestChooseID(layer)
+    } else {
+        return ws.SybilChooseID()
+    }
+}
 
+// Honest choose id
+func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 	DPrintf("In ChooseID of %s, layer %d", ws.myaddr, layer)
 	if layer == 0 {
 		// choose randomly from db
@@ -529,6 +595,11 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
 		return randFinger.Id
 	}
+}
+
+// Sybil choose id
+func (ws *WhanauServer) SybilChooseID() KeyType {
+    return KeyType("Sybil Node ID")
 }
 
 // Gets successors that are nearest each key
@@ -560,6 +631,15 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
+    if (ws.is_sybil) {
+        return ws.HonestSuccessors(layer)
+    } else {
+        return ws.SybilSuccessors(layer)
+    }
+}
+
+// Honest successors
+func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	var successors []Record
 	for i := 0; i < ws.rs; i++ {
@@ -584,6 +664,12 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 		}
 	}
 	return successors
+}
+
+// Sybil successors
+func (ws *WhanauServer) SybilSuccessors(layer int) []Record {
+    record := make([]Record, 0)
+    return record
 }
 
 // each server changes its current state, and sends the setup messages
@@ -686,7 +772,7 @@ func (ws *WhanauServer) Kill() {
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string,
-	neighbors []string, masters []string, is_master bool,
+	neighbors []string, masters []string, is_master bool, is_sybil bool,
 	nlayers int, rf int, w int, rd int, rs int, t int) *WhanauServer {
 
 	ws := new(WhanauServer)

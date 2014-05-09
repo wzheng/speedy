@@ -7,7 +7,21 @@ import "math/rand"
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
 	steps := args.Steps
-	// pick a random neighbor
+    var randomWalkReply RandomWalkReply
+    if (ws.is_sybil) {
+        randomWalkReply = ws.SybilRandomWalk()
+    } else {
+        randomWalkReply = ws.HonestRandomWalk(steps)
+    }
+	randomWalkReply.Server = randomWalkReply.Server
+    randomWalkReply.Err = randomWalkReply.Err
+    return nil
+}
+
+// Random walk for honest nodes
+func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
+	var reply RandomWalkReply
+    // pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
 	if steps == 1 {
@@ -23,8 +37,12 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 			reply.Err = OK
 		}
 	}
+    return reply
+}
 
-	return nil
+// Random walk for sybil nodes
+func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
+    return RandomWalkReply{"Sybil server!", ErrNoKey}
 }
 
 // Gets the ID from node's local id table
@@ -51,7 +69,16 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 // rs = number of nodes to collect samples from
 // t = number of successors returned from sample per node
 func (ws *WhanauServer) Setup() {
-	DPrintf("In Setup of server %s", ws.myaddr)
+    if (ws.is_sybil) {
+        ws.SetupSybil()
+    } else {
+        ws.SetupHonest()
+    }
+}
+
+// Setup for honest nodes
+func (ws *WhanauServer) SetupHonest() {
+	DPrintf("In Setup of honest server %s", ws.myaddr)
 
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
@@ -75,15 +102,14 @@ func (ws *WhanauServer) Setup() {
 	}
 }
 
-
 // Server for Sybil nodes
-func (ws *WhanauSybilServer) SetupSybil(rd int, w int, neighbors []string) {
+func (ws *WhanauServer) SetupSybil() {
 	DPrintf("In Setup of Sybil server %s", ws.myaddr)
 
-	// Fill up table but might not use values
-	ws.db = ws.SampleRecords(rd, w)
-
-	// No need for other variables because Sybil nodes will be routing to other Sybil nodes
-	ws.sybilNeighbors = neighbors
+	// reset ids, fingers, succ...etc.
+    ws.db = make([]Record, 0)
+	ws.ids = make([]KeyType, 0)
+	ws.fingers = make([][]Finger, 0)
+	ws.succ = make([][]Record, 0)
 }
 

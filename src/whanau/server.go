@@ -132,13 +132,6 @@ func (ws *WhanauServer) PaxosPutRPC(args *ClientPutArgs,
 		return nil
 	}
 
-	//put_valuetype := TrueValueType{args.Value, args.Originator, nil, nil}
-
-	// Sign true value using my secret key
-	//fmt.Println("put_valuetype %v", put_valuetype)
-	//sig, _ := SignTrueValue(put_valuetype, ws.secretKey)
-	//put_valuetype.Sign = sig
-
 	put_args := PaxosPutArgs{args.Key, args.Value, args.RequestID}
 	var put_reply PaxosPutReply
 
@@ -603,7 +596,7 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 			rpc_reply := &StartSetupReply{}
 			ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
 			if ok {
-
+				
 			}
 		}
 
@@ -627,7 +620,18 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 		ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster", receive_paxos_args, receive_paxos_reply)
 		if ok {
 			if reply.Err == OK {
-				break
+				for k, v := range reply.KV {
+					// initiate paxos call for all of these keys
+					var req int64
+					ws.mu.Lock()
+					ws.reqID += 1
+					req = ws.reqID
+					ws.mu.Unlock()
+
+					cpargs := &ClientPutArgs{k, v, req, ws.myaddr}
+					cpreply := &ClientPutReply{}
+					ws.PaxosPutRPC(cpargs, cpreply)
+				}
 			}
 		}
 	}
@@ -655,8 +659,24 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
 	ws.new_paxos_clusters = append(ws.new_paxos_clusters, args.Cluster)
 
-	// go through the dictionary to see if
+	// go through the dictionary to see if the master already has some keys for it
+	var send_keys map[KeyType]TrueValueType
+	
+	ws.mu.Lock()
+	for k, v := range ws.key_to_server {
+		for c := range args.Cluster {
+			if v == c {
+				send_keys[k.Key] = ws.all_pending_writes[k]
+				// deletes should be safe
+				delete(ws.key_to_server, k)
+				delete(ws.all_pending_writes, k)
+				break
+			}
+		}
+	}
+	ws.mu.Unlock()
 
+	reply.KV = send_keys
 	reply.Err = OK
 	return nil
 }

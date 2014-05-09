@@ -180,6 +180,7 @@ type ReceiveNewPaxosClusterArgs struct {
 }
 
 type ReceiveNewPaxosClusterReply struct {
+	KV map[KeyType]TrueValueType
 	Err Err
 }
 

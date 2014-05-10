@@ -505,7 +505,6 @@ func (ws *WhanauServer) SybilChooseID() KeyType {
 
 // Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
-	By(RecordKey).Sort(ws.db)
 
 	key := args.Key
 	records := make([]Record, 0, ws.t*2)

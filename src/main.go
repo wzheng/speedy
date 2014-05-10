@@ -36,25 +36,27 @@ func cleanup(ws []*whanau.WhanauServer) {
 func main() {
 	runtime.GOMAXPROCS(8)
 
-	const nservers = 100
-	const nkeys = 100           // keys are strings from 0 to 99
+	const nservers = 10
+	const nkeys = 50           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
   // run setup in parallel
 	// parameters
 	constant := 5
-	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
-	nfingers := constant * int(math.Sqrt(k*nservers))
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
 	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))             // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers)) * int(math.Log(float64(nservers)))      // number of nodes to sample to get successors
-	ts := constant                                   // number of successors sampled per node
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := 5                                          // number of successors sampled per node
+
 
 
 	var ws []*whanau.WhanauServer = make([]*whanau.WhanauServer, nservers)
 	var kvh []string = make([]string, nservers, nservers)
 	defer cleanup(ws)
 
+  createTime := time.Now()
 	for i := 0; i < nservers; i++ {
 		kvh[i] = port("basic", i)
 	}
@@ -68,7 +70,7 @@ func main() {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-    ws[i] = whanau.StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false,
+    ws[i] = whanau.StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 
 	}
@@ -94,6 +96,9 @@ func main() {
 		}
 	}
 
+  e1 := time.Since(createTime)
+
+  fmt.Printf("Time for network creation and start: %s\n", e1)
 	c := make(chan bool) // writes true of done
   fmt.Printf("Starting setup\n")
   start := time.Now()

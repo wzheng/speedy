@@ -2,7 +2,6 @@
 
 package whanau
 
-//import "fmt"
 import "math/rand"
 
 // Random walk

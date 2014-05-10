@@ -4,7 +4,6 @@ package whanau
 
 import "math/rand"
 import "sort"
-import "fmt"
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
@@ -92,7 +91,7 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 
 	// Lookup in local kvstore (pg 60 of thesis)
 	if val, ok := ws.kvstore[key]; ok {
-		fmt.Printf("local look up found %s\n", key)
+		DPrintf("local look up found %s\n", key)
 		reply.Value = val
 		reply.Err = OK
 		return nil

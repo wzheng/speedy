@@ -176,11 +176,12 @@ type ReceivePendingWritesReply struct {
 }
 
 type ReceiveNewPaxosClusterArgs struct {
+	Server  string
 	Cluster []string
 }
 
 type ReceiveNewPaxosClusterReply struct {
-	KV map[KeyType]TrueValueType
+	KV  map[KeyType]TrueValueType
 	Err Err
 }
 
@@ -190,5 +191,14 @@ type WhanauPutRPCArgs struct {
 }
 
 type WhanauPutRPCReply struct {
+	Err Err
+}
+
+type JoinClusterArgs struct {
+	NewCluster []string
+	KV         map[KeyType]TrueValueType
+}
+
+type JoinClusterReply struct {
 	Err Err
 }

@@ -537,6 +537,225 @@ func TestRealGetAndPut(t *testing.T) {
 	fmt.Printf("After put: value is %v\n", value)
 }
 
+// Test doesn't work, wrote it for subclassing sybil nodes
+/*
+func TestRealGetAndPutWithSybils(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 10
+	const nkeys = 20           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+    const nsybilservers = 10
+    const sybilConnectionProb = 0.7
+
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
+	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+    var ksvh []string = make([]string, nsybilservers)
+    var wss []*WhanauSybilServer = make([]*WhanauSybilServer, nsybilservers)
+    var sybilnormalneighbors [nsybilservers][]string
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+    for i := nservers; i < nsybilservers + nservers; i++ {
+        ksvh[i-nservers] = port("basic", i)
+    }
+
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+        rand.Seed(time.Now().UTC().UnixNano())
+
+        for k := 0; k < nsybilservers; k++ {
+            prob := rand.Float32()
+*/
+
+func TestPendingWrites(t *testing.T) {
+
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 10
+	const nkeys = 30           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
+	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		if i < 3 {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		} else {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		}
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup")
+
+	keys := make([]KeyType, 0)
+	records := make(map[KeyType]ValueType)
+	counter := 0
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+
+		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+
+		for j := 0; j < nkeys/nservers; j++ {
+			//var key KeyType = testKeys[counter]
+			var key KeyType = KeyType(strconv.Itoa(counter))
+			keys = append(keys, key)
+			counter++
+
+			fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
+			val := ValueType{paxos_cluster}
+			records[key] = val
+			ws[i].kvstore[key] = val
+
+			ws[i].paxosInstances[key] = *wp0
+			ws[(i+1)%nservers].paxosInstances[key] = *wp1
+			ws[(i+2)%nservers].paxosInstances[key] = *wp2
+
+			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
+			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
+			val0.Sign = sig0
+			wp0.db[key] = val0
+
+			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+			val1.Sign = sig1
+			wp1.db[key] = val1
+
+			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+			val2.Sign = sig2
+			wp2.db[key] = val2
+		}
+	}
+
+	c := make(chan bool) // writes true of done
+	fmt.Printf("Starting setup\n")
+	start := time.Now()
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			DPrintf("running ws[%d].Setup", srv)
+			ws[srv].Setup()
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Finished setup, time: %s\n", elapsed)
+
+	// start clients
+
+	largs := &LookupArgs{"0", nil}
+	lreply := &LookupReply{}
+	ws[3].Lookup(largs, lreply)
+	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
+
+	cl := MakeClerk(kvh[0])
+
+	fmt.Printf("Try to do a lookup from client\n")
+
+	value := cl.ClientGet("0")
+	fmt.Printf("value is %s\n", value)
+
+	// test single value put -- an update, NOT an insert!
+
+	cl.ClientPut("0", "helloworld")
+	value = cl.ClientGet("0")
+
+	fmt.Printf("After put: value is %v\n", value)
+
+	cl.ClientPut("40", "cantbefound")
+
+	// look in the masters' pending inserts table:
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Printf("pending writes for master 0: %v, %v\n", ws[0].all_pending_writes, ws[0].key_to_server)
+	fmt.Printf("pending writes for master 1: %v, %v\n", ws[1].all_pending_writes, ws[1].key_to_server)
+	fmt.Printf("pending writes for master 2: %v, %v\n", ws[2].all_pending_writes, ws[2].key_to_server)
+
+	value = cl.ClientGet("40")
+	fmt.Printf("After pending insert: value is %v\n", value)
+
+	time.Sleep(5 * time.Second)
+
+	fmt.Printf("Starting setup from masters\n")
+
+	go ws[0].InitiateSetup()
+	go ws[1].InitiateSetup()
+	go ws[2].InitiateSetup()
+
+	time.Sleep(30 * time.Second)
+
+	value = cl.ClientGet("40")
+	fmt.Printf("After setup: value is %v\n", value)
+}
+
 // Testing non-malicious sybils, should have the same output as lookup
 func TestLookupWithSybils(t *testing.T) {
 	runtime.GOMAXPROCS(8)
@@ -566,7 +785,7 @@ func TestLookupWithSybils(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 		kvh[i] = port("basic", i)
 	}
-	
+
 	m := nservers
 
 	for i := 0; i < nservers; i++ {
@@ -577,18 +796,18 @@ func TestLookupWithSybils(t *testing.T) {
 			}
 			neighbors = append(neighbors, kvh[j])
 		}
-		
+
 		rand.Seed(time.Now().UTC().UnixNano())
 		prob := rand.Float32()
 		if prob > sybilProb {
 			ksvh = append(ksvh, port("basic", m))
 			for l := 0; l < len(ksvh); l++ {
-			    neighborProb := rand.Float32()
-			    if neighborProb > sybilProb {
-				neighbors = append(neighbors, ksvh[l])
-			    }
+				neighborProb := rand.Float32()
+				if neighborProb > sybilProb {
+					neighbors = append(neighbors, ksvh[l])
+				}
 			}
-			sybils = append(sybils, StartServer(ksvh, m - nservers, ksvh[m - nservers],
+			sybils = append(sybils, StartServer(ksvh, m-nservers, ksvh[m-nservers],
 				ksvh, make([]string, 0), false, true, nlayers, nfingers, w, rd, rs, ts))
 			m++
 		}
@@ -637,7 +856,7 @@ func TestLookupWithSybils(t *testing.T) {
 			c <- true
 		}(i)
 	}
-	
+
 	for i := 0; i < len(sybils); i++ {
 		go func(srv int) {
 			sybils[srv].Setup()
@@ -650,7 +869,7 @@ func TestLookupWithSybils(t *testing.T) {
 		done := <-c
 		DPrintf("ws[%d] setup done: %b", i, done)
 	}
-	
+
 	// wait for all setups to finish
 	for i := 0; i < len(sybils); i++ {
 		done := <-c

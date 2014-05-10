@@ -108,6 +108,7 @@ func (wp *WhanauPaxos) LogPending(args *PaxosPendingInsertsArgs, reply *PaxosPen
 		reply.Err = OK
 	} else {
 		wp.pending_writes[PendingInsertsKey{args.Key, args.View}] = args.Server
+		reply.Server = args.Server
 		reply.Err = OK
 	}
 }
@@ -172,7 +173,7 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 	defer wp.logLock.Unlock()
 
 	// TODO check if this paxos group is responsible for this key
-
+	fmt.Printf("looking for key %v in server %v\n", args.Key, wp.me)
 	// Have we handled this request already?
 	if r, ok := wp.handledRequests[args.RequestID]; ok {
 		getreply := r.(PaxosGetReply)
@@ -192,7 +193,6 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 	reply.Err = getreply.Err
 	reply.Value = getreply.Value
 
-	fmt.Printf("get got value %v\n", getreply.Value)
 	return nil
 }
 
@@ -224,7 +224,6 @@ func (wp *WhanauPaxos) PaxosPut(args *PaxosPutArgs,
 }
 
 func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *PaxosPendingInsertsReply) error {
-
 	wp.logLock.Lock()
 	defer wp.logLock.Unlock()
 
@@ -248,6 +247,8 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Server = pending_reply.Server
 	reply.Err = pending_reply.Err
 
+	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
+
 	return nil
 }
 
@@ -269,6 +270,7 @@ func StartWhanauPaxos(servers []string, me int,
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)
 	wp.currSeq = 0
+	wp.currView = 0
 
 	gob.Register(Op{})
 	gob.Register(PaxosGetArgs{})

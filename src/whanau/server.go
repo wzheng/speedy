@@ -54,7 +54,7 @@ type WhanauServer struct {
 	masters []string // list of servers for the master cluster; these servers are also trusted
 
 	is_master bool                      // whether the server itself is a master server
-    is_sybil  bool                      // whether the server is a sybil server
+	is_sybil  bool                      // whether the server is a sybil server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 
@@ -87,9 +87,9 @@ type WhanauSybilServer struct {
 
 // for testing
 func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
-    if (!ws.is_sybil) {
-	    ws.kvstore[key] = value
-    }
+	if !ws.is_sybil {
+		ws.kvstore[key] = value
+	}
 }
 
 func (ws *WhanauServer) GetDB() []Record {
@@ -150,23 +150,19 @@ func (ws *WhanauServer) AddPendingRPCMaster(args *PendingArgs, reply *PendingRep
 
 	// TODO: put the paxos call in another function, so we don't block
 
-	var req int64
 	var current_view int
 
 	ws.mu.Lock()
 	ws.all_pending_writes[PendingInsertsKey{args.Key, ws.master_paxos_cluster.currView}] = args.Value
-	ws.reqID += 1
-	req = ws.reqID
 	ws.mu.Unlock()
 
-	rpc_args := &PaxosPendingInsertsArgs{args.Key, current_view, args.Server, req}
-	rpc_reply := &PaxosPendingInsertsArgs{}
-	ok := call(ws.master_paxos_cluster.myaddr, "WhanauPaxos.PaxosPendingInsert", rpc_args, rpc_reply)
-	if ok {
-		ws.mu.Lock()
-		ws.key_to_server[PendingInsertsKey{args.Key, ws.master_paxos_cluster.currView}] = rpc_reply.Server
-		ws.mu.Unlock()
-	}
+	rpc_args := &PaxosPendingInsertsArgs{args.Key, current_view, args.Server, NRand()}
+	rpc_reply := &PaxosPendingInsertsReply{}
+	ws.master_paxos_cluster.PaxosPendingInsert(rpc_args, rpc_reply)
+
+	ws.mu.Lock()
+	ws.key_to_server[PendingInsertsKey{args.Key, ws.master_paxos_cluster.currView}] = rpc_reply.Server
+	ws.mu.Unlock()
 
 	reply.Err = OK
 	return nil
@@ -196,25 +192,25 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 // Called by servers to figure out which paxos cluster
 // to get the true value from.
 func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
-    var lookupReply LookupReply
-    if (!ws.is_sybil) {
-	    key := args.Key
-	    steps := ws.w
-        lookupReply = ws.HonestLookup(key, steps)
-    } else {
-        lookupReply = ws.SybilLookup()
-    }
-    reply.Value = lookupReply.Value
-    reply.Err = lookupReply.Err
-    return nil
+	var lookupReply LookupReply
+	if !ws.is_sybil {
+		key := args.Key
+		steps := ws.w
+		lookupReply = ws.HonestLookup(key, steps)
+	} else {
+		lookupReply = ws.SybilLookup()
+	}
+	reply.Value = lookupReply.Value
+	reply.Err = lookupReply.Err
+	return nil
 }
 
 // Helper method for honest lookup
 func (ws *WhanauServer) HonestLookup(key KeyType, steps int) LookupReply {
 	DPrintf("In Lookup key: %s server %s", key, ws.myaddr)
-    reply := LookupReply{}
+	reply := LookupReply{}
 
-    addr := ws.myaddr
+	addr := ws.myaddr
 	count := 0
 
 	tryArgs := &TryArgs{key}
@@ -238,15 +234,16 @@ func (ws *WhanauServer) HonestLookup(key KeyType, steps int) LookupReply {
 	} else {
 		reply.Err = ErrNoKey
 	}
-    return reply
+	return reply
 }
 
 // Helper method for sybil lookup
 func (ws *WhanauServer) SybilLookup() LookupReply {
-    reply := LookupReply{}
-    reply.Err = ErrNoKey
-    return reply
+	reply := LookupReply{}
+	reply.Err = ErrNoKey
+	return reply
 }
+
 /*
 // Get the value for a particular key.
 // Runs Lookup to find the appropriate Paxos cluster, then
@@ -288,107 +285,17 @@ func (ws *WhanauSybilServer) Lookup(args *LookupArgs, reply *LookupReply) error 
 	return nil
 }*/
 
-func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
-	if args.Phase == PhaseOne {
-		reply.Reply = Commit
-	} else {
-		if args.Action == Commit {
-
-			// first, find the index of itself in the list of servers
-			servers := args.Servers
-			var index int
-			for idx, s := range servers {
-				if s == ws.myaddr {
-					index = idx
-				}
-			}
-
-			for k, v := range args.KeyMap {
-				ws.mu.Lock()
-				ws.kvstore[k] = ValueType{servers}
-				wp := StartWhanauPaxos(servers, index, nil)
-				ws.paxosInstances[k] = *wp
-				ws.paxosInstances[k].db[k] = v
-				ws.mu.Unlock()
-			}
-		} else {
-			// do nothing?
-		}
-	}
-
-	return nil
-}
-
-func (ws *WhanauServer) ConstructPaxosCluster() []string {
-
-	var cluster []string
-
-	randIndex := rand.Intn(len(ws.neighbors))
-	neighbor := ws.neighbors[randIndex]
-
-	// pick several random walk nodes to join the Paxos cluster
-	for i := 0; i < PaxosSize; i++ {
-		args := &RandomWalkArgs{}
-		args.Steps = PaxosWalk
-		var reply RandomWalkReply
-		ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
-		if ok && (reply.Err == OK) {
-			cluster = append(cluster, reply.Server)
-		}
-	}
-
-	// initiate 2PC with all the nodes in the tentative paxos cluster
-	// pass key-value information in the second phase, if it's okay to commit
-
-	var if_commit = true
-
-	for c := range cluster {
-		args := &InitPaxosClusterArgs{}
-		var reply InitPaxosClusterReply
-		args.RequestServer = ws.myaddr
-		args.Phase = PhaseOne
-		args.Action = ""
-		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
-		if ok && (reply.Err == OK) {
-			if reply.Reply == Reject {
-				if_commit = false
-				break
-			}
-		}
-	}
-
-	// Send commit message to every server, along with the key
-	for c := range cluster {
-		args := &InitPaxosClusterArgs{}
-		var reply InitPaxosClusterReply
-		args.RequestServer = ws.myaddr
-		args.Phase = PhaseTwo
-
-		if if_commit {
-			args.Action = Commit
-		} else {
-			args.Action = Abort
-		}
-
-		ok := call(cluster[c], "WhanauServer.InitPaxosCluster", args, &reply)
-		if ok && (reply.Err == OK) {
-		}
-	}
-
-	return cluster
-}
-
 // return random Key/value record from local storage
 func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecordReply) error {
-    var samplereply SampleRecordReply
-    if (ws.is_sybil) {
-        samplereply = ws.SybilSampleRecord()
-    } else {
-        samplereply = ws.HonestSampleRecord()
-    }
-    reply.Record = samplereply.Record
-    reply.Err = samplereply.Err
-    return nil
+	var samplereply SampleRecordReply
+	if ws.is_sybil {
+		samplereply = ws.SybilSampleRecord()
+	} else {
+		samplereply = ws.HonestSampleRecord()
+	}
+	reply.Record = samplereply.Record
+	reply.Err = samplereply.Err
+	return nil
 }
 
 // honest node samplerecord
@@ -406,11 +313,11 @@ func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
 
 // sybil node samplerecord
 func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
-    key := KeyType("This is a Sybil key")
-    value := make([]string, 0)
-    value = append(value, "HA")
-    record := Record{key, ValueType{value}}
-    return SampleRecordReply{record, OK}
+	key := KeyType("This is a Sybil key")
+	value := make([]string, 0)
+	value = append(value, "HA")
+	record := Record{key, ValueType{value}}
+	return SampleRecordReply{record, OK}
 }
 
 // Returns a list of records sampled randomly from local kv store
@@ -445,11 +352,11 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
-    if (ws.is_sybil) {
-        return ws.SybilConstructFingers(layer)
-    } else {
-        return ws.HonestConstructFingers(layer)
-    }
+	if ws.is_sybil {
+		return ws.SybilConstructFingers(layer)
+	} else {
+		return ws.HonestConstructFingers(layer)
+	}
 }
 
 // honest node construct fingers
@@ -493,8 +400,8 @@ func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 
 // sybil node construct fingers
 func (ws *WhanauServer) SybilConstructFingers(layer int) []Finger {
-    fingers := make([]Finger, 0)
-    return fingers
+	fingers := make([]Finger, 0)
+	return fingers
 }
 
 /*
@@ -566,12 +473,12 @@ func StartSybilServer(servers []string, myaddr string, me int, neighbors []strin
 
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
-    DPrintf("Currently choosing id: %s", ws.myaddr)
-    if (ws.is_sybil) {
-        return ws.SybilChooseID()
-    } else {
-        return ws.HonestChooseID(layer)
-    }
+	DPrintf("Currently choosing id: %s", ws.myaddr)
+	if ws.is_sybil {
+		return ws.SybilChooseID()
+	} else {
+		return ws.HonestChooseID(layer)
+	}
 }
 
 // Honest choose id
@@ -593,7 +500,7 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 
 // Sybil choose id
 func (ws *WhanauServer) SybilChooseID() KeyType {
-    return KeyType("Sybil Node ID")
+	return KeyType("Sybil Node ID")
 }
 
 // Gets successors that are nearest each key
@@ -625,11 +532,11 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
-    if (ws.is_sybil) {
-        return ws.SybilSuccessors(layer)
-    } else {
-        return ws.HonestSuccessors(layer)
-    }
+	if ws.is_sybil {
+		return ws.SybilSuccessors(layer)
+	} else {
+		return ws.HonestSuccessors(layer)
+	}
 }
 
 // Honest successors
@@ -666,29 +573,176 @@ func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 
 // Sybil successors
 func (ws *WhanauServer) SybilSuccessors(layer int) []Record {
-    record := make([]Record, 0)
-    return record
+	record := make([]Record, 0)
+	return record
+}
+
+func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
+	if args.Phase == PhaseOne {
+		reply.Reply = Commit
+	} else {
+		if args.Action == Commit {
+			// first, find the index of itself in the list of servers
+			servers := args.Servers
+			var index int
+			for idx, s := range servers {
+				if s == ws.myaddr {
+					index = idx
+				}
+			}
+
+			for k, v := range args.KeyMap {
+				ws.mu.Lock()
+				ws.kvstore[k] = ValueType{servers}
+				fmt.Printf("\ninitiating wp in server %v ... \n\n", ws.me)
+				wp := StartWhanauPaxos(servers, index, ws.rpc)
+				ws.paxosInstances[k] = *wp
+				ws.paxosInstances[k].db[k] = v
+				ws.mu.Unlock()
+			}
+		} else {
+			// do nothing?
+		}
+	}
+
+	return nil
+}
+
+func (ws *WhanauServer) ConstructPaxosCluster() []string {
+
+	cluster := make(map[string]bool)
+
+	randIndex := rand.Intn(len(ws.neighbors))
+	neighbor := ws.neighbors[randIndex]
+
+	// pick several random walk nodes to join the Paxos cluster
+	for i := 0; i < PaxosSize-1; i++ {
+		args := &RandomWalkArgs{}
+		args.Steps = PaxosWalk
+		var reply RandomWalkReply
+		ok := call(neighbor, "WhanauServer.RandomWalk", args, &reply)
+		if ok && (reply.Err == OK) {
+
+			if _, found := cluster[reply.Server]; found || reply.Server == ws.myaddr {
+				i--
+				continue
+			}
+
+			cluster[reply.Server] = true
+		}
+	}
+
+	// initiate 2PC with all the nodes in the tentative paxos cluster
+	// pass key-value information in the second phase, if it's okay to commit
+
+	var if_commit = true
+
+	for c, _ := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseOne
+		args.Action = ""
+		ok := call(c, "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+			if reply.Reply == Reject {
+				if_commit = false
+				break
+			}
+		}
+	}
+
+	// Send commit message to every server, along with the key
+	for c, _ := range cluster {
+		args := &InitPaxosClusterArgs{}
+		var reply InitPaxosClusterReply
+		args.RequestServer = ws.myaddr
+		args.Phase = PhaseTwo
+
+		if if_commit {
+			args.Action = Commit
+		} else {
+			args.Action = Abort
+		}
+
+		ok := call(c, "WhanauServer.InitPaxosCluster", args, &reply)
+		if ok && (reply.Err == OK) {
+		}
+	}
+
+	var ret []string
+	for c, _ := range cluster {
+		ret = append(ret, c)
+	}
+
+	ret = append(ret, ws.myaddr)
+
+	return ret
+}
+
+// Join the cluster and add the new keys that this cluster is
+// responsible for.
+func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
+	reply *JoinClusterReply) error {
+
+	var index int
+	for idx, s := range args.NewCluster {
+		if s == ws.myaddr {
+			index = idx
+		}
+	}
+
+	wp := StartWhanauPaxos(args.NewCluster, index, ws.rpc)
+
+	for k, v := range args.KV {
+		// initiate paxos call for all of these keys
+
+		// put into one's own kvstore
+		ws.mu.Lock()
+		ws.kvstore[k] = ValueType{args.NewCluster}
+		ws.paxosInstances[k] = *wp
+		ws.mu.Unlock()
+
+		cpargs := &ClientPutArgs{k, v, NRand(), ws.myaddr}
+		cpreply := &ClientPutReply{}
+		ws.PaxosPutRPC(cpargs, cpreply)
+
+	}
+
+	reply.Err = OK
+	return nil
 }
 
 // each server changes its current state, and sends the setup messages
 // to all of its neighbors
 func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply) error {
+
 	ws.mu.Lock()
 	if ws.state == Normal {
 		ws.state = PreSetup
-
-		// forward this msg to all of its neighbors
-		for _, srv := range ws.neighbors {
-			rpc_args := &StartSetupArgs{args.MasterServer}
-			rpc_reply := &StartSetupReply{}
-			ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
-			if ok {
-				
-			}
-		}
-
+		go ws.StartSetupStage2()
+	} else {
+		ws.mu.Unlock()
+		reply.Err = OK
+		return nil
 	}
 	ws.mu.Unlock()
+
+	// forward this msg to all of its neighbors
+	for _, srv := range ws.neighbors {
+		rpc_args := &StartSetupArgs{args.MasterServer}
+		rpc_reply := &StartSetupReply{}
+		ok := call(srv, "WhanauServer.StartSetup", rpc_args, rpc_reply)
+		if ok {
+		}
+	}
+
+	reply.Err = OK
+
+	return nil
+}
+
+func (ws *WhanauServer) StartSetupStage2() {
 
 	// wait until all of its current outstanding requests are done processing
 	// TODO: should keep a counter of all of the outstanding requests
@@ -696,68 +750,85 @@ func (ws *WhanauServer) StartSetup(args *StartSetupArgs, reply *StartSetupReply)
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()
 	// send this new cluster to a random master cluster
-
-	for {
-		randInt := rand.Intn(len(ws.masters))
-		master_server := ws.masters[randInt]
-
-		receive_paxos_args := &ReceiveNewPaxosClusterArgs{new_cluster}
-		receive_paxos_reply := &ReceiveNewPaxosClusterReply{}
-
-		ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster", receive_paxos_args, receive_paxos_reply)
-		if ok {
-			if reply.Err == OK {
-				for k, v := range reply.KV {
-					// initiate paxos call for all of these keys
-					var req int64
-					ws.mu.Lock()
-					ws.reqID += 1
-					req = ws.reqID
-					ws.mu.Unlock()
-
-					cpargs := &ClientPutArgs{k, v, req, ws.myaddr}
-					cpreply := &ClientPutReply{}
-					ws.PaxosPutRPC(cpargs, cpreply)
-				}
-			}
-		}
-	}
+	fmt.Printf("Server %v DONE constructing new paxos clusters, new cluster is %v\n", ws.myaddr, new_cluster)
 
 	// enter the SETUP stage
 	ws.mu.Lock()
 	ws.state = Setup
 	ws.mu.Unlock()
 
-	// wait some time for pending writes
-	// TODO: how long to actually wait...?
+	// TODO: for every key value in the current kv store, replace with the newest paxos cluster
 
-	time.Sleep(180 * time.Second)
+	randInt := rand.Intn(len(ws.masters))
+	master_server := ws.masters[randInt]
+
+	receive_paxos_args := &ReceiveNewPaxosClusterArgs{ws.myaddr, new_cluster}
+	receive_paxos_reply := &ReceiveNewPaxosClusterReply{}
+
+	ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster",
+		receive_paxos_args, receive_paxos_reply)
+	if ok {
+		if receive_paxos_reply.Err == OK {
+
+			fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+
+			join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
+			var join_reply JoinClusterReply
+
+			for _, srv := range new_cluster {
+				if srv == ws.myaddr {
+					ws.JoinClusterRPC(&join_args, &join_reply)
+				} else {
+					ok := call(srv, "WhanauServer.JoinClusterRPC",
+						join_args, &join_reply)
+					if !ok {
+						// TODO error
+					}
+				}
+			}
+
+		}
+	}
 
 	// move on to the next stage
 	ws.mu.Lock()
 	ws.state = WhanauSetup
 	ws.mu.Unlock()
 
-	// TODO: run Whanau setup protocol
+	c := make(chan bool) // writes true of done
+	go func() {
+		ws.Setup()
+		c <- true
+	}()
 
-	return nil
+	<-c
+
+	ws.mu.Lock()
+	ws.state = Normal
+	ws.mu.Unlock()
+
+	fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
 }
 
-func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs, reply *ReceiveNewPaxosClusterReply) error {
+func (ws *WhanauServer) ReceiveNewPaxosCluster(
+	args *ReceiveNewPaxosClusterArgs,
+	reply *ReceiveNewPaxosClusterReply) error {
 	ws.new_paxos_clusters = append(ws.new_paxos_clusters, args.Cluster)
 
-	// go through the dictionary to see if the master already has some keys for it
-	var send_keys map[KeyType]TrueValueType
-	
+	// go through the dictionary to see if the master already
+	// has some keys for it
+	send_keys := make(map[KeyType]TrueValueType)
+	fmt.Printf("looking for server %v\n", args.Server)
 	ws.mu.Lock()
 	for k, v := range ws.key_to_server {
-		for c := range args.Cluster {
-			if v == c {
-				send_keys[k.Key] = ws.all_pending_writes[k]
+		if v == args.Server {
+			if value, found := ws.all_pending_writes[k]; found {
+				fmt.Printf("found in pending writes %v\n", value)
+				send_keys[k.Key] = value
 				// deletes should be safe
 				delete(ws.key_to_server, k)
 				delete(ws.all_pending_writes, k)
-				break
+				fmt.Printf("send keys is now %v\n", send_keys)
 			}
 		}
 	}
@@ -765,6 +836,7 @@ func (ws *WhanauServer) ReceiveNewPaxosCluster(args *ReceiveNewPaxosClusterArgs,
 
 	reply.KV = send_keys
 	reply.Err = OK
+
 	return nil
 }
 
@@ -811,7 +883,25 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.masters = masters
 	ws.is_master = is_master
-    ws.is_sybil = is_sybil
+	ws.is_sybil = is_sybil
+
+	if is_master {
+
+		var idx int
+
+		for i, m := range masters {
+			if m == ws.myaddr {
+				idx = i
+				break
+			}
+		}
+
+		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
+		ws.master_paxos_cluster = *wp_m
+		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
+		ws.key_to_server = make(map[PendingInsertsKey]string)
+		ws.new_paxos_clusters = make([][]string, 0)
+	}
 
 	// whanau routing parameters
 	ws.nlayers = nlayers
@@ -917,14 +1007,7 @@ func (ws *WhanauServer) WhanauPutRPC(args *WhanauPutRPCArgs, reply *WhanauPutRPC
 
 	} else {
 
-		var req int64
-
-		ws.mu.Lock()
-		ws.reqID += 1
-		req = ws.reqID
-		ws.mu.Unlock()
-
-		cpargs := &ClientPutArgs{key, value, req, ws.myaddr}
+		cpargs := &ClientPutArgs{key, value, NRand(), ws.myaddr}
 		cpreply := &ClientPutReply{}
 
 		randIdx := rand.Intn(len(servers))

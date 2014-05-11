@@ -59,8 +59,8 @@ func testGetId(server string, layer int) KeyType {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 
-	const nservers = 10
-	const nkeys = 50           // keys are strings from 0 to 99
+	const nservers = 100
+	const nkeys = 200          // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
 	// run setup in parallel
@@ -1020,7 +1020,7 @@ func TestSystolic(t *testing.T) {
 	c := make(chan bool) // writes true of done
 	for i := 0; i < nservers; i++ {
 		go func(srv int) {
-			ws[srv].PerformSystolicMixing()
+			ws[srv].PerformSystolicMixing(100)
 			c <- true
 		}(i)
 	}

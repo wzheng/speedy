@@ -56,56 +56,6 @@ func testGetId(server string, layer int) KeyType {
 	return "GETID ERR"
 }
 
-/*
-func TestBasic(t *testing.T) {
-	runtime.GOMAXPROCS(4)
-
-	const nservers = 3
-	var ws []*WhanauServer = make([]*WhanauServer, nservers)
-	var kvh []string = make([]string, nservers)
-	defer cleanup(ws)
-
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-
-	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
-		for j := 0; j < nservers; j++ {
-			if j == i {
-				continue
-			}
-			neighbors = append(neighbors, kvh[j])
-		}
-
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors)
-	}
-
-	var cka [nservers]*Clerk
-	for i := 0; i < nservers; i++ {
-		cka[i] = MakeClerk(kvh[i])
-	}
-
-	fmt.Printf("Test: Basic put/lookup ...\n")
-
-	cka[1].Put("a", "x")
-	val := cka[1].Lookup("a")
-
-	fmt.Printf("lookup for key a got value %s\n", val)
-
-	fmt.Printf("...Passed\n")
-
-	fmt.Printf("Lookup in neighboring server ...\n")
-
-	cka[2].Put("b", "y")
-	val = cka[1].Lookup("b")
-
-	fmt.Printf("lookup for key b got value %s\n", val)
-
-	fmt.Printf("...Passed\n")
-}
-*/
-
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 
@@ -140,7 +90,8 @@ func TestLookup(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
+			false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -157,7 +108,6 @@ func TestLookup(t *testing.T) {
 	// hard code in records for each server
 	for i := 0; i < nservers; i++ {
 		for j := 0; j < nkeys/nservers; j++ {
-			//var key KeyType = testKeys[counter]
 			var key KeyType = KeyType(strconv.Itoa(counter))
 			keys = append(keys, key)
 			counter++
@@ -193,20 +143,6 @@ func TestLookup(t *testing.T) {
 
 	elapsed := time.Since(start)
 	fmt.Printf("Finished setup, time: %s\n", elapsed)
-
-	/*
-		for i := 0; i < nservers; i++ {
-			fmt.Println("")
-			//fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
-
-			fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
-			for j := 1; j < nlayers; j++ {
-				fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
-				fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
-				//fmt.Printf("ws[%d].succ[%d]: %s\n", i, j, ws[i].succ[j])
-			}
-		}
-	*/
 
 	fmt.Printf("Check key coverage in all dbs\n")
 
@@ -301,53 +237,6 @@ func TestLookup(t *testing.T) {
 	fmt.Printf("numFound: %d\n", numFound)
 	fmt.Printf("total keys: %d\n", nkeys)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
-
-}
-
-// Test a basic put/get using paxos without checking lookup integrity
-func TestPutGet(t *testing.T) {
-	runtime.GOMAXPROCS(4)
-
-	fmt.Printf("\033[95m%s\033[0m\n", "Test: Basic PutGet")
-	const nservers = 10
-	const nkeys = 20           // keys are strings from 0 to 99
-	const k = nkeys / nservers // keys per node
-
-	// run setup in parallel
-	// parameters
-	constant := 5
-	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
-	nfingers := constant * int(math.Sqrt(k*nservers))
-	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := constant                                   // number of successors sampled per node
-
-	var ws []*WhanauServer = make([]*WhanauServer, nservers)
-	var kvh []string = make([]string, nservers)
-	defer cleanup(ws)
-
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-
-	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
-		for j := 0; j < nservers; j++ {
-			if j == i {
-				continue
-			}
-			neighbors = append(neighbors, kvh[j])
-		}
-
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
-			nlayers, nfingers, w, rd, rs, ts)
-	}
-
-	var cka [nservers]*Clerk
-	for i := 0; i < nservers; i++ {
-		cka[i] = MakeClerk(kvh[i])
-	}
 
 }
 
@@ -537,16 +426,12 @@ func TestRealGetAndPut(t *testing.T) {
 	fmt.Printf("After put: value is %v\n", value)
 }
 
-// Test doesn't work, wrote it for subclassing sybil nodes
-/*
-func TestRealGetAndPutWithSybils(t *testing.T) {
+func TestEndToEnd(t *testing.T) {
 	runtime.GOMAXPROCS(4)
 
 	const nservers = 10
-	const nkeys = 20           // keys are strings from 0 to 99
+	const nkeys = 30           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
-    const nsybilservers = 10
-    const sybilConnectionProb = 0.7
 
 	// parameters
 	constant := 5
@@ -561,18 +446,11 @@ func TestRealGetAndPutWithSybils(t *testing.T) {
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
-    var ksvh []string = make([]string, nsybilservers)
-    var wss []*WhanauSybilServer = make([]*WhanauSybilServer, nsybilservers)
-    var sybilnormalneighbors [nsybilservers][]string
 	defer cleanup(ws)
 
 	for i := 0; i < nservers; i++ {
 		kvh[i] = port("basic", i)
 	}
-
-    for i := nservers; i < nsybilservers + nservers; i++ {
-        ksvh[i-nservers] = port("basic", i)
-    }
 
 	master_servers := []string{kvh[0], kvh[1], kvh[2]}
 
@@ -585,11 +463,23 @@ func TestRealGetAndPutWithSybils(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-        rand.Seed(time.Now().UTC().UnixNano())
+		if i < 3 {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		} else {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		}
+	}
 
-        for k := 0; k < nsybilservers; k++ {
-            prob := rand.Float32()
-*/
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: End to End")
+
+}
 
 func TestPendingWrites(t *testing.T) {
 
@@ -741,7 +631,7 @@ func TestPendingWrites(t *testing.T) {
 
 	value = cl.ClientGet("40")
 	fmt.Printf("After pending insert: value is %v\n", value)
-	
+
 	time.Sleep(5 * time.Second)
 
 	fmt.Printf("Starting setup from masters\n")
@@ -750,10 +640,307 @@ func TestPendingWrites(t *testing.T) {
 	go ws[1].InitiateSetup()
 	go ws[2].InitiateSetup()
 
-	time.Sleep(30*time.Second)
-	
+	time.Sleep(30 * time.Second)
+
 	value = cl.ClientGet("40")
-	fmt.Printf("After setup: value is %v\n", value)	
+	fmt.Printf("After setup: value is %v\n", value)
+}
+
+// Testing non-malicious sybils, should have the same output as lookup
+func TestLookupWithSybils(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+
+	const nservers = 10
+	const nkeys = 50           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+	const sybilProb = 0.9
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := 5                                          // number of successors sampled per node
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var sybils []*WhanauServer = make([]*WhanauServer, 0)
+	var kvh []string = make([]string, nservers)
+	var ksvh []string = make([]string, 0)
+	defer cleanup(ws)
+	defer cleanup(sybils)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	m := nservers
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		rand.Seed(time.Now().UTC().UnixNano())
+		prob := rand.Float32()
+		if prob > sybilProb {
+			ksvh = append(ksvh, port("basic", m))
+			for l := 0; l < len(ksvh); l++ {
+				neighborProb := rand.Float32()
+				if neighborProb > sybilProb {
+					neighbors = append(neighbors, ksvh[l])
+				}
+			}
+			sybils = append(sybils, StartServer(ksvh, m-nservers, ksvh[m-nservers],
+				ksvh, make([]string, 0), false, true, nlayers, nfingers, w, rd, rs, ts))
+			m++
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
+			nlayers, nfingers, w, rd, rs, ts)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup With Sybils")
+
+	keys := make([]KeyType, 0)
+	records := make(map[KeyType]ValueType)
+	counter := 0
+	// Hard code records for non-Sybil servers
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < nkeys/nservers; j++ {
+			//var key KeyType = testKeys[counter]
+			var key KeyType = KeyType(strconv.Itoa(counter))
+			keys = append(keys, key)
+			counter++
+			val := ValueType{}
+			// randomly pick 5 servers
+			for kp := 0; kp < PaxosSize; kp++ {
+				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
+			}
+			records[key] = val
+			ws[i].kvstore[key] = val
+		}
+	}
+
+	c := make(chan bool) // writes true of done
+	fmt.Printf("Starting setup\n")
+	start := time.Now()
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			ws[srv].Setup()
+			c <- true
+		}(i)
+	}
+
+	for i := 0; i < len(sybils); i++ {
+		go func(srv int) {
+			sybils[srv].Setup()
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < len(sybils); i++ {
+		done := <-c
+		DPrintf("sybils[%d] setup done: %b", i, done)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Finished setup, time: %s\n", elapsed)
+
+	fmt.Printf("Check key coverage in all dbs\n")
+
+	keyset := make(map[KeyType]bool)
+	for i := 0; i < len(keys); i++ {
+		keyset[keys[i]] = false
+	}
+
+	for i := 0; i < nservers; i++ {
+		srv := ws[i]
+		for j := 0; j < len(srv.db); j++ {
+			keyset[srv.db[j].Key] = true
+		}
+	}
+
+	// count number of covered keys, all the false keys in keyset
+	covered_count := 0
+	for _, v := range keyset {
+		if v {
+			covered_count++
+		}
+	}
+	fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
+
+	fmt.Printf("Check key coverage in all successor tables\n")
+	keyset = make(map[KeyType]bool)
+	for i := 0; i < len(keys); i++ {
+		keyset[keys[i]] = false
+	}
+
+	for i := 0; i < nservers; i++ {
+		srv := ws[i]
+		for j := 0; j < len(srv.succ); j++ {
+			for k := 0; k < len(srv.succ[j]); k++ {
+				keyset[srv.succ[j][k].Key] = true
+			}
+		}
+	}
+
+	// count number of covered keys, all the false keys in keyset
+	covered_count = 0
+	missing_keys := make([]KeyType, 0)
+	for k, v := range keyset {
+		if v {
+			covered_count++
+		} else {
+			missing_keys = append(missing_keys, k)
+		}
+	}
+
+	fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
+	fmt.Printf("missing keys in succs: %s\n", missing_keys)
+	// check populated ids and fingers
+	/*
+		var x0 KeyType = "1"
+		var key KeyType = "3"
+		finger, layer := ws[0].ChooseFinger(x0, key, nlayers)
+		fmt.Printf("chosen finger: %s, chosen layer: %d\n", finger, layer)
+	*/
+
+	fmt.Printf("Checking Try for every key from every node\n")
+	numFound := 0
+	numTotal := 0
+	ctr := 0
+	fmt.Printf("All test keys: %s\n", keys)
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < len(keys); j++ {
+			key := KeyType(keys[j])
+			ctr++
+			largs := &LookupArgs{key, nil}
+			lreply := &LookupReply{}
+			ws[i].Lookup(largs, lreply)
+			if lreply.Err != OK {
+				//fmt.Printf("Did not find key: %s\n", key)
+			} else {
+				value := lreply.Value
+				// compare string arrays...
+				if len(value.Servers) != len(records[key].Servers) {
+					t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
+				}
+				for k := 0; k < len(value.Servers); k++ {
+					if value.Servers[k] != records[key].Servers[k] {
+						t.Fatalf("Wrong value returned for key(%s): %s expected: %s", key, value, records[key])
+					}
+				}
+				numFound++
+			}
+			numTotal++
+		}
+	}
+
+	fmt.Printf("numFound: %d\n", numFound)
+	fmt.Printf("total keys: %d\n", nkeys)
+	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
+}
+
+// Time setup
+func BenchmarkSetup(b *testing.B) {
+	runtime.GOMAXPROCS(8)
+
+	const nservers = 20
+	const nkeys = 80           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := 5                                          // number of successors sampled per node
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
+			false, false,
+			nlayers, nfingers, w, rd, rs, ts)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Setup benchmark")
+
+	keys := make([]KeyType, 0)
+	records := make(map[KeyType]ValueType)
+	counter := 0
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < nkeys/nservers; j++ {
+			var key KeyType = KeyType(strconv.Itoa(counter))
+			keys = append(keys, key)
+			counter++
+			val := ValueType{}
+			// randomly pick 5 servers
+			for kp := 0; kp < PaxosSize; kp++ {
+				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
+			}
+			records[key] = val
+			ws[i].kvstore[key] = val
+		}
+	}
+
+	c := make(chan bool) // writes true of done
+	fmt.Printf("Starting setup\n")
+
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			ws[srv].Setup()
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
 }
 
 // Testing non-malicious sybils, should have the same output as lookup

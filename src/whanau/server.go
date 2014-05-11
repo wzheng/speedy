@@ -12,9 +12,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	//"sort"
 	"sync"
-	"time"
 )
 
 //import "encoding/gob"
@@ -54,7 +52,7 @@ type WhanauServer struct {
 	masters []string // list of servers for the master cluster; these servers are also trusted
 
 	is_master bool                      // whether the server itself is a master server
-    is_sybil  bool                      // whether the server is a sybil server
+	is_sybil  bool                      // whether the server is a sybil server
 	state     State                     // what phase the server is in
 	pending   map[KeyType]TrueValueType // this is a list of pending writes
 
@@ -87,9 +85,9 @@ type WhanauSybilServer struct {
 
 // for testing
 func (ws *WhanauServer) AddToKvstore(key KeyType, value ValueType) {
-    if (!ws.is_sybil) {
-	    ws.kvstore[key] = value
-    }
+	if !ws.is_sybil {
+		ws.kvstore[key] = value
+	}
 }
 
 func (ws *WhanauServer) GetDB() []Record {
@@ -103,7 +101,7 @@ func (ws *WhanauServer) GetSucc() [][]Record {
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
 func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
- 	reply *ClientGetReply) error {
+	reply *ClientGetReply) error {
 
 	if _, ok := ws.paxosInstances[args.Key]; !ok {
 		reply.Err = ErrNoKey
@@ -188,6 +186,7 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 	return nil
 }
 
+<<<<<<< HEAD
 // Returns paxos cluster for given key.
 // Called by servers to figure out which paxos cluster
 // to get the true value from.
@@ -805,6 +804,8 @@ func (ws *WhanauServer) InitiateSetup() {
 	}
 }
 
+=======
+>>>>>>> 9553777a907080865caac629dccb08c73881c896
 // tell the server to shut itself down.
 func (ws *WhanauServer) Kill() {
 	ws.dead = true
@@ -828,22 +829,22 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.masters = masters
 	ws.is_master = is_master
-    ws.is_sybil = is_sybil
-	
-	if (is_master) {
-		
+	ws.is_sybil = is_sybil
+
+	if is_master {
+
 		var idx int
-		
+
 		for i, m := range masters {
 			if m == ws.myaddr {
 				idx = i
 				break
 			}
 		}
-		
+
 		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
 		ws.master_paxos_cluster = *wp_m
-		ws.all_pending_writes =  make(map[PendingInsertsKey]TrueValueType)
+		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
 		ws.key_to_server = make(map[PendingInsertsKey]string)
 		ws.new_paxos_clusters = make([][]string, 0)
 	}
@@ -909,7 +910,8 @@ func StartServer(servers []string, me int, myaddr string,
 
 // Methods used only for testing
 
-// This method is only used for putting ids into the table for testing purposes
+// This method is only used for putting ids into the table
+// for testing purposes
 func (ws *WhanauServer) PutId(args *PutIdArgs, reply *PutIdReply) error {
 	//ws.ids[args.Layer] = args.Key
 	ws.ids = append(ws.ids, args.Key)

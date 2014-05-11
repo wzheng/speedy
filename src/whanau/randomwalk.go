@@ -2,6 +2,7 @@
 
 package whanau
 
+//import "fmt"
 import "math/rand"
 
 // Random walk
@@ -22,6 +23,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 
 // Random walk for honest nodes
 func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
+	//fmt.Printf("In honest node random walk: %s", ws.myaddr)
 	var reply RandomWalkReply
 	// pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
@@ -46,6 +48,7 @@ func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
 
 // Random walk for sybil nodes
 func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
+	//fmt.Printf("In Sybil node random walk: %s", ws.myaddr)
 	// testing assumption for breaking cluster attacks
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]

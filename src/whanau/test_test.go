@@ -970,3 +970,65 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	fmt.Printf("total keys: %d\n", nkeys)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
 }
+
+func TestSystolic(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+
+	const nservers = 10
+	const nkeys = 50           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := 5                                          // number of successors sampled per node
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
+			false, false,
+			nlayers, nfingers, w, rd, rs, ts)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Systolic mixing")
+
+	c := make(chan bool) // writes true of done
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			ws[srv].PerformSystolicMixing(100)
+			c <- true
+		}(i)
+	}
+
+	// wait for mixing to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] mixing done: %b", i, done)
+	}
+
+}

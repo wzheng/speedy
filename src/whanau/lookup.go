@@ -134,12 +134,12 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 }
 
 // Try finds the value associated with the key in honest node
-func (ws *WhanauServer) HonestTry(key KeyType) TryReply{
+func (ws *WhanauServer) HonestTry(key KeyType) TryReply {
 	nlayers := ws.nlayers
 	DPrintf("In Honest Try RPC, trying key: %s", key)
-	
+
 	var reply TryReply
-	
+
 	// Lookup in local kvstore (pg 60 of thesis)
 	if val, ok := ws.kvstore[key]; ok {
 		DPrintf("local look up found %s\n", key)
@@ -147,7 +147,7 @@ func (ws *WhanauServer) HonestTry(key KeyType) TryReply{
 		reply.Err = OK
 		return reply
 	}
-	
+
 	var fingerLength int
 	if len(ws.fingers) > 0 {
 		fingerLength = len(ws.fingers[0])
@@ -172,10 +172,10 @@ func (ws *WhanauServer) HonestTry(key KeyType) TryReply{
 			if j < 0 {
 				j = j + fingerLength
 			}
-	
+
 			count++
 		}
-	
+
 		if queryReply.Err == OK {
 			DPrintf("Found key in Try!")
 			value := queryReply.Value
@@ -187,7 +187,7 @@ func (ws *WhanauServer) HonestTry(key KeyType) TryReply{
 	} else {
 		reply.Err = ErrNoKey
 	}
-	
+
 	return reply
 }
 
@@ -228,12 +228,15 @@ func (ws *WhanauServer) HonestLookup(key KeyType, steps int) LookupReply {
 
 	for tryReply.Err != OK && count < TIMEOUT {
 		call(addr, "WhanauServer.Try", tryArgs, tryReply)
-		randomWalkArgs := &RandomWalkArgs{steps}
+		/*randomWalkArgs := &RandomWalkArgs{steps}
 		randomWalkReply := &RandomWalkReply{}
 		call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
 		if randomWalkReply.Err == OK {
 			addr = randomWalkReply.Server
-		}
+		}*/
+
+		// Get a server from the lookup cache reserve
+		addr, _ = ws.GetLookupServer()
 		count++
 	}
 
@@ -286,7 +289,7 @@ func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
 	value := make([]string, 0)
 	value = append(value, "HA")
 	record := Record{key, ValueType{value}}
-	
+
 	if len(ws.kvstore) > 0 {
 		for k, _ := range ws.kvstore {
 			key = k
@@ -295,7 +298,7 @@ func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
 		val := ws.kvstore[key]
 		record = Record{key, val}
 	}
-	
+
 	return SampleRecordReply{record, OK}
 }
 
@@ -464,7 +467,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 				call(vj, "WhanauServer.SampleSuccessors",
 					sampleSuccessorsArgs, sampleSuccessorsReply)
 			}
-			
+
 			if sampleSuccessorsReply.Err != OK {
 				sampleSuccessorsReply.Successors = make([]Record, 0)
 				sampleSuccessorsReply.Err = OK
@@ -476,4 +479,3 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 	//fmt.Printf("These are the successors: %s \n", successors)
 	return successors
 }
-

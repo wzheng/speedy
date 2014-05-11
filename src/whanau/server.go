@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net"
 	"net/rpc"
@@ -49,6 +50,13 @@ type WhanauServer struct {
 	succ      [][]Record            // contains successor records for each layer
 	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
 
+	rw_servers []string // list of random walk servers from systolic mixing
+	rw_idx     int64
+	rw_mu      sync.Mutex
+	rec_mu     sync.Mutex
+	recv_chan  chan *SystolicMixingArgs
+	doneMixing bool
+
 	masters []string // list of servers for the master cluster; these servers are also trusted
 
 	is_master bool                      // whether the server itself is a master server
@@ -76,6 +84,11 @@ type WhanauServer struct {
 	rd      int // rd = size of database, O(sqrt(km))
 	rs      int // rs = number of nodes to collect samples from, O(sqrt(km))
 	t       int // t = number of successors returned from sample per node, less than rs
+
+	// Systolic mixing variables
+	received_servers map[int][][]string // timestep -> neighbor name -> values
+	nreserved        int                // num in pool reserved for Lookups
+	lookup_idx       int
 }
 
 type WhanauSybilServer struct {
@@ -237,6 +250,14 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.rs = rs
 	ws.t = t
 
+	ws.received_servers = make(map[int][][]string, ws.w+1)
+	ws.rw_servers = make([]string, 0)
+	ws.rw_idx = 0
+	ws.recv_chan = make(chan *SystolicMixingArgs)
+	ws.doneMixing = true
+	ws.nreserved = int(math.Pow(float64(ws.rd), 2))
+	ws.lookup_idx = 0
+
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
 
 	ws.rpc = rpc.NewServer()
@@ -250,6 +271,10 @@ func StartServer(servers []string, me int, myaddr string,
 	gob.Register(PaxosGetReply{})
 	gob.Register(PaxosPutArgs{})
 	gob.Register(PaxosPutReply{})
+	gob.Register(JoinClusterArgs{})
+	gob.Register(JoinClusterReply{})
+	gob.Register(SystolicMixingArgs{})
+	gob.Register(SystolicMixingReply{})
 
 	os.Remove(servers[me])
 	l, e := net.Listen("unix", servers[me])

@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net"
 	"net/rpc"
@@ -86,6 +87,8 @@ type WhanauServer struct {
 
 	// Systolic mixing variables
 	received_servers map[int][][]string // timestep -> neighbor name -> values
+	nreserved        int                // num in pool reserved for Lookups
+	lookup_idx       int
 }
 
 type WhanauSybilServer struct {
@@ -252,6 +255,8 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.rw_idx = 0
 	ws.recv_chan = make(chan *SystolicMixingArgs)
 	ws.doneMixing = true
+	ws.nreserved = int(math.Pow(float64(ws.rd), 2))
+	ws.lookup_idx = 0
 
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
 

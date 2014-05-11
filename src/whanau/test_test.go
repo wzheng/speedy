@@ -59,8 +59,8 @@ func testGetId(server string, layer int) KeyType {
 func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 
-	const nservers = 100
-	const nkeys = 500          // keys are strings from 0 to 99
+	const nservers = 10
+	const nkeys = 50           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
 	// run setup in parallel

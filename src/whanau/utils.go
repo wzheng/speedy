@@ -37,6 +37,24 @@ func Shuffle(src []string) []string {
 	return dest
 }
 
+func (ws *WhanauServer) GetLookupServer() (string, bool) {
+	ws.rw_mu.Lock()
+	defer ws.rw_mu.Unlock()
+
+	//fmt.Printf("asking ws %v: idx wants %d, len is %d\n",
+	//	ws.me, ws.rw_idx, len(ws.rw_servers))
+
+	if len(ws.rw_servers) <= ws.nreserved {
+		// wrap around: we have reserved a certain number for lookups
+		ws.lookup_idx = 0
+	}
+
+	// get nth from end
+	retval := ws.rw_servers[len(ws.rw_servers)-ws.lookup_idx-1]
+	ws.lookup_idx++
+	return retval, true
+}
+
 // Handles getting another server from the precomputed cache of
 // random walk results.
 func (ws *WhanauServer) GetNextRWServer() (string, bool) {
@@ -46,7 +64,7 @@ func (ws *WhanauServer) GetNextRWServer() (string, bool) {
 	//fmt.Printf("asking ws %v: idx wants %d, len is %d\n",
 	//	ws.me, ws.rw_idx, len(ws.rw_servers))
 
-	if len(ws.rw_servers) == 0 {
+	if len(ws.rw_servers) <= ws.nreserved {
 		log.Fatalf("not enough servers in ws %v: idx wants %d, len is %d\n",
 			ws.me, ws.rw_idx, len(ws.rw_servers))
 		return "", false
@@ -54,16 +72,5 @@ func (ws *WhanauServer) GetNextRWServer() (string, bool) {
 
 	retval := ws.rw_servers[0]
 	ws.rw_servers = ws.rw_servers[1:]
-	return retval, true
-
-	if ws.rw_idx >= int64(len(ws.rw_servers)) {
-		log.Fatalf("not enough servers in ws %v: idx wants %d, len is %d\n",
-			ws.me, ws.rw_idx, len(ws.rw_servers))
-		return "", false
-	}
-
-	retval = ws.rw_servers[ws.rw_idx]
-	ws.rw_idx = ws.rw_idx + 1
-
 	return retval, true
 }

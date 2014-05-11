@@ -110,7 +110,7 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		reply.Err = OK
 		return nil
 	}
-	
+
 	var fingerLength int
 	if len(ws.fingers) > 0 {
 		fingerLength = len(ws.fingers[0])
@@ -135,10 +135,10 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 			if j < 0 {
 				j = j + fingerLength
 			}
-	
+
 			count++
 		}
-	
+
 		if queryReply.Err == OK {
 			DPrintf("Found key in Try!")
 			value := queryReply.Value
@@ -150,7 +150,7 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 	} else {
 		reply.Err = ErrNoKey
 	}
-	
+
 	return nil
 }
 
@@ -184,12 +184,15 @@ func (ws *WhanauServer) HonestLookup(key KeyType, steps int) LookupReply {
 
 	for tryReply.Err != OK && count < TIMEOUT {
 		call(addr, "WhanauServer.Try", tryArgs, tryReply)
-		randomWalkArgs := &RandomWalkArgs{steps}
+		/*randomWalkArgs := &RandomWalkArgs{steps}
 		randomWalkReply := &RandomWalkReply{}
 		call(ws.myaddr, "WhanauServer.RandomWalk", randomWalkArgs, randomWalkReply)
 		if randomWalkReply.Err == OK {
 			addr = randomWalkReply.Server
-		}
+		}*/
+
+		// Get a server from the lookup cache reserve
+		addr, _ = ws.GetLookupServer()
 		count++
 	}
 
@@ -425,7 +428,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 				call(vj, "WhanauServer.SampleSuccessors",
 					sampleSuccessorsArgs, sampleSuccessorsReply)
 			}
-			
+
 			if sampleSuccessorsReply.Err != OK {
 				sampleSuccessorsReply.Successors = make([]Record, 0)
 				sampleSuccessorsReply.Err = OK
@@ -437,4 +440,3 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 	//fmt.Printf("These are the successors: %s \n", successors)
 	return successors
 }
-

@@ -312,11 +312,11 @@ func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
 
 // sybil node samplerecord
 func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
-    key := KeyType("This is a Sybil key")
-    value := make([]string, 0)
-    value = append(value, "HA")
-    record := Record{key, ValueType{value}}
-    return SampleRecordReply{record, OK}
+	key := KeyType("This is a Sybil key")
+	value := make([]string, 0)
+	value = append(value, "HA")
+	record := Record{key, ValueType{value}}
+	return SampleRecordReply{record, OK}
 }
 
 // Returns a list of records sampled randomly from local kv store
@@ -351,16 +351,7 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
-    if (ws.is_sybil) {
-        return ws.SybilConstructFingers(layer)
-    } else {
-        return ws.HonestConstructFingers(layer)
-    }
-}
-
-// honest node construct fingers
-func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
-	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
+    	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0, ws.rf*2)
 	for i := 0; i < ws.rf; i++ {
 		args := &RandomWalkArgs{ws.w}
@@ -395,12 +386,6 @@ func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 	}
 
 	return fingers
-}
-
-// sybil node construct fingers
-func (ws *WhanauServer) SybilConstructFingers(layer int) []Finger {
-    fingers := make([]Finger, 0)
-    return fingers
 }
 
 /*
@@ -474,7 +459,7 @@ func StartSybilServer(servers []string, myaddr string, me int, neighbors []strin
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
     DPrintf("Currently choosing id: %s", ws.myaddr)
     if (ws.is_sybil) {
-        return ws.SybilChooseID()
+        return ws.SybilChooseID(layer)
     } else {
         return ws.HonestChooseID(layer)
     }
@@ -498,8 +483,13 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 }
 
 // Sybil choose id
-func (ws *WhanauServer) SybilChooseID() KeyType {
-    return KeyType("Sybil Node ID")
+func (ws *WhanauServer) SybilChooseID(layer int) KeyType {
+	id := KeyType("Sybil node key")
+	for k := range ws.kvstore {
+		id = k
+		break
+	}
+	return id
 }
 
 // Gets successors that are nearest each key
@@ -531,15 +521,6 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
-    if (ws.is_sybil) {
-        return ws.SybilSuccessors(layer)
-    } else {
-        return ws.HonestSuccessors(layer)
-    }
-}
-
-// Honest successors
-func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
 	//var successors []Record
 	// overallocate memory for array
@@ -569,13 +550,6 @@ func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 	}
 	return successors
 }
-
-// Sybil successors
-func (ws *WhanauServer) SybilSuccessors(layer int) []Record {
-    record := make([]Record, 0)
-    return record
-}
-
 
 func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *InitPaxosClusterReply) error {
 	if args.Phase == PhaseOne {

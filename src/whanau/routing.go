@@ -8,23 +8,23 @@ import "math/rand"
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
 	steps := args.Steps
-    var randomWalkReply RandomWalkReply
-    if (ws.is_sybil) {
-        randomWalkReply = ws.SybilRandomWalk()
-    } else {
-        //fmt.Printf("Doing an honest random walk")
-        randomWalkReply = ws.HonestRandomWalk(steps)
-    }
+	var randomWalkReply RandomWalkReply
+	if (ws.is_sybil) {
+	    randomWalkReply = ws.SybilRandomWalk()
+	} else {
+	    //fmt.Printf("Doing an honest random walk")
+	    randomWalkReply = ws.HonestRandomWalk(steps)
+	}
 	reply.Server = randomWalkReply.Server
-    reply.Err = randomWalkReply.Err
-    //fmt.Printf("Random walk reply: %s", randomWalkReply)
-    return nil
+	reply.Err = randomWalkReply.Err
+	//fmt.Printf("Random walk reply: %s", randomWalkReply)
+	return nil
 }
 
 // Random walk for honest nodes
 func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
 	var reply RandomWalkReply
-    // pick a random neighbor
+	// pick a random neighbor
 	randIndex := rand.Intn(len(ws.neighbors))
 	neighbor := ws.neighbors[randIndex]
 	if steps == 1 {
@@ -38,14 +38,20 @@ func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
 		if ok && (rpc_reply.Err == OK) {
 			reply.Server = rpc_reply.Server
 			reply.Err = OK
+		} else {
+			reply.Err = ErrNoKey
 		}
 	}
-    return reply
+	return reply
 }
 
 // Random walk for sybil nodes
 func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
-    return RandomWalkReply{"Sybil server!", ErrNoKey}
+	// testing assumption for breaking cluster attacks
+	randIndex := rand.Intn(len(ws.neighbors))
+	neighbor := ws.neighbors[randIndex]
+	return RandomWalkReply{ neighbor, OK }
+	//return RandomWalkReply{"Sybil server!", ErrNoKey}
 }
 
 // Gets the ID from node's local id table
@@ -100,10 +106,22 @@ func (ws *WhanauServer) SetupSybil() {
 	DPrintf("In Setup of Sybil server %s", ws.myaddr)
 
 	// reset ids, fingers, succ...etc.
-    ws.db = make([]Record, 0)
+	ws.db = make([]Record, 0)
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
 	ws.succ = make([][]Record, 0)
+	
+	for k := range ws.kvstore {
+		if len(ws.ids) < ws.nlayers {
+			ws.ids = append(ws.ids, k)
+		}
+	}
+	
+	last_val := ws.ids[len(ws.ids) - 1]
+	
+	for len(ws.ids) < ws.nlayers {
+		ws.ids = append(ws.ids, last_val)
+	}
 }
 
 // TODO

@@ -4,8 +4,8 @@ package whanau
 
 import "math/rand"
 import "sort"
-import "time"
-import "fmt"
+//import "time"
+//import "fmt"
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
@@ -75,11 +75,17 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 	layer := args.Layer
 	key := args.Key
-	valueIndex := sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
-		return ws.succ[layer][valueIndex].Key >= key
-	})
-
-	if valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
+	//fmt.Printf("Starting binary search: %s", ws.myaddr)
+	var valueIndex int
+	if layer < len(ws.succ) {
+		valueIndex = sort.Search(len(ws.succ[layer]), func(valueIndex int) bool {
+			return ws.succ[layer][valueIndex].Key >= key
+		})
+	} else {
+		valueIndex = -1
+	}
+	//fmt.Printf("Ending binary search: %s", ws.myaddr)
+	if valueIndex != -1 && valueIndex < len(ws.succ[layer]) && valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
 		DPrintf("In Query: found the key!!!!")
 		reply.Value = ws.succ[layer][valueIndex].Value
 		DPrintf("reply.Value: %s", reply.Value)
@@ -87,6 +93,7 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 	} else {
 		reply.Err = ErrNoKey
 	}
+	//fmt.Printf("Ending query search: %s", ws.myaddr)
 	return nil
 }
 
@@ -103,41 +110,47 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		reply.Err = OK
 		return nil
 	}
-
-	fingerLength := len(ws.fingers[0])
-	j := sort.Search(fingerLength, func(i int) bool {
-		return ws.fingers[0][i].Id >= key
-	})
-	j = j % fingerLength
-	if j < 0 {
-		j = j + fingerLength
-	}
-	j = (j + fingerLength - 1) % fingerLength
-	count := 0
-	queryArgs := &QueryArgs{}
-	queryReply := &QueryReply{}
-	for queryReply.Err != OK && count < TIMEOUT {
-		f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, nlayers)
-		queryArgs.Key = key
-		queryArgs.Layer = i
-		call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
-		j = j - 1
+	
+	var fingerLength int
+	if len(ws.fingers) > 0 {
+		fingerLength = len(ws.fingers[0])
+		j := sort.Search(fingerLength, func(i int) bool {
+			return ws.fingers[0][i].Id >= key
+		})
 		j = j % fingerLength
 		if j < 0 {
 			j = j + fingerLength
 		}
-
-		count++
-	}
-
-	if queryReply.Err == OK {
-		DPrintf("Found key in Try!")
-		value := queryReply.Value
-		reply.Value = value
-		reply.Err = OK
+		j = (j + fingerLength - 1) % fingerLength
+		count := 0
+		queryArgs := &QueryArgs{}
+		queryReply := &QueryReply{}
+		for queryReply.Err != OK && count < TIMEOUT {
+			f, i := ws.ChooseFinger(ws.fingers[0][j].Id, key, nlayers)
+			queryArgs.Key = key
+			queryArgs.Layer = i
+			call(f.Address, "WhanauServer.Query", queryArgs, queryReply)
+			j = j - 1
+			j = j % fingerLength
+			if j < 0 {
+				j = j + fingerLength
+			}
+	
+			count++
+		}
+	
+		if queryReply.Err == OK {
+			DPrintf("Found key in Try!")
+			value := queryReply.Value
+			reply.Value = value
+			reply.Err = OK
+		} else {
+			reply.Err = ErrNoKey
+		}
 	} else {
 		reply.Err = ErrNoKey
 	}
+	
 	return nil
 }
 
@@ -264,9 +277,9 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
-	start := time.Now()
-	defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
+		//ws.myaddr, time.Since(start))
 
 	if ws.is_sybil {
 		return ws.SybilConstructFingers(layer)
@@ -322,9 +335,9 @@ func (ws *WhanauServer) SybilConstructFingers(layer int) []Finger {
 
 // Choose id for specified layer
 func (ws *WhanauServer) ChooseID(layer int) KeyType {
-	DPrintf("Currently choosing id: %s", ws.myaddr)
+	//fmt.Printf("Currently choosing id: %s \n", ws.myaddr)
 	if ws.is_sybil {
-		return ws.SybilChooseID()
+		return ws.SybilChooseID(layer)
 	} else {
 		return ws.HonestChooseID(layer)
 	}
@@ -332,7 +345,7 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 
 // Honest choose id
 func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
-	DPrintf("In ChooseID of %s, layer %d", ws.myaddr, layer)
+	//fmt.Printf("In ChooseID of honest %s, layer %d \n", ws.myaddr, layer)
 	if layer == 0 {
 		// choose randomly from db
 		randIndex := rand.Intn(len(ws.db))
@@ -348,19 +361,24 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 }
 
 // Sybil choose id
-func (ws *WhanauServer) SybilChooseID() KeyType {
-	return KeyType("Sybil Node ID")
+func (ws *WhanauServer) SybilChooseID(layer int) KeyType {
+	//fmt.Printf("In ChooseID Sybil %s, layer %d \n", ws.myaddr, layer)
+	key := KeyType("Sybil Node ID")
+	for k := range ws.kvstore {
+		key = k
+	}
+	return key
 }
 
 // Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
-	start := time.Now()
-	defer fmt.Printf("SAMPLESUCCESSORS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("SAMPLESUCCESSORS in server %v took %v\n",
+		//ws.myaddr, time.Since(start))
 
 	key := args.Key
 	records := make([]Record, ws.t*2)
-
+	//fmt.Printf("Sampling successors: %s \n", ws.myaddr)
 	if ws.t <= len(ws.db) {
 		firstRecord := PositionOf(key, ws.db)
 		remaining := len(ws.db) - firstRecord
@@ -380,23 +398,16 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
-	start := time.Now()
-	defer fmt.Printf("SUCCESSORS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("SUCCESSORS in server %v took %v\n",
+		//ws.myaddr, time.Since(start))
 
-	if ws.is_sybil {
-		return ws.SybilSuccessors(layer)
-	} else {
-		return ws.HonestSuccessors(layer)
-	}
-}
-
-// Honest successors
-func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
-	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
+	//fmt.Printf("In Sucessors of %s, layer %d \n", ws.myaddr, layer)
 
 	// overallocate memory for array
 	successors := make([]Record, 0, ws.rs*ws.t*2)
+	maxIteration := 50
+	counter := 0
 	for i := 0; i < ws.rs; i++ {
 		args := &RandomWalkArgs{}
 		args.Steps = ws.w
@@ -405,22 +416,23 @@ func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 
 		if reply.Err == OK {
 			vj := reply.Server
-
+			//fmt.Printf("random walk reply: %s \n", vj)
 			sampleSuccessorsArgs := &SampleSuccessorsArgs{ws.ids[layer]}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
-			for sampleSuccessorsReply.Err != OK {
+			for sampleSuccessorsReply.Err != OK && counter < maxIteration {
+				counter++
 				call(vj, "WhanauServer.SampleSuccessors",
 					sampleSuccessorsArgs, sampleSuccessorsReply)
+			}
+			
+			if sampleSuccessorsReply.Err != OK {
+				sampleSuccessorsReply.Successors = make([]Record, 0)
+				sampleSuccessorsReply.Err = OK
 			}
 			successors = append(successors,
 				sampleSuccessorsReply.Successors...)
 		}
 	}
+	//fmt.Printf("These are the successors: %s \n", successors)
 	return successors
-}
-
-// Sybil successors
-func (ws *WhanauServer) SybilSuccessors(layer int) []Record {
-	record := make([]Record, 0)
-	return record
 }

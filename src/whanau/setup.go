@@ -20,7 +20,7 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-	DPrintf("In Setup of honest server %s", ws.myaddr)
+	//fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
 	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
@@ -32,15 +32,15 @@ func (ws *WhanauServer) SetupHonest() {
 	ws.succ = make([][]Record, 0)
 	for i := 0; i < ws.nlayers; i++ {
 		// populate tables in layers
-        //fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
+		//fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
 		ws.ids = append(ws.ids, ws.ChooseID(i))
-        //fmt.Printf("Choosing Fingers: %s", ws.ConstructFingers(i))
 		curFingerTable := ws.ConstructFingers(i)
+		//fmt.Printf("Choosing Fingers: %s", curFingerTable)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
-
-        //fmt.Printf("Choosing successors: %s", ws.Successors(i))
+		//fmt.Printf("Finished choosing fingers")
 		curSuccessorTable := ws.Successors(i)
+		//fmt.Printf("Choosing successors: %s", curSuccessorTable)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 
@@ -52,7 +52,7 @@ func (ws *WhanauServer) SetupHonest() {
 
 // Server for Sybil nodes
 func (ws *WhanauServer) SetupSybil() {
-	DPrintf("In Setup of Sybil server %s", ws.myaddr)
+	//fmt.Printf("In Setup of Sybil server %s \n", ws.myaddr)
 
 	// reset ids, fingers, succ...etc.
 	ws.db = make([]Record, 0)

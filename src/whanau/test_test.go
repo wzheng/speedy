@@ -914,8 +914,6 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 			sybils = append(sybils, kvh[i])
 		}
 	}
-	
-	DPrintf("Sybils in this place: %s", sybils)
 
 	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
@@ -950,6 +948,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup With Sybils")
+	fmt.Printf("Sybils in this place: %s \n", sybils)
 	for i := 0; i < len(kvh); i++ {
 		if _, ok := ksvh[i]; ok {
 			fmt.Println("Address of Sybil node: %s \n", kvh[i])
@@ -995,7 +994,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	// wait for all setups to finish
 	for i := 0; i < nservers; i++ {
 		done := <-c
-		DPrintf("ws[%d] setup done: %b", i, done)
+		fmt.Printf("ws[%d] setup done: %b", i, done)
 	}
 
 	elapsed := time.Since(start)

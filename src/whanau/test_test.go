@@ -60,7 +60,7 @@ func TestLookup(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 
 	const nservers = 100
-	const nkeys = 200          // keys are strings from 0 to 99
+	const nkeys = 500          // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
 	// run setup in parallel

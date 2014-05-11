@@ -2,7 +2,6 @@ package whanau
 
 import "time"
 
-//import "math"
 import "fmt"
 import "log"
 
@@ -12,11 +11,9 @@ func (ws *WhanauServer) ServerHandler() {
 
 		ws.rec_mu.Lock()
 
-		if ws.received_servers[args.Timestep] != nil {
+		if _, ok := ws.received_servers[args.Timestep]; ok {
 			ws.received_servers[args.Timestep] =
 				append(ws.received_servers[args.Timestep], args.Servers)
-			//fmt.Printf("server %v logging idx %v at ts %d\n", ws.me,
-			//	len(ws.received_servers[args.Timestep]), args.Timestep)
 		} else {
 			ws.received_servers[args.Timestep] = make([][]string, 0)
 			ws.received_servers[args.Timestep] =
@@ -88,6 +85,9 @@ func (ws *WhanauServer) PerformSystolicMixing(numWalks int) {
 			// TODO not sure if off by one here
 			break
 		}
+
+		// free up memory!!
+		delete(ws.received_servers, iter)
 
 		// create server pool by concatenating new vals
 		server_pool = make([]string, 0)

@@ -85,7 +85,7 @@ type WhanauServer struct {
 	t       int // t = number of successors returned from sample per node, less than rs
 
 	// Systolic mixing variables
-	received_servers [][][]string // timestep -> neighbor name -> values
+	received_servers map[int][][]string // timestep -> neighbor name -> values
 }
 
 type WhanauSybilServer struct {
@@ -247,7 +247,7 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.rs = rs
 	ws.t = t
 
-	ws.received_servers = make([][][]string, ws.w+1)
+	ws.received_servers = make(map[int][][]string, ws.w+1)
 	ws.rw_servers = make([]string, 0)
 	ws.rw_idx = 0
 	ws.recv_chan = make(chan *SystolicMixingArgs)

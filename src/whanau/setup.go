@@ -65,6 +65,12 @@ func (ws *WhanauServer) SetupHonest() {
 func (ws *WhanauServer) SetupSybil() {
 	//fmt.Printf("In Setup of Sybil server %s \n", ws.myaddr)
 
+	// Sybil nodes should participate in mixing so that other nodes
+	// will try to route to them
+	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
+	ws.PerformSystolicMixing(numToSample)
+	ws.doneMixing = true // turn off server handler
+
 	// reset ids, fingers, succ...etc.
 	ws.db = make([]Record, 0)
 	ws.ids = make([]KeyType, 0)

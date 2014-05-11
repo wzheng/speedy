@@ -761,34 +761,55 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rand.Seed(time.Now().UTC().UnixNano())
 		prob := rand.Float32()
 		if prob > sybilProb {
+			// randomly make some of the servers sybil servers
 			ksvh[i] = true
 			sybils = append(sybils, kvh[i])
 		}
 	}
 
+	neighbors := make([][]string, nservers)
 	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
+		neighbors[i] = make([]string, 0)
+	}
 
-		for j := 0; j < nservers; j++ {
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < i; j++ {
 			if j == i {
 				continue
 			}
+
 			if _, ok := ksvh[j]; ok {
+				if _, ok := ksvh[i]; ok {
+					// both nodes are sybil nodes
+					// create edge with 100% probability
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
+				}
+
+				// one node is a sybil node
+				// create edge with small probability
 				prob := rand.Float32()
 
 				if prob > sybilProb {
-					neighbors = append(neighbors, kvh[j])
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
 				}
 
 			} else {
-				neighbors = append(neighbors, kvh[j])
+				// neither is sybil, create edge with 100% probability
+				neighbors[i] = append(neighbors[i], kvh[j])
+				neighbors[j] = append(neighbors[j], kvh[i])
 			}
 		}
-		if _, ok := ksvh[i]; ok {
-			ws[i] = StartServer(kvh, i, kvh[i], sybils, make([]string, 0), false, true,
+
+	}
+
+	for k := 0; k < nservers; k++ {
+		if _, ok := ksvh[k]; ok {
+			ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
+			ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}

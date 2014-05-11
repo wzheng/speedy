@@ -1,8 +1,6 @@
 package whanau
 
 import "time"
-
-import "fmt"
 import "log"
 
 func (ws *WhanauServer) ServerHandler() {
@@ -48,16 +46,18 @@ func (ws *WhanauServer) PerformSystolicMixing(numWalks int) {
 		server_pool[i] = ws.myaddr
 	}
 
-	naddresses := len(server_pool) / len(ws.neighbors)
 	// perform w iterations to get sufficient mixing
 	for iter := 0; iter < ws.w; iter++ {
-		fmt.Printf("server %v in performsystolic at ts %d\n", ws.me, iter)
+		naddresses := int(float64(len(server_pool)) /
+			float64(len(ws.neighbors)))
+		DPrintf("server %v in performsystolic at ts %d\n", ws.me, iter)
 		for idx, srv := range ws.neighbors {
 			start := idx * naddresses
 			end := start + naddresses
 			if idx == len(ws.neighbors)-1 {
 				end = len(server_pool)
 			}
+			DPrintf("server %v using bounds %d %d with len %d neighbors %v addresses %d\n", ws.me, start, end, len(server_pool), len(ws.neighbors), naddresses)
 			srv_args := &SystolicMixingArgs{server_pool[start:end], iter + 1,
 				ws.myaddr}
 			var srv_reply SystolicMixingReply

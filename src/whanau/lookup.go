@@ -4,6 +4,8 @@ package whanau
 
 import "math/rand"
 import "sort"
+import "time"
+import "fmt"
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
@@ -262,6 +264,10 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
+	start := time.Now()
+	defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
+		ws.myaddr, time.Since(start))
+
 	if ws.is_sybil {
 		return ws.SybilConstructFingers(layer)
 	} else {
@@ -348,22 +354,22 @@ func (ws *WhanauServer) SybilChooseID() KeyType {
 
 // Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
+	start := time.Now()
+	defer fmt.Printf("SAMPLESUCCESSORS in server %v took %v\n",
+		ws.myaddr, time.Since(start))
 
 	key := args.Key
-	records := make([]Record, 0, ws.t*2)
-	curCount := 0
-	curRecord := 0
+	records := make([]Record, ws.t*2)
+
 	if ws.t <= len(ws.db) {
-		for curCount < ws.t {
-			if ws.db[curRecord].Key >= key {
-				records = append(records, ws.db[curRecord])
-				curCount++
-			}
-			curRecord++
-			if curRecord == len(ws.db) {
-				curRecord = 0
-				key = ws.db[curRecord].Key
-			}
+		firstRecord := PositionOf(key, ws.db)
+		remaining := len(ws.db) - firstRecord
+		if remaining >= ws.t {
+			copy(records, ws.db[firstRecord:firstRecord+ws.t])
+		} else {
+			headIdx := ws.t - remaining
+			copy(records, ws.db[firstRecord:])
+			copy(records, ws.db[:headIdx])
 		}
 		reply.Successors = records
 		reply.Err = OK
@@ -374,6 +380,10 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
+	start := time.Now()
+	defer fmt.Printf("SUCCESSORS in server %v took %v\n",
+		ws.myaddr, time.Since(start))
+
 	if ws.is_sybil {
 		return ws.SybilSuccessors(layer)
 	} else {
@@ -384,7 +394,7 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 // Honest successors
 func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 	DPrintf("In Sucessors of %s, layer %d", ws.myaddr, layer)
-	//var successors []Record
+
 	// overallocate memory for array
 	successors := make([]Record, 0, ws.rs*ws.t*2)
 	for i := 0; i < ws.rs; i++ {
@@ -395,19 +405,15 @@ func (ws *WhanauServer) HonestSuccessors(layer int) []Record {
 
 		if reply.Err == OK {
 			vj := reply.Server
-			/*
-				getIdArgs := &GetIdArgs{layer}
-				getIdReply := &GetIdReply{}
-				DPrintf("Calling getid layer: %d in Successors of %s", layer, ws.myaddr)
-				ws.GetId(getIdArgs, getIdReply)
-			*/
 
 			sampleSuccessorsArgs := &SampleSuccessorsArgs{ws.ids[layer]}
 			sampleSuccessorsReply := &SampleSuccessorsReply{}
 			for sampleSuccessorsReply.Err != OK {
-				call(vj, "WhanauServer.SampleSuccessors", sampleSuccessorsArgs, sampleSuccessorsReply)
+				call(vj, "WhanauServer.SampleSuccessors",
+					sampleSuccessorsArgs, sampleSuccessorsReply)
 			}
-			successors = append(successors, sampleSuccessorsReply.Successors...)
+			successors = append(successors,
+				sampleSuccessorsReply.Successors...)
 		}
 	}
 	return successors

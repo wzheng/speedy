@@ -20,11 +20,13 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-	//DPrintf("In Setup of honest server %s", ws.myaddr)
+	DPrintf("In Setup of honest server %s", ws.myaddr)
 	DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
 	ws.db = ws.SampleRecords(ws.rd, ws.w)
+
 	// TODO probably don't need lock?
 	By(RecordKey).Sort(ws.db)
 
@@ -34,22 +36,18 @@ func (ws *WhanauServer) SetupHonest() {
 	ws.succ = make([][]Record, 0)
 	for i := 0; i < ws.nlayers; i++ {
 		// populate tables in layers
-		//fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
+
 		ws.ids = append(ws.ids, ws.ChooseID(i))
-		//fmt.Printf("Choosing Fingers: %s", ws.ConstructFingers(i))
+
 		curFingerTable := ws.ConstructFingers(i)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
 
-		//fmt.Printf("Choosing successors: %s", ws.Successors(i))
 		curSuccessorTable := ws.Successors(i)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 
 	}
-	//fmt.Printf("Server ids: %s", ws.ids)
-	//fmt.Printf("Server fingers: %s", ws.fingers)
-	//fmt.Printf("Server successors: %s", ws.succ)
 }
 
 // Server for Sybil nodes

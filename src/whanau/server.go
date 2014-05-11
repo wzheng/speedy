@@ -256,6 +256,10 @@ func StartServer(servers []string, me int, myaddr string,
 	gob.Register(PaxosGetReply{})
 	gob.Register(PaxosPutArgs{})
 	gob.Register(PaxosPutReply{})
+	gob.Register(JoinClusterArgs{})
+	gob.Register(JoinClusterReply{})
+	gob.Register(SystolicMixingArgs{})
+	gob.Register(SystolicMixingReply{})
 
 	os.Remove(servers[me])
 	l, e := net.Listen("unix", servers[me])

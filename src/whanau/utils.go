@@ -1,5 +1,7 @@
 package whanau
 
+import "math/rand"
+
 func IsInList(val string, array []string) bool {
 	for _, v := range array {
 		if v == val {
@@ -20,4 +22,14 @@ func PositionOf(k KeyType, array []Record) int {
 	}
 
 	return 0
+}
+
+func Shuffle(src []string) []string {
+	dest := make([]string, len(src))
+	perm := rand.Perm(len(src))
+	for i, v := range perm {
+		dest[v] = src[i]
+	}
+
+	return dest
 }

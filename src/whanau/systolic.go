@@ -2,19 +2,26 @@ package whanau
 
 import "time"
 
+//import "math"
+import "fmt"
+
 // RPC to receive random list of servers from neighbors
 func (ws *WhanauServer) GetRandomServers(args *SystolicMixingArgs,
 	reply *SystolicMixingReply) error {
 	// send over the servers to the systolic mixing process
-	if _, ok := ws.received_servers[args.Timestep]; ok {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	if ws.received_servers[args.Timestep] != nil {
 		ws.received_servers[args.Timestep] =
 			append(ws.received_servers[args.Timestep], args.Servers)
 	} else {
-		ws.received_servers[args.Timestep] = make([]string, 0)
+		ws.received_servers[args.Timestep] = make([][]string, 0)
 		ws.received_servers[args.Timestep] =
 			append(ws.received_servers[args.Timestep], args.Servers)
 	}
-	reply.Error = OK
+
+	reply.Err = OK
 	return nil
 }
 
@@ -32,13 +39,20 @@ func (ws *WhanauServer) PerformSystolicMixing() {
 	for iter := 0; iter < ws.w; iter++ {
 		for idx, srv := range ws.neighbors {
 			start := idx * naddresses
-			end := int(min(float64(naddresses), float64(len(server_pool))))
-			srv_args := SystolicMixingArgs{server_pool[start:end], iter + 1,
+			end := start + naddresses
+			if idx == len(ws.neighbors)-1 {
+				end = len(server_pool)
+			}
+			srv_args := &SystolicMixingArgs{server_pool[start:end], iter + 1,
 				ws.myaddr}
 			var srv_reply SystolicMixingReply
 
 			ok := call(srv, "WhanauServer.GetRandomServers",
 				srv_args, &srv_reply)
+			if !ok {
+				fmt.Printf("call to server %s failed\n", srv)
+				// TODO handle error :(
+			}
 		}
 
 		if iter+1 == ws.w {
@@ -48,12 +62,12 @@ func (ws *WhanauServer) PerformSystolicMixing() {
 		}
 
 		// when can we move on? need replies from all neighbors
-		val, ok := ws.received_servers[iter+1]
+		val := ws.received_servers[iter+1]
 
 		// val is a list of lists of servers. how long is it?
-		for !ok || len(val) < len(ws.neighbors) {
-			time.Sleep(time.Millisecond * 50)
-			val, ok = ws.received_servers[iter+1]
+		for val == nil || len(val) < len(ws.neighbors) {
+			time.Sleep(time.Millisecond * 100)
+			val = ws.received_servers[iter+1]
 		}
 
 		// create server pool by concatenating new vals
@@ -61,11 +75,12 @@ func (ws *WhanauServer) PerformSystolicMixing() {
 		for _, v := range val {
 			server_pool = append(server_pool, v...)
 		}
+		server_pool = Shuffle(server_pool)
 
-		fmt.Printf("Server pool in server %s is %v at timestep %d\n",
-			ws.myaddr, server_pool, iter)
 	}
 
 	// done. After w iterations, we should have a sufficiently randomized
-	// list of servers.
+	// list of servers. Save the servers.
+	ws.rw_servers = make([]string, len(server_pool))
+	copy(ws.rw_servers, server_pool)
 }

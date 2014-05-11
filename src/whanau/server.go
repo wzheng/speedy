@@ -42,12 +42,13 @@ type WhanauServer struct {
 	paxosInstances map[KeyType]WhanauPaxos
 
 	//// Routing variables ////
-	neighbors []string              // list of servers this server can talk to
-	kvstore   map[KeyType]ValueType // k/v table used for routing
-	ids       []KeyType             // contains id of each layer
-	fingers   [][]Finger            // (id, server name) pairs
-	succ      [][]Record            // contains successor records for each layer
-	db        []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	neighbors  []string              // list of servers this server can talk to
+	kvstore    map[KeyType]ValueType // k/v table used for routing
+	ids        []KeyType             // contains id of each layer
+	fingers    [][]Finger            // (id, server name) pairs
+	succ       [][]Record            // contains successor records for each layer
+	db         []Record              // sample of records used for constructing struct, according to the paper, the union of all dbs in all nodes cover all the keys =)
+	rw_servers []string              // list of random walk servers from systolic mixing
 
 	masters []string // list of servers for the master cluster; these servers are also trusted
 
@@ -76,6 +77,9 @@ type WhanauServer struct {
 	rd      int // rd = size of database, O(sqrt(km))
 	rs      int // rs = number of nodes to collect samples from, O(sqrt(km))
 	t       int // t = number of successors returned from sample per node, less than rs
+
+	// Systolic mixing variables
+	received_servers [][][]string // timestep -> neighbor name -> values
 }
 
 type WhanauSybilServer struct {
@@ -236,6 +240,8 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.rd = rd
 	ws.rs = rs
 	ws.t = t
+
+	ws.received_servers = make([][][]string, ws.w+1)
 
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
 

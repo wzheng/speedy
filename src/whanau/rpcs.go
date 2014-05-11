@@ -202,3 +202,13 @@ type JoinClusterArgs struct {
 type JoinClusterReply struct {
 	Err Err
 }
+
+type SystolicMixingArgs struct {
+	Servers    []string
+	Timestep   int
+	SenderAddr string
+}
+
+type SystolicMixingReply struct {
+	Err Err
+}

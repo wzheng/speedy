@@ -17,7 +17,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 	}
 	reply.Server = randomWalkReply.Server
 	reply.Err = randomWalkReply.Err
-	//fmt.Printf("Random walk reply: %s", randomWalkReply)
+	DPrintf("Random walk reply: %s", randomWalkReply)
 	return nil
 }
 
@@ -71,11 +71,11 @@ func (ws *WhanauServer) GetId(args *GetIdArgs, reply *GetIdReply) error {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest(){
-	//DPrintf("In Setup of honest server %s", ws.myaddr)
-    DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+	DPrintf("In Setup of honest server %s", ws.myaddr)
+	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
-    ws.db = ws.SampleRecords(ws.rd, ws.w)
+	ws.db = ws.SampleRecords(ws.rd, ws.w)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
@@ -96,9 +96,9 @@ func (ws *WhanauServer) SetupHonest(){
 		ws.succ = append(ws.succ, curSuccessorTable)
 
 	}
-    //fmt.Printf("Server ids: %s", ws.ids)
-    //fmt.Printf("Server fingers: %s", ws.fingers)
-    //fmt.Printf("Server successors: %s", ws.succ)
+	//fmt.Printf("Server ids: %s", ws.ids)
+	//fmt.Printf("Server fingers: %s", ws.fingers)
+	//fmt.Printf("Server successors: %s", ws.succ)
 }
 
 // Server for Sybil nodes

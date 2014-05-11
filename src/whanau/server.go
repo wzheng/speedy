@@ -299,6 +299,7 @@ func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecord
 
 // honest node samplerecord
 func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
+	DPrintf("In Sample Record of honest %s \n", ws.myaddr)
 	randIndex := rand.Intn(len(ws.kvstore))
 	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
@@ -312,6 +313,7 @@ func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
 
 // sybil node samplerecord
 func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
+	DPrintf("In Sample Record of sybil %s \n", ws.myaddr)
 	key := KeyType("This is a Sybil key")
 	value := make([]string, 0)
 	value = append(value, "HA")
@@ -322,7 +324,7 @@ func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
 // Returns a list of records sampled randomly from local kv store
 // Note: we agreed that duplicates are fine
 func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
-
+	DPrintf("In Sample Records of %s \n", ws.myaddr)
 	records := make([]Record, 0)
 	for i := 0; i < rd; i++ {
 		// random walk
@@ -484,6 +486,7 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 
 // Sybil choose id
 func (ws *WhanauServer) SybilChooseID(layer int) KeyType {
+	DPrintf("In Sybil ChooseID of %s, layer %d", ws.myaddr, layer)
 	id := KeyType("Sybil node key")
 	for k := range ws.kvstore {
 		id = k

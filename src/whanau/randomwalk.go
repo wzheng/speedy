@@ -50,10 +50,13 @@ func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
 func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
 	//fmt.Printf("In Sybil node random walk: %s", ws.myaddr)
 	// testing assumption for breaking cluster attacks
-	randIndex := rand.Intn(len(ws.neighbors))
-	neighbor := ws.neighbors[randIndex]
-	return RandomWalkReply{ neighbor, OK }
-	//return RandomWalkReply{"Sybil server!", ErrNoKey}
+	if len(ws.neighbors) > 0 {
+		randIndex := rand.Intn(len(ws.neighbors))
+		neighbor := ws.neighbors[randIndex]
+		return RandomWalkReply{ neighbor, OK }
+	} else {
+		return RandomWalkReply{"Sybil server!", ErrNoKey}
+	}
 }
 
 // Gets the ID from node's local id table

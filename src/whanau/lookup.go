@@ -73,8 +73,23 @@ func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Fing
 
 // Query for a key in the successor table
 func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
-	layer := args.Layer
-	key := args.Key
+	var queryReply QueryReply
+	if !ws.is_sybil {
+		layer := args.Layer
+		key := args.Key
+		queryReply = ws.HonestQuery(key, layer)
+	} else {
+		queryReply = ws.SybilQuery()
+	}
+	reply.Value = queryReply.Value
+	reply.Err = queryReply.Err
+	//fmt.Printf("Ending query search: %s", ws.myaddr)
+	return nil
+}
+
+// Honest query
+func (ws *WhanauServer) HonestQuery(key KeyType, layer int) QueryReply {
+	var reply QueryReply
 	//fmt.Printf("Starting binary search: %s", ws.myaddr)
 	var valueIndex int
 	if layer < len(ws.succ) {
@@ -94,21 +109,43 @@ func (ws *WhanauServer) Query(args *QueryArgs, reply *QueryReply) error {
 		reply.Err = ErrNoKey
 	}
 	//fmt.Printf("Ending query search: %s", ws.myaddr)
-	return nil
+	return reply
+}
+
+// Sybil query
+func (ws *WhanauServer) SybilQuery() QueryReply {
+	var queryReply QueryReply
+	queryReply.Err = ErrNoKey
+	return queryReply
 }
 
 // Try finds the value associated with the key
 func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
-	key := args.Key
-	nlayers := ws.nlayers
-	DPrintf("In Try RPC, trying key: %s", key)
+	var tryReply TryReply
+	if !ws.is_sybil {
+		key := args.Key
+		tryReply = ws.HonestTry(key)
+	} else {
+		tryReply = ws.SybilTry()
+	}
+	reply.Value = tryReply.Value
+	reply.Err = tryReply.Err
+	return nil
+}
 
+// Try finds the value associated with the key in honest node
+func (ws *WhanauServer) HonestTry(key KeyType) TryReply{
+	nlayers := ws.nlayers
+	DPrintf("In Honest Try RPC, trying key: %s", key)
+	
+	var reply TryReply
+	
 	// Lookup in local kvstore (pg 60 of thesis)
 	if val, ok := ws.kvstore[key]; ok {
 		DPrintf("local look up found %s\n", key)
 		reply.Value = val
 		reply.Err = OK
-		return nil
+		return reply
 	}
 	
 	var fingerLength int
@@ -151,7 +188,14 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 		reply.Err = ErrNoKey
 	}
 	
-	return nil
+	return reply
+}
+
+// Helper method for sybil try
+func (ws *WhanauServer) SybilTry() TryReply {
+	var tryReply TryReply
+	tryReply.Err = ErrNoKey
+	return tryReply
 }
 
 // Returns paxos cluster for given key.
@@ -242,6 +286,16 @@ func (ws *WhanauServer) SybilSampleRecord() SampleRecordReply {
 	value := make([]string, 0)
 	value = append(value, "HA")
 	record := Record{key, ValueType{value}}
+	
+	if len(ws.kvstore) > 0 {
+		for k, _ := range ws.kvstore {
+			key = k
+			break
+		}
+		val := ws.kvstore[key]
+		record = Record{key, val}
+	}
+	
 	return SampleRecordReply{record, OK}
 }
 
@@ -281,15 +335,6 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 	defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
 		ws.myaddr, time.Since(start))
 
-	if ws.is_sybil {
-		return ws.SybilConstructFingers(layer)
-	} else {
-		return ws.HonestConstructFingers(layer)
-	}
-}
-
-// honest node construct fingers
-func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0, ws.rf*2)
 	for i := 0; i < ws.rf; i++ {
@@ -324,12 +369,6 @@ func (ws *WhanauServer) HonestConstructFingers(layer int) []Finger {
 		}
 	}
 
-	return fingers
-}
-
-// sybil node construct fingers
-func (ws *WhanauServer) SybilConstructFingers(layer int) []Finger {
-	fingers := make([]Finger, 0)
 	return fingers
 }
 

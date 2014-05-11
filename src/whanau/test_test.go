@@ -737,7 +737,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	const nservers = 10
 	const nkeys = 50           // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
-	const sybilProb = 0.9
+	const sybilProb = 0.8
 
 	// run setup in parallel
 	// parameters

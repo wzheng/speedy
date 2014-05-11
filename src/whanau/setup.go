@@ -59,6 +59,18 @@ func (ws *WhanauServer) SetupSybil() {
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
 	ws.succ = make([][]Record, 0)
+	
+	for k := range ws.kvstore {
+		if len(ws.ids) < ws.nlayers {
+			ws.ids = append(ws.ids, k)
+		}
+	}
+	
+	last_val := ws.ids[len(ws.ids) - 1]
+	
+	for len(ws.ids) < ws.nlayers {
+		ws.ids = append(ws.ids, last_val)
+	}
 }
 
 // this function shoud be run in a separate thread

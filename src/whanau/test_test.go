@@ -751,6 +751,8 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	numAttackEdges := int(nservers / math.Log(nservers)) + 1
 	attackCounter := 0
 
+    fmt.Printf("Max attack edges: %d", numAttackEdges)
+
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
 	var sybils []string = make([]string, 0)
@@ -794,6 +796,8 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 
 				if prob > sybilProb && attackCounter < numAttackEdges{
                     attackCounter++
+                    //Sybil neighbor, print out neighbors
+                    fmt.Printf("Sybil edges from %s to %s \n", kvh[j], kvh[i])
 					neighbors[i] = append(neighbors[i], kvh[j])
 					neighbors[j] = append(neighbors[j], kvh[i])
 				}
@@ -804,8 +808,9 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 				neighbors[j] = append(neighbors[j], kvh[i])
 			}
 		}
-
 	}
+
+    fmt.Printf("Actual number of attack edges: %d", attackCounter)
 
 	for k := 0; k < nservers; k++ {
 		if _, ok := ksvh[k]; ok {
@@ -876,13 +881,13 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 
 	/*
 		for i := 0; i < nservers; i++ {
-			fmt.Println("")
+			//fmt.Println("")
 			//fmt.Printf("ws[%d].db: %s\n", i, ws[i].db)
 
-			fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
+			//fmt.Printf("ws[%d].ids[%d]: %s\n", i, 0, ws[i].ids[0])
 			for j := 1; j < nlayers; j++ {
-				fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
-				fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
+				//fmt.Printf("ws[%d].fingers[%d]: %s\n", i, j-1, ws[i].fingers[j-1])
+				//fmt.Printf("ws[%d].ids[%d]: %s\n\n", i, j, ws[i].ids[j])
 				//fmt.Printf("ws[%d].succ[%d]: %s\n", i, j, ws[i].succ[j])
 			}
 		}
@@ -896,17 +901,15 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	for i := 0; i < nservers; i++ {
-		srv := ws[i]
-		for j := 0; j < len(srv.db); j++ {
-			if _, ok := ksvh[i]; !ok {
-				keyset[srv.db[j].Key] = true
-			} else {
-				// TODO: make sybil nodes record successors and db values for testing purposes
-				sybilkeys = append(sybilkeys, srv.db[j].Key)
+	    if _, ok := ksvh[i]; !ok {
+		    srv := ws[i]
+		    for j := 0; j < len(srv.db); j++ {
+				    keyset[srv.db[j].Key] = true
 			}
 		}
 	}
 
+    fmt.Printf("Covered keys: %s \n", keyset)
 	// count number of covered keys, all the false keys in keyset
 	covered_count := 0
 	for _, v := range keyset {
@@ -923,12 +926,14 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	for i := 0; i < nservers; i++ {
-		srv := ws[i]
-		for j := 0; j < len(srv.succ); j++ {
-			for k := 0; k < len(srv.succ[j]); k++ {
-				keyset[srv.succ[j][k].Key] = true
-			}
-		}
+        if _, ok := ksvh[i]; !ok {
+		    srv := ws[i]
+		    for j := 0; j < len(srv.succ); j++ {
+			    for k := 0; k < len(srv.succ[j]); k++ {
+				    keyset[srv.succ[j][k].Key] = true
+			    }
+		    }
+        }
 	}
 
 	// count number of covered keys, all the false keys in keyset
@@ -944,7 +949,6 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 
 	fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
 	fmt.Printf("missing keys in succs: %s\n", missing_keys)
-	fmt.Printf("keys in Sybil nodes: %s\n", sybilkeys)
 	// check populated ids and fingers
 	/*
 		var x0 KeyType = "1"
@@ -957,11 +961,6 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	numFound := 0
 	numTotal := 0
 	ctr := 0
-	oldkeys := keys
-	//keys := make([]KeyType, 0)
-	for i := 0; i < len(oldkeys); i++ {
-		// Discard all keys in Sybil nodes
-	}
 
 	fmt.Printf("All test keys: %s\n", keys)
 	for i := 0; i < nservers; i++ {
@@ -972,7 +971,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 			lreply := &LookupReply{}
 			ws[i].Lookup(largs, lreply)
 			if lreply.Err != OK {
-				//fmt.Printf("Did not find key: %s\n", key)
+				fmt.Printf("Did not find key: %s\n", key)
 			} else {
 				value := lreply.Value
 				// compare string arrays...
@@ -991,7 +990,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	fmt.Printf("numFound: %d\n", numFound)
-	fmt.Printf("total keys: %d\n", nkeys)
+	fmt.Printf("total keys: %d\n", numTotal)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
 }
 

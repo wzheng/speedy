@@ -81,6 +81,34 @@ func TestLookup(t *testing.T) {
 		kvh[i] = port("basic", i)
 	}
 
+	var edgeProb float32 = 0.5
+
+	neighbors := make([][]string, nservers)
+	for i := 0; i < nservers; i++ {
+		neighbors[i] = make([]string, 0)
+	}
+
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < i; j++ {
+			if j == i {
+				continue
+			}
+
+			// create edge with small probability
+			prob := rand.Float32()
+
+			if prob < edgeProb {
+				neighbors[i] = append(neighbors[i], kvh[j])
+				neighbors[j] = append(neighbors[j], kvh[i])
+			}
+		}
+	}
+
+	for k := 0; k < nservers; k++ {
+		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
+			nlayers, nfingers, w, rd, rs, ts)
+	}
+
 	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
 		for j := 0; j < nservers; j++ {

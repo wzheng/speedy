@@ -7,16 +7,24 @@ import "math/rand"
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-	steps := args.Steps
+	//steps := args.Steps
 	var randomWalkReply RandomWalkReply
 	if ws.is_sybil {
 		randomWalkReply = ws.SybilRandomWalk()
+		reply.Server = randomWalkReply.Server
+		reply.Err = randomWalkReply.Err
 	} else {
 		//fmt.Printf("Doing an honest random walk")
-		randomWalkReply = ws.HonestRandomWalk(steps)
+		//randomWalkReply = ws.HonestRandomWalk(steps)
+		nextServer, ok := ws.GetNextRWServer()
+		if !ok {
+			// Ran out of servers!!
+			// TODO should we stop here and generate some more...?
+			return nil
+		}
+		reply.Server = nextServer
+		reply.Err = OK
 	}
-	reply.Server = randomWalkReply.Server
-	reply.Err = randomWalkReply.Err
 	//fmt.Printf("Random walk reply: %s", randomWalkReply)
 	return nil
 }
@@ -50,10 +58,11 @@ func (ws *WhanauServer) HonestRandomWalk(steps int) RandomWalkReply {
 func (ws *WhanauServer) SybilRandomWalk() RandomWalkReply {
 	//fmt.Printf("In Sybil node random walk: %s", ws.myaddr)
 	// testing assumption for breaking cluster attacks
+
 	if len(ws.neighbors) > 0 {
 		randIndex := rand.Intn(len(ws.neighbors))
 		neighbor := ws.neighbors[randIndex]
-		return RandomWalkReply{ neighbor, OK }
+		return RandomWalkReply{neighbor, OK}
 	} else {
 		return RandomWalkReply{"Sybil server!", ErrNoKey}
 	}

@@ -763,35 +763,56 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rand.Seed(time.Now().UTC().UnixNano())
 		prob := rand.Float32()
 		if prob > sybilProb {
+			// randomly make some of the servers sybil servers
 			ksvh[i] = true
 			sybils = append(sybils, kvh[i])
 		}
 	}
 
+	neighbors := make([][]string, nservers)
 	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
+		neighbors[i] = make([]string, 0)
+	}
 
-		for j := 0; j < nservers; j++ {
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < i; j++ {
 			if j == i {
 				continue
 			}
+
 			if _, ok := ksvh[j]; ok {
+				if _, ok := ksvh[i]; ok {
+					// both nodes are sybil nodes
+					// create edge with 100% probability
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
+				}
+
+				// one node is a sybil node
+				// create edge with small probability
 				prob := rand.Float32()
 
-				if prob > sybilProb && attackCounter < numAttackEdges {
-					attackCounter++
-					neighbors = append(neighbors, kvh[j])
+				if prob > sybilProb && attackCounter < numAttackEdges{
+                    attackCounter++
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
 				}
 
 			} else {
-				neighbors = append(neighbors, kvh[j])
+				// neither is sybil, create edge with 100% probability
+				neighbors[i] = append(neighbors[i], kvh[j])
+				neighbors[j] = append(neighbors[j], kvh[i])
 			}
 		}
-		if _, ok := ksvh[i]; ok {
-			ws[i] = StartServer(kvh, i, kvh[i], sybils, make([]string, 0), false, true,
+
+	}
+
+	for k := 0; k < nservers; k++ {
+		if _, ok := ksvh[k]; ok {
+			ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0), false, false,
+			ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -972,4 +993,66 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	fmt.Printf("numFound: %d\n", numFound)
 	fmt.Printf("total keys: %d\n", nkeys)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
+}
+
+func TestSystolic(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+
+	const nservers = 10
+	const nkeys = 50           // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// run setup in parallel
+	// parameters
+	constant := 5
+	nlayers := int(math.Log(float64(k*nservers))) + 1
+	nfingers := int(math.Sqrt(k * nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := 5                                          // number of successors sampled per node
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
+			false, false,
+			nlayers, nfingers, w, rd, rs, ts)
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Systolic mixing")
+
+	c := make(chan bool) // writes true of done
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			ws[srv].PerformSystolicMixing(100)
+			c <- true
+		}(i)
+	}
+
+	// wait for mixing to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] mixing done: %b", i, done)
+	}
+
 }

@@ -23,20 +23,27 @@ func (ws *WhanauServer) SetupHonest() {
 	//fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
 	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
 
+	// How many random walks should we precompute?
+	// the extras are for lookups
+	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
+	ws.PerformSystolicMixing(numToSample)
+	ws.doneMixing = true // turn off server handler
+	fmt.Printf("server %v done with performsystolic\n", ws.me)
+
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
 	ws.db = ws.SampleRecords(ws.rd, ws.w)
-
-
 	// TODO probably don't need lock?
 	By(RecordKey).Sort(ws.db)
+
+	fmt.Printf("server %v has moved on\n", ws.me)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
 	ws.succ = make([][]Record, 0)
 	for i := 0; i < ws.nlayers; i++ {
-		// populate tables in layers		
+		// populate tables in layers
 		//fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
 		ws.ids = append(ws.ids, ws.ChooseID(i))
 		curFingerTable := ws.ConstructFingers(i)
@@ -58,20 +65,26 @@ func (ws *WhanauServer) SetupHonest() {
 func (ws *WhanauServer) SetupSybil() {
 	//fmt.Printf("In Setup of Sybil server %s \n", ws.myaddr)
 
+	// Sybil nodes should participate in mixing so that other nodes
+	// will try to route to them
+	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
+	ws.PerformSystolicMixing(numToSample)
+	ws.doneMixing = true // turn off server handler
+
 	// reset ids, fingers, succ...etc.
 	ws.db = make([]Record, 0)
 	ws.ids = make([]KeyType, 0)
 	ws.fingers = make([][]Finger, 0)
 	ws.succ = make([][]Record, 0)
-	
+
 	for k := range ws.kvstore {
 		if len(ws.ids) < ws.nlayers {
 			ws.ids = append(ws.ids, k)
 		}
 	}
-	
-	last_val := ws.ids[len(ws.ids) - 1]
-	
+
+	last_val := ws.ids[len(ws.ids)-1]
+
 	for len(ws.ids) < ws.nlayers {
 		ws.ids = append(ws.ids, last_val)
 	}

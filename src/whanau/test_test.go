@@ -105,21 +105,8 @@ func TestLookup(t *testing.T) {
 	}
 
 	for k := 0; k < nservers; k++ {
-		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
-			nlayers, nfingers, w, rd, rs, ts)
-	}
-
-	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
-		for j := 0; j < nservers; j++ {
-			if j == i {
-				continue
-			}
-			neighbors = append(neighbors, kvh[j])
-		}
-
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
+		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k],
+			make([]string, 0), false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -763,7 +750,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 
 	const nservers = 100
-	const nkeys = 500           // keys are strings from 0 to 99
+	const nkeys = 500          // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 	const sybilProb = 0.8
 
@@ -776,10 +763,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := 5                                          // number of successors sampled per node
-	numAttackEdges := int(nservers / math.Log(nservers)) + 1
+	numAttackEdges := int(nservers/math.Log(nservers)) + 1
 	attackCounter := 0
 
-    fmt.Printf("Max attack edges: %d", numAttackEdges)
+	fmt.Printf("Max attack edges: %d", numAttackEdges)
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -821,10 +808,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 				// create edge with small probability
 				prob := rand.Float32()
 
-				if prob > sybilProb && attackCounter < numAttackEdges{
-                    attackCounter++
-                    //Sybil neighbor, print out neighbors
-                    fmt.Printf("Sybil edges from %s to %s \n", kvh[j], kvh[i])
+				if prob > sybilProb && attackCounter < numAttackEdges {
+					attackCounter++
+					//Sybil neighbor, print out neighbors
+					fmt.Printf("Sybil edges from %s to %s \n", kvh[j], kvh[i])
 					neighbors[i] = append(neighbors[i], kvh[j])
 					neighbors[j] = append(neighbors[j], kvh[i])
 				}
@@ -837,7 +824,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		}
 	}
 
-    fmt.Printf("Actual number of attack edges: %d", attackCounter)
+	fmt.Printf("Actual number of attack edges: %d", attackCounter)
 
 	for k := 0; k < nservers; k++ {
 		if _, ok := ksvh[k]; ok {
@@ -928,15 +915,15 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	for i := 0; i < nservers; i++ {
-	    if _, ok := ksvh[i]; !ok {
-		    srv := ws[i]
-		    for j := 0; j < len(srv.db); j++ {
-				    keyset[srv.db[j].Key] = true
+		if _, ok := ksvh[i]; !ok {
+			srv := ws[i]
+			for j := 0; j < len(srv.db); j++ {
+				keyset[srv.db[j].Key] = true
 			}
 		}
 	}
 
-    fmt.Printf("Covered keys: %s \n", keyset)
+	fmt.Printf("Covered keys: %s \n", keyset)
 	// count number of covered keys, all the false keys in keyset
 	covered_count := 0
 	for _, v := range keyset {
@@ -953,14 +940,14 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	}
 
 	for i := 0; i < nservers; i++ {
-        if _, ok := ksvh[i]; !ok {
-		    srv := ws[i]
-		    for j := 0; j < len(srv.succ); j++ {
-			    for k := 0; k < len(srv.succ[j]); k++ {
-				    keyset[srv.succ[j][k].Key] = true
-			    }
-		    }
-        }
+		if _, ok := ksvh[i]; !ok {
+			srv := ws[i]
+			for j := 0; j < len(srv.succ); j++ {
+				for k := 0; k < len(srv.succ[j]); k++ {
+					keyset[srv.succ[j][k].Key] = true
+				}
+			}
+		}
 	}
 
 	// count number of covered keys, all the false keys in keyset

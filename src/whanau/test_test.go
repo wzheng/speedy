@@ -757,7 +757,6 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	var kvh []string = make([]string, nservers)
 	var sybils []string = make([]string, 0)
 	var ksvh map[int]bool = make(map[int]bool)
-	var sybilkeys []KeyType = make([]KeyType, 0)
 	defer cleanup(ws)
 
 	for i := 0; i < nservers; i++ {

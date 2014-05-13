@@ -47,6 +47,13 @@ func (ws *WhanauServer) PerformSystolicMixing(numWalks int) {
 	}
 
 	if len(ws.neighbors) == 0 {
+		ws.rw_mu.Lock()
+
+		ws.rw_servers = make([]string, len(server_pool))
+		copy(ws.rw_servers, server_pool)
+		ws.rw_idx = 0
+
+		ws.rw_mu.Unlock()
 		return
 	}
 

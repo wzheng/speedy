@@ -106,7 +106,7 @@ func TestLookup(t *testing.T) {
 
 	for k := 0; k < nservers; k++ {
 		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k],
-			make([]string, 0), false, false,
+			make([]string, 0), nil, false, false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -340,10 +340,10 @@ func TestRealGetAndPut(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -478,10 +478,10 @@ func TestEndToEnd(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -534,10 +534,10 @@ func TestPendingWrites(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -688,7 +688,27 @@ func TestDemo(t *testing.T) {
 		kvh[i] = port("basic", i)
 	}
 
-	master_servers := []string{kvh[0], kvh[1], kvh[2], kvh[3], kvh[4], kvh[5], kvh[6]}
+	//master_servers := []string{kvh[0], kvh[1], kvh[2], kvh[3], kvh[4], kvh[5], kvh[6]}
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	newservers := make([]string, len(master_servers))
+	for i, _ := range master_servers {
+		// we need to actually create new servers
+		// to disambiguate Paxos instances
+		// so that masters don't overlap
+
+		newservers[i] = port("masterpaxos", i)
+	}
+
+	for j, srv := range newservers {
+		// This is just a dummy, only for the purpose
+		// of starting the Paxos handler properly.
+		// No routing should happen here!
+
+		StartServer(newservers, j, srv, nil,
+			master_servers, newservers, false, false, true, nlayers, nfingers,
+			w, rd, rs, ts)
+	}
 
 	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
@@ -699,11 +719,11 @@ func TestDemo(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		if i < 7 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+		if i < 3 {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, newservers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -877,89 +897,6 @@ func TestDemo(t *testing.T) {
 	fmt.Printf("Value for key 5 is %s\n\n", value)
 }
 
-// Time setup
-func BenchmarkSetup(b *testing.B) {
-	runtime.GOMAXPROCS(8)
-
-	const nservers = 20
-	const nkeys = 80           // keys are strings from 0 to 99
-	const k = nkeys / nservers // keys per node
-
-	// run setup in parallel
-	// parameters
-	constant := 5
-	nlayers := int(math.Log(float64(k*nservers))) + 1
-	nfingers := int(math.Sqrt(k * nservers))
-	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
-	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := 5                                          // number of successors sampled per node
-
-	var ws []*WhanauServer = make([]*WhanauServer, nservers)
-	var kvh []string = make([]string, nservers)
-	defer cleanup(ws)
-
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-
-	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
-		for j := 0; j < nservers; j++ {
-			if j == i {
-				continue
-			}
-			neighbors = append(neighbors, kvh[j])
-		}
-
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
-			nlayers, nfingers, w, rd, rs, ts)
-	}
-
-	var cka [nservers]*Clerk
-	for i := 0; i < nservers; i++ {
-		cka[i] = MakeClerk(kvh[i])
-	}
-
-	fmt.Printf("\033[95m%s\033[0m\n", "Setup benchmark")
-
-	keys := make([]KeyType, 0)
-	records := make(map[KeyType]ValueType)
-	counter := 0
-	// hard code in records for each server
-	for i := 0; i < nservers; i++ {
-		for j := 0; j < nkeys/nservers; j++ {
-			var key KeyType = KeyType(strconv.Itoa(counter))
-			keys = append(keys, key)
-			counter++
-			val := ValueType{}
-			// randomly pick 5 servers
-			for kp := 0; kp < PaxosSize; kp++ {
-				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
-			}
-			records[key] = val
-			ws[i].kvstore[key] = val
-		}
-	}
-
-	c := make(chan bool) // writes true of done
-	fmt.Printf("Starting setup\n")
-
-	for i := 0; i < nservers; i++ {
-		go func(srv int) {
-			ws[srv].Setup()
-			c <- true
-		}(i)
-	}
-
-	// wait for all setups to finish
-	for i := 0; i < nservers; i++ {
-		done := <-c
-		DPrintf("ws[%d] setup done: %b", i, done)
-	}
-}
-
 // Testing malicious sybils, should NOT have the same output as lookup
 // Redistributing some keys to sybil nodes
 func TestLookupWithSybilsMalicious(t *testing.T) {
@@ -1044,10 +981,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 
 		for k := 0; k < nservers; k++ {
 			if _, ok := ksvh[k]; ok {
-				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), nil, false, true, false,
 					nlayers, nfingers, w, rd, rs, ts)
 			} else {
-				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, false,
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), nil, false, false, false,
 					nlayers, nfingers, w, rd, rs, ts)
 			}
 		}
@@ -1178,7 +1115,7 @@ func TestSystolic(t *testing.T) {
 		}
 
 		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
+			nil, false, false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 

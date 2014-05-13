@@ -214,6 +214,7 @@ func (ws *WhanauServer) Lookup(args *LookupArgs, reply *LookupReply) error {
 	}
 	reply.Value = lookupReply.Value
 	reply.Err = lookupReply.Err
+	//fmt.Printf("Lookup returned %v\n", reply.Value)
 	return nil
 }
 

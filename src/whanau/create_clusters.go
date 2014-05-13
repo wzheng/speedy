@@ -21,13 +21,13 @@ func (ws *WhanauServer) ReceiveNewPaxosCluster(
 	send_keys := make(map[KeyType]TrueValueType)
 	//fmt.Printf("looking for server %v\n", args.Server)
 	ws.mu.Lock()
-	for k, v := range ws.key_to_server {
+	for k, v := range ws.master_paxos_cluster.pending_writes {
 		if v == args.Server {
 			if value, found := ws.all_pending_writes[k]; found {
 				//fmt.Printf("found in pending writes %v\n", value)
 				send_keys[k.Key] = value
 				// deletes should be safe
-				delete(ws.key_to_server, k)
+				//delete(ws.key_to_server, k)
 				delete(ws.all_pending_writes, k)
 				//fmt.Printf("send keys is now %v\n", send_keys)
 			}
@@ -46,16 +46,24 @@ func (ws *WhanauServer) ReceiveNewPaxosCluster(
 func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 	reply *JoinClusterReply) error {
 
-	var index int
-	for idx, s := range args.NewCluster {
-		if s == ws.myaddr {
-			index = idx
-		}
-	}
-
-	wp := StartWhanauPaxos(args.NewCluster, index, ws.rpc)
+	var wp *WhanauPaxos
 
 	for k, v := range args.KV {
+
+		if p, ok := ws.paxosInstances[k]; ok {
+			// WHEEEE :(
+			wp = &p
+		} else {
+			var index int
+			for idx, s := range args.NewCluster {
+				if s == ws.myaddr {
+					index = idx
+				}
+			}
+			
+			wp = StartWhanauPaxos(args.NewCluster, index, ws.rpc)
+		}
+
 		// initiate paxos call for all of these keys
 
 		// put into one's own kvstore

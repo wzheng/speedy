@@ -10,6 +10,8 @@ import "math"
 import "net/rpc"
 import "encoding/gob"
 
+import "fmt"
+
 type WhanauPaxos struct {
 	mu     sync.Mutex
 	me     int
@@ -246,8 +248,8 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Server = pending_reply.Server
 	reply.Err = pending_reply.Err
 
-	//fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
-
+	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
+	
 	return nil
 }
 

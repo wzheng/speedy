@@ -113,6 +113,7 @@ func (ws *WhanauServer) GetSucc() [][]Record {
 
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
+/*
 func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 	reply *ClientGetReply) error {
 
@@ -135,6 +136,56 @@ func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 	}
 	return nil
 }
+*/
+
+func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+  if !ws.is_sybil {
+    ws.HonestPaxosGetRPC(args, reply)
+  } else {
+    ws.SybilPaxosGetRPC(args, reply)
+  }
+
+  return nil
+}
+
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) HonestPaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
+		reply.Err = ErrNoKey
+	}
+
+	get_args := PaxosGetArgs{args.Key, args.RequestID}
+	var get_reply PaxosGetReply
+
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosGet(&get_args, &get_reply)
+
+	if VerifyTrueValue(get_reply.Value) {
+		reply.Value = get_reply.Value.TrueValue
+		reply.Err = OK
+	} else {
+		reply.Value = ""
+		reply.Err = ErrFailVerify
+	}
+	return nil
+}
+
+
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+// sybil behavior returns no key
+func (ws *WhanauServer) SybilPaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+  fmt.Printf("SYBILPAXOSGET WUAHAHAHAHA\n")
+  reply.Value = "I am a Sybil"
+  reply.Err = ErrNoKey
+	return nil
+}
+
 
 // RPC to actually do a Put on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
@@ -229,6 +280,7 @@ func StartServer(servers []string, me int, myaddr string,
 
 		var idx int
 
+    fmt.Printf("masters: %v\n", masters)
 		for i, m := range masters {
 			if m == ws.myaddr {
 				idx = i

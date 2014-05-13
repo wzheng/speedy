@@ -5,7 +5,7 @@ package whanau
 */
 
 import "time"
-//import "fmt"
+import "fmt"
 //import "math/rand"
 
 func (ws *WhanauServer) Setup() {
@@ -204,5 +204,5 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.state = Normal
 	ws.mu.Unlock()
 
-	//fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
+	fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
 }

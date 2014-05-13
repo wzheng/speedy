@@ -754,34 +754,34 @@ func TestDemo(t *testing.T) {
 			val0.Sign = sig0
 			wp0.db[key] = val0
 
-// 			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
-// 			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
-// 			val1.Sign = sig1
+			// 			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			// 			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+			// 			val1.Sign = sig1
 			wp1.db[key] = val0
 
-// 			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
-// 			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
-// 			val2.Sign = sig2
+			// 			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			// 			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+			// 			val2.Sign = sig2
 			wp2.db[key] = val0
 
-// 			val3 := TrueValueType{"hello", wp3.myaddr, nil, &ws[(i+3)%nservers].secretKey.PublicKey}
-// 			sig3, _ := SignTrueValue(val3, ws[(i+3)%nservers].secretKey)
-// 			val3.Sign = sig3
+			// 			val3 := TrueValueType{"hello", wp3.myaddr, nil, &ws[(i+3)%nservers].secretKey.PublicKey}
+			// 			sig3, _ := SignTrueValue(val3, ws[(i+3)%nservers].secretKey)
+			// 			val3.Sign = sig3
 			wp3.db[key] = val0
 
-// 			val4 := TrueValueType{"hello", wp4.myaddr, nil, &ws[(i+4)%nservers].secretKey.PublicKey}
-// 			sig4, _ := SignTrueValue(val4, ws[(i+4)%nservers].secretKey)
-// 			val4.Sign = sig4
+			// 			val4 := TrueValueType{"hello", wp4.myaddr, nil, &ws[(i+4)%nservers].secretKey.PublicKey}
+			// 			sig4, _ := SignTrueValue(val4, ws[(i+4)%nservers].secretKey)
+			// 			val4.Sign = sig4
 			wp4.db[key] = val0
 
-// 			val5 := TrueValueType{"hello", wp5.myaddr, nil, &ws[(i+5)%nservers].secretKey.PublicKey}
-// 			sig5, _ := SignTrueValue(val5, ws[(i+5)%nservers].secretKey)
-// 			val5.Sign = sig5
+			// 			val5 := TrueValueType{"hello", wp5.myaddr, nil, &ws[(i+5)%nservers].secretKey.PublicKey}
+			// 			sig5, _ := SignTrueValue(val5, ws[(i+5)%nservers].secretKey)
+			// 			val5.Sign = sig5
 			wp5.db[key] = val0
 
-// 			val6 := TrueValueType{"hello", wp6.myaddr, nil, &ws[(i+6)%nservers].secretKey.PublicKey}
-// 			sig6, _ := SignTrueValue(val6, ws[(i+6)%nservers].secretKey)
-// 			val6.Sign = sig6
+			// 			val6 := TrueValueType{"hello", wp6.myaddr, nil, &ws[(i+6)%nservers].secretKey.PublicKey}
+			// 			sig6, _ := SignTrueValue(val6, ws[(i+6)%nservers].secretKey)
+			// 			val6.Sign = sig6
 			wp6.db[key] = val0
 
 		}
@@ -1203,4 +1203,239 @@ func TestSystolic(t *testing.T) {
 		DPrintf("ws[%d] mixing done: %b", i, done)
 	}
 
+}
+
+// Testing malicious sybils end to end, should NOT have the same output as lookup
+// Redistributing some keys to sybil nodes
+func TestRealLookupSybil(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+	iterations := 1
+	for z := 0; z < iterations; z++ {
+		fmt.Println("Iteration: %d \n \n", z)
+		const nservers = 10
+		const nkeys = 50          // keys are strings from 0 to nkeys
+		const k = nkeys / nservers // keys per node
+		const attackEdgeProb = 0.0
+
+		// run setup in parallel
+		// parameters
+		constant := 5
+		nlayers := int(math.Log(float64(k*nservers))) + 1
+		nfingers := int(math.Sqrt(k * nservers))
+		w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+		ts := 5                                          // number of successors sampled per node
+		numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
+		attackCounter := 0
+		numSybilServers := 0
+		sybilServerCounter := 0
+
+		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
+
+		var ws []*WhanauServer = make([]*WhanauServer, nservers)
+		var kvh []string = make([]string, nservers)
+		var ksvh map[int]bool = make(map[int]bool)
+		defer cleanup(ws)
+
+		master_servers := make([]string, 0)
+		// first PaxosSize servers are master servers
+		for i := 0; i < PaxosSize; i++ {
+			master_servers = append(master_servers, kvh[i])
+		}
+
+		for i := 0; i < nservers; i++ {
+			kvh[i] = port("basic", i)
+			rand.Seed(time.Now().UTC().UnixNano())
+			prob := rand.Float32()
+			if prob > attackEdgeProb && sybilServerCounter < numSybilServers {
+				sybilServerCounter++
+				// randomly make some of the servers sybil servers
+				ksvh[i] = true
+			}
+		}
+
+		neighbors := make([][]string, nservers)
+		for i := 0; i < nservers; i++ {
+			neighbors[i] = make([]string, 0)
+		}
+
+		for i := 0; i < nservers; i++ {
+			for j := 0; j < i; j++ {
+				_, ok := ksvh[j]
+				_, ok2 := ksvh[i]
+
+				if ok || ok2 {
+					if ok && ok2 {
+						// both nodes are sybil nodes
+						// create edge with 100% probability
+						neighbors[i] = append(neighbors[i], kvh[j])
+						neighbors[j] = append(neighbors[j], kvh[i])
+					} else {
+						// one node is a sybil node
+						// create edge with small probability
+						prob := rand.Float32()
+
+						if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
+							attackCounter++
+							//Sybil neighbor, print out neighbors
+							neighbors[i] = append(neighbors[i], kvh[j])
+							neighbors[j] = append(neighbors[j], kvh[i])
+						}
+					}
+				} else {
+					// neither is sybil, create edge with 100% probability
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
+				}
+			}
+		}
+
+		fmt.Printf("Actual number of attack edges: %d", attackCounter)
+
+    // Start servers
+		for k := 0; k < nservers; k++ {
+
+      // if malicious
+			if _, ok := ksvh[k]; ok {
+				if k < PaxosSize {
+					// malicious master -- doesn't do anything
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, true, true, nlayers, nfingers, w, rd, rs, ts)
+
+				} else {
+					// malicious nonmaster
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, false, true, nlayers, nfingers, w, rd, rs, ts)
+				}
+			} else {
+        // not malicious
+				if k < PaxosSize {
+					// non malicious master
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, true, false, nlayers, nfingers, w, rd, rs, ts)
+				} else {
+					// normal villager
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, false, false, nlayers, nfingers, w, rd, rs, ts)
+				}
+			}
+		}
+
+		var cka [nservers]*Clerk
+		for i := 0; i < nservers; i++ {
+			cka[i] = MakeClerk(kvh[i])
+		}
+
+		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
+		for i := 0; i < len(kvh); i++ {
+			if _, ok := ksvh[i]; ok {
+				fmt.Println("Address of Sybil node: %s \n", kvh[i])
+			}
+		}
+
+		keys := make([]KeyType, 0)
+    trueRecords := make(map[KeyType]TrueValueType)
+		counter := 0
+		// Hard code records for all servers
+		for i := 0; i < nservers; i++ {
+			for j := 0; j < nkeys/nservers; j++ {
+
+        // make key/true value
+				var key KeyType = KeyType(strconv.Itoa(counter))
+        keys = append(keys, key)
+			  val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+        sig, _ := SignTrueValue(val, ws[i].secretKey)
+			  val.Sign = sig
+
+        trueRecords[key] = val
+        args := &PendingArgs{key, val, ws[i].myaddr}
+        reply := &PendingReply{}
+        ws[i].AddPendingRPC(args, reply)
+
+        /*
+				if _, ok := ksvh[i]; !ok {
+					keys = append(keys, key)
+				}
+				counter++
+				val := ValueType{}
+				// randomly pick 5 servers
+				for kp := 0; kp < PaxosSize; kp++ {
+					val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
+				}
+				records[key] = val
+				ws[i].kvstore[key] = val
+        */
+			}
+		}
+
+    // initiate setup from all masters
+
+		start := time.Now()
+    for i := 0; i < PaxosSize; i++ {
+      go ws[i].InitiateSetup()
+    }
+
+    time.Sleep(30 * time.Second)
+    for i := 0; i < nservers; i++ {
+      fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+    }
+
+    /*
+		c := make(chan bool) // writes true of done
+		fmt.Printf("Starting setup\n")
+		for i := 0; i < nservers; i++ {
+			go func(srv int) {
+				ws[srv].Setup()
+				c <- true
+			}(i)
+		}
+
+		// wait for all setups to finish
+		for i := 0; i < nservers; i++ {
+			done := <-c
+			DPrintf("ws[%d] setup done: %b", i, done)
+		}
+    */
+
+		elapsed := time.Since(start)
+		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
+    
+
+    /*
+		fmt.Printf("Checking Try for every key from every node\n")
+		numFound := 0
+		numTotal := 0
+
+		fmt.Printf("All test keys: %s\n", keys)
+		for i := 0; i < nservers; i++ {
+			if _, ok := ksvh[i]; !ok {
+				for j := 0; j < len(keys); j++ {
+					key := KeyType(keys[j])
+					largs := &LookupArgs{key, nil}
+					lreply := &LookupReply{}
+					ws[i].Lookup(largs, lreply)
+					if lreply.Err != OK {
+						//fmt.Printf("Did not find key: %s\n", key)
+					} else {
+						value := lreply.Value
+						// compare string arrays...
+						if len(value.Servers) != len(records[key].Servers) {
+							t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
+						}
+						for k := 0; k < len(value.Servers); k++ {
+							if value.Servers[k] != records[key].Servers[k] {
+								t.Fatalf("Wrong value returned for key(%s): %s expected: %s", key, value, records[key])
+							}
+						}
+						numFound++
+					}
+					numTotal++
+				}
+			}
+		}
+
+		fmt.Printf("numFound: %d\n", numFound)
+		fmt.Printf("total keys: %d\n", numTotal)
+		fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
+    */
+    
+	}
+  
 }

@@ -302,53 +302,6 @@ func TestDataIntegrityBasic(t *testing.T) {
 
 }
 
-func TestDataIntegrityBasic(t *testing.T) {
-	runtime.GOMAXPROCS(4)
-
-	fmt.Printf("\033[95m%s\033[0m\n", "Test: Data Integrity Functions")
-	sk, err := rsa.GenerateKey(crand.Reader, 2014)
-
-	if err != nil {
-		t.Fatalf("key gen err", err)
-	}
-
-	err = sk.Validate()
-	if err != nil {
-		t.Fatalf("Validation failed.", err)
-	}
-
-	fmt.Println("Testing verification on true value type")
-	val1 := TrueValueType{"testval", "srv1", nil, &sk.PublicKey}
-
-	sig2, _ := SignTrueValue(val1, sk)
-	val1.Sign = sig2
-
-	if VerifyTrueValue(val1) {
-		fmt.Println("true value verified!")
-	} else {
-		t.Fatalf("TrueValue couldn't verify")
-	}
-
-	val1.TrueValue = "changed"
-	if !VerifyTrueValue(val1) {
-		fmt.Println("true value modification detected!")
-	} else {
-		t.Fatalf("True value modification not detected")
-	}
-
-	sk1, _ := rsa.GenerateKey(crand.Reader, 2014)
-
-	val1 = TrueValueType{"testval", "srv1", nil, &sk1.PublicKey}
-	val1.Sign = sig2
-
-	if !VerifyTrueValue(val1) {
-		fmt.Println("true value pk modification detected!")
-	} else {
-		t.Fatalf("True value PK modification not detected")
-	}
-
-}
-
 func TestRealGetAndPut(t *testing.T) {
 
 	runtime.GOMAXPROCS(4)

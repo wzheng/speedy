@@ -1238,12 +1238,6 @@ func TestRealLookupSybil(t *testing.T) {
 		var ksvh map[int]bool = make(map[int]bool)
 		defer cleanup(ws)
 
-		master_servers := make([]string, 0)
-		// first PaxosSize servers are master servers
-		for i := 0; i < PaxosSize; i++ {
-			master_servers = append(master_servers, kvh[i])
-		}
-
 		for i := 0; i < nservers; i++ {
 			kvh[i] = port("basic", i)
 			rand.Seed(time.Now().UTC().UnixNano())
@@ -1254,6 +1248,14 @@ func TestRealLookupSybil(t *testing.T) {
 				ksvh[i] = true
 			}
 		}
+
+		master_servers := make([]string, 0)
+		// first PaxosSize servers are master servers
+		for i := 0; i < PaxosSize; i++ {
+			master_servers = append(master_servers, kvh[i])
+		}
+
+		fmt.Printf("Master paxos servers are %v\n", master_servers)
 
 		neighbors := make([][]string, nservers)
 		for i := 0; i < nservers; i++ {
@@ -1291,30 +1293,16 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 		}
 
-		fmt.Printf("Actual number of attack edges: %d", attackCounter)
+		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 
-    // Start servers
+		// Start servers
 		for k := 0; k < nservers; k++ {
-
-      // if malicious
-			if _, ok := ksvh[k]; ok {
-				if k < PaxosSize {
-					// malicious master -- doesn't do anything
-					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, true, true, nlayers, nfingers, w, rd, rs, ts)
-
-				} else {
-					// malicious nonmaster
-					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, false, true, nlayers, nfingers, w, rd, rs, ts)
-				}
+			if k < PaxosSize {
+				// non malicious master
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, true, false, nlayers, nfingers, w, rd, rs, ts)
 			} else {
-        // not malicious
-				if k < PaxosSize {
-					// non malicious master
-					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, true, false, nlayers, nfingers, w, rd, rs, ts)
-				} else {
-					// normal villager
-					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, false, false, nlayers, nfingers, w, rd, rs, ts)
-				}
+				// normal villager
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, false, false, nlayers, nfingers, w, rd, rs, ts)
 			}
 		}
 
@@ -1326,58 +1314,48 @@ func TestRealLookupSybil(t *testing.T) {
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
-				fmt.Println("Address of Sybil node: %s \n", kvh[i])
+				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
 			}
 		}
 
 		keys := make([]KeyType, 0)
-    trueRecords := make(map[KeyType]TrueValueType)
+		trueRecords := make(map[KeyType]TrueValueType)
 		counter := 0
 		// Hard code records for all servers
 		for i := 0; i < nservers; i++ {
 			for j := 0; j < nkeys/nservers; j++ {
-
-        // make key/true value
+				// make key/true value
 				var key KeyType = KeyType(strconv.Itoa(counter))
-        keys = append(keys, key)
-			  val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
-        sig, _ := SignTrueValue(val, ws[i].secretKey)
-			  val.Sign = sig
-
-        trueRecords[key] = val
-        args := &PendingArgs{key, val, ws[i].myaddr}
-        reply := &PendingReply{}
-        ws[i].AddPendingRPC(args, reply)
-
-        /*
-				if _, ok := ksvh[i]; !ok {
-					keys = append(keys, key)
-				}
+				keys = append(keys, key)
+				val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+				sig, _ := SignTrueValue(val, ws[i].secretKey)
+				val.Sign = sig
+				
+				trueRecords[key] = val
+				args := &PendingArgs{key, val, ws[i].myaddr}
+				reply := &PendingReply{}
+				ws[i].AddPendingRPC(args, reply)
 				counter++
-				val := ValueType{}
-				// randomly pick 5 servers
-				for kp := 0; kp < PaxosSize; kp++ {
-					val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
-				}
-				records[key] = val
-				ws[i].kvstore[key] = val
-        */
 			}
 		}
-
-    // initiate setup from all masters
-
+		
+		for i := 0; i < PaxosSize; i++ {
+			fmt.Printf("ws[%v]'s pending writes are %v\n",i, ws[i].master_paxos_cluster.pending_writes)
+		}
+		
+		// initiate setup from all masters
+		
 		start := time.Now()
-    for i := 0; i < PaxosSize; i++ {
-      go ws[i].InitiateSetup()
-    }
-
-    time.Sleep(30 * time.Second)
-    for i := 0; i < nservers; i++ {
-      fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-    }
-
-    /*
+		for i := 0; i < PaxosSize; i++ {
+			go ws[i].InitiateSetup()
+		}
+		
+		time.Sleep(30 * time.Second)
+		for i := 0; i < nservers; i++ {
+			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+		}
+		
+		/*
 		c := make(chan bool) // writes true of done
 		fmt.Printf("Starting setup\n")
 		for i := 0; i < nservers; i++ {

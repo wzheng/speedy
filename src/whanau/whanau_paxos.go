@@ -267,11 +267,13 @@ func StartWhanauPaxos(servers []string, me int,
 	}
 
 	wp.handledRequests = make(map[int64]interface{})
+	fmt.Printf("Servers is %v, me is %v\n", servers, me)
 	wp.px = paxos.Make(servers, me, rpcs)
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)
 	wp.currSeq = 0
 	wp.currView = 0
+	wp.me = me
 
 	gob.Register(Op{})
 	gob.Register(PaxosGetArgs{})

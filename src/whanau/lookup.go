@@ -4,8 +4,8 @@ package whanau
 
 import "math/rand"
 import "sort"
-import "time"
-import "fmt"
+//import "time"
+//import "fmt"
 
 // Returns randomly chosen finger and randomly chosen layer as part of lookup
 func (ws *WhanauServer) ChooseFinger(x0 KeyType, key KeyType, nlayers int) (Finger, int) {
@@ -334,9 +334,9 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 
 // Constructs Finger table for a specified layer
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
-	start := time.Now()
-	defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
+		//ws.myaddr, time.Since(start))
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0, ws.rf*2)
@@ -414,9 +414,9 @@ func (ws *WhanauServer) SybilChooseID(layer int) KeyType {
 
 // Gets successors that are nearest each key
 func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *SampleSuccessorsReply) error {
-	start := time.Now()
-	defer fmt.Printf("SAMPLESUCCESSORS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("SAMPLESUCCESSORS in server %v took %v\n",
+	//	ws.myaddr, time.Since(start))
 
 	key := args.Key
 	records := make([]Record, ws.t*2)
@@ -440,9 +440,9 @@ func (ws *WhanauServer) SampleSuccessors(args *SampleSuccessorsArgs, reply *Samp
 }
 
 func (ws *WhanauServer) Successors(layer int) []Record {
-	start := time.Now()
-	defer fmt.Printf("SUCCESSORS in server %v took %v\n",
-		ws.myaddr, time.Since(start))
+	//start := time.Now()
+	//defer fmt.Printf("SUCCESSORS in server %v took %v\n",
+	//	ws.myaddr, time.Since(start))
 
 	//fmt.Printf("In Sucessors of %s, layer %d \n", ws.myaddr, layer)
 

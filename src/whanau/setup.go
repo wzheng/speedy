@@ -28,7 +28,7 @@ func (ws *WhanauServer) SetupHonest() {
 	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
 	ws.PerformSystolicMixing(numToSample)
 	ws.doneMixing = true // turn off server handler
-	fmt.Printf("server %v done with performsystolic\n", ws.me)
+	//fmt.Printf("server %v done with performsystolic\n", ws.me)
 
 	// fill up db by randomly sampling records from random walks
 	// "The db table has the good property that each honest node’s stored records are frequently represented in other honest nodes’db tables"
@@ -36,7 +36,7 @@ func (ws *WhanauServer) SetupHonest() {
 	// TODO probably don't need lock?
 	By(RecordKey).Sort(ws.db)
 
-	fmt.Printf("server %v has moved on\n", ws.me)
+	//fmt.Printf("server %v has moved on\n", ws.me)
 
 	// reset ids, fingers, succ
 	ws.ids = make([]KeyType, 0)

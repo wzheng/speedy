@@ -9,7 +9,6 @@ import "sync"
 import "math"
 import "net/rpc"
 import "encoding/gob"
-import "fmt"
 
 type WhanauPaxos struct {
 	mu     sync.Mutex
@@ -173,7 +172,7 @@ func (wp *WhanauPaxos) PaxosGet(args *PaxosGetArgs,
 	defer wp.logLock.Unlock()
 
 	// TODO check if this paxos group is responsible for this key
-	fmt.Printf("looking for key %v in server %v\n", args.Key, wp.me)
+
 	// Have we handled this request already?
 	if r, ok := wp.handledRequests[args.RequestID]; ok {
 		getreply := r.(PaxosGetReply)
@@ -247,7 +246,7 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Server = pending_reply.Server
 	reply.Err = pending_reply.Err
 
-	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
+	//fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
 
 	return nil
 }

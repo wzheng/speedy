@@ -318,7 +318,7 @@ func TestRealGetAndPut(t *testing.T) {
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
-	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+	//fmt.Printf("nlayers is %d, w is %d\n", nlayers, w)
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -372,7 +372,7 @@ func TestRealGetAndPut(t *testing.T) {
 			keys = append(keys, key)
 			counter++
 
-			fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
+			//fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
 			val := ValueType{paxos_cluster}
 			records[key] = val
 			ws[i].kvstore[key] = val
@@ -416,14 +416,14 @@ func TestRealGetAndPut(t *testing.T) {
 	}
 
 	elapsed := time.Since(start)
-	fmt.Printf("Finished setup, time: %s\n", elapsed)
+	fmt.Printf("Finished setup, time: %s\n\n", elapsed)
 
 	// start clients
 
 	largs := &LookupArgs{"0", nil}
 	lreply := &LookupReply{}
 	ws[3].Lookup(largs, lreply)
-	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
+	//fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
 
 	cl := MakeClerk(kvh[0])
 
@@ -456,7 +456,7 @@ func TestEndToEnd(t *testing.T) {
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
-	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+	fmt.Printf("nlayers is %d, w is %d\n", nlayers, w)
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -512,7 +512,7 @@ func TestPendingWrites(t *testing.T) {
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 	ts := constant                                   // number of successors sampled per node
 
-	fmt.Printf("nlayers is %u, w is %u\n", nlayers, w)
+	fmt.Printf("nlayers is %d, w is %d\n", nlayers, w)
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -566,7 +566,7 @@ func TestPendingWrites(t *testing.T) {
 			keys = append(keys, key)
 			counter++
 
-			fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
+			//fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
 			val := ValueType{paxos_cluster}
 			records[key] = val
 			ws[i].kvstore[key] = val
@@ -617,7 +617,7 @@ func TestPendingWrites(t *testing.T) {
 	largs := &LookupArgs{"0", nil}
 	lreply := &LookupReply{}
 	ws[3].Lookup(largs, lreply)
-	fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
+	//fmt.Printf("lreply.value is %v\n", lreply.Value.Servers)
 
 	cl := MakeClerk(kvh[0])
 
@@ -639,9 +639,9 @@ func TestPendingWrites(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	fmt.Printf("pending writes for master 0: %v, %v\n", ws[0].all_pending_writes, ws[0].key_to_server)
-	fmt.Printf("pending writes for master 1: %v, %v\n", ws[1].all_pending_writes, ws[1].key_to_server)
-	fmt.Printf("pending writes for master 2: %v, %v\n", ws[2].all_pending_writes, ws[2].key_to_server)
+	//fmt.Printf("pending writes for master 0: %v, %v\n", ws[0].all_pending_writes, ws[0].key_to_server)
+	//fmt.Printf("pending writes for master 1: %v, %v\n", ws[1].all_pending_writes, ws[1].key_to_server)
+	//fmt.Printf("pending writes for master 2: %v, %v\n", ws[2].all_pending_writes, ws[2].key_to_server)
 
 	value = cl.ClientGet("40")
 	fmt.Printf("After pending insert: value is %v\n", value)
@@ -658,6 +658,194 @@ func TestPendingWrites(t *testing.T) {
 
 	value = cl.ClientGet("40")
 	fmt.Printf("After setup: value is %v\n", value)
+}
+
+// In-class demo
+func TestDemo(t *testing.T) {
+
+	runtime.GOMAXPROCS(4)
+
+	const nservers = 20
+	const nkeys = 100          // keys are strings from 0 to 99
+	const k = nkeys / nservers // keys per node
+
+	// parameters
+	constant := 5
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
+	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
+	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+	ts := constant                                   // number of successors sampled per node
+
+	//fmt.Printf("nlayers is %d, w is %d\n", nlayers, w)
+
+	var ws []*WhanauServer = make([]*WhanauServer, nservers)
+	var kvh []string = make([]string, nservers)
+	defer cleanup(ws)
+
+	for i := 0; i < nservers; i++ {
+		kvh[i] = port("basic", i)
+	}
+
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	for i := 0; i < nservers; i++ {
+		neighbors := make([]string, 0)
+		for j := 0; j < nservers; j++ {
+			if j == i {
+				continue
+			}
+			neighbors = append(neighbors, kvh[j])
+		}
+
+		if i < 3 {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		} else {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		}
+	}
+
+	var cka [nservers]*Clerk
+	for i := 0; i < nservers; i++ {
+		cka[i] = MakeClerk(kvh[i])
+	}
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Demo")
+
+	keys := make([]KeyType, 0)
+	records := make(map[KeyType]ValueType)
+	counter := 0
+	// hard code in records for each server
+	for i := 0; i < nservers; i++ {
+
+		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+
+		for j := 0; j < nkeys/nservers; j++ {
+			//var key KeyType = testKeys[counter]
+			var key KeyType = KeyType(strconv.Itoa(counter))
+			keys = append(keys, key)
+			counter++
+
+			//fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
+			val := ValueType{paxos_cluster}
+			records[key] = val
+			ws[i].kvstore[key] = val
+
+			ws[i].paxosInstances[key] = *wp0
+			ws[(i+1)%nservers].paxosInstances[key] = *wp1
+			ws[(i+2)%nservers].paxosInstances[key] = *wp2
+
+			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
+			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
+			val0.Sign = sig0
+			wp0.db[key] = val0
+
+			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+			val1.Sign = sig1
+			wp1.db[key] = val1
+
+			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+			val2.Sign = sig2
+			wp2.db[key] = val2
+		}
+	}
+
+	c := make(chan bool) // writes true of done
+	fmt.Printf("Starting setup: %d servers, %d keys\n", nservers, nkeys)
+	start := time.Now()
+	for i := 0; i < nservers; i++ {
+		go func(srv int) {
+			DPrintf("running ws[%d].Setup", srv)
+			ws[srv].Setup()
+			c <- true
+		}(i)
+	}
+
+	// wait for all setups to finish
+	for i := 0; i < nservers; i++ {
+		done := <-c
+		DPrintf("ws[%d] setup done: %b", i, done)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Finished setup, time: %s\n\n", elapsed)
+
+	// start clients
+
+	largs := &LookupArgs{"0", nil}
+	lreply := &LookupReply{}
+	ws[3].Lookup(largs, lreply)
+
+	cl := MakeClerk(kvh[0])
+
+	fmt.Printf("Client lookup of existing key 0...\n")
+
+	value := cl.ClientGet("0")
+	fmt.Printf("Value for key 0 is %s\n\n", value)
+
+	// test single value put -- an update, NOT an insert!
+
+	fmt.Printf("Client update of existing key 0 with new value helloworld...\n")
+	cl.ClientPut("0", "helloworld")
+	value = cl.ClientGet("0")
+
+	fmt.Printf("After put, without re-running Setup: value for key 0 is %v\n\n", value)
+
+	fmt.Printf("Client performing insert of new key 101 with value cantbefound...\n")
+	cl.ClientPut("101", "cantbefound")
+
+	fmt.Printf("Client performing update of new key 101 with value newvalue...\n")
+	cl.ClientPut("101", "newvalue")
+
+	// look in the masters' pending inserts table:
+
+	time.Sleep(1 * time.Second)
+
+	value = cl.ClientGet("101")
+	fmt.Printf("After insert, before Setup run: value for key 101 is %v\n\n", value)
+
+	time.Sleep(5 * time.Second)
+
+	fmt.Printf("Starting setup from masters\n")
+
+	go ws[0].InitiateSetup()
+	go ws[1].InitiateSetup()
+	go ws[2].InitiateSetup()
+
+	time.Sleep(30 * time.Second)
+
+	fmt.Printf("Setup finished\n\n")
+
+	fmt.Printf("Client lookup of inserted key 101...\n")
+	value = cl.ClientGet("101")
+	fmt.Printf("After setup run: value for key 101 is %v\n\n", value)
+
+	fmt.Printf("Six random node failures...\n")
+	failed := make([]int, 6)
+	for i := 0; i < 6; i++ {
+		fail := rand.Intn(20) // pick an idx to fail
+		for IsInList(fail, failed) {
+			fail = rand.Intn(20)
+		}
+
+		failed[i] = fail
+		os.Remove(kvh[fail])
+	}
+
+	fmt.Printf("Failed nodes: %v\n\n", failed)
+
+	fmt.Printf("Client lookup of existing key 5...\n")
+
+	value = cl.ClientGet("5")
+	fmt.Printf("Value for key 5 is %s\n\n", value)
 }
 
 // Time setup
@@ -751,7 +939,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
 		const nservers = 20
-		const nkeys = 100           // keys are strings from 0 to 99
+		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.2
 
@@ -764,7 +952,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 0 //4*(int(nservers / math.Log(nservers)) + 1)
+		numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
 		numSybilServers := 50
 		sybilServerCounter := 0
@@ -796,7 +984,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 			for j := 0; j < i; j++ {
 				_, ok := ksvh[j]
 				_, ok2 := ksvh[i]
-				
+
 				if ok || ok2 {
 					if ok && ok2 {
 						// both nodes are sybil nodes
@@ -807,8 +995,8 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 						// one node is a sybil node
 						// create edge with small probability
 						prob := rand.Float32()
-	
-						if prob > sybilProb + 0.455 && attackCounter < numAttackEdges {
+
+						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
@@ -834,7 +1022,6 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 					nlayers, nfingers, w, rd, rs, ts)
 			}
 		}
-
 
 		var cka [nservers]*Clerk
 		for i := 0; i < nservers; i++ {
@@ -869,7 +1056,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 				ws[i].kvstore[key] = val
 			}
 		}
-		
+
 		c := make(chan bool) // writes true of done
 		fmt.Printf("Starting setup\n")
 		start := time.Now()

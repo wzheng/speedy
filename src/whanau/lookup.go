@@ -4,6 +4,7 @@ package whanau
 
 import "math/rand"
 import "sort"
+
 //import "time"
 //import "fmt"
 
@@ -101,11 +102,12 @@ func (ws *WhanauServer) HonestQuery(key KeyType, layer int) QueryReply {
 	}
 	//fmt.Printf("Ending binary search: %s", ws.myaddr)
 	if valueIndex != -1 && valueIndex < len(ws.succ[layer]) && valueIndex < len(ws.succ[layer]) && ws.succ[layer][valueIndex].Key == key {
-		DPrintf("In Query: found the key!!!!")
+		DPrintf("In Query: found the key!!!! %v\n", key)
 		reply.Value = ws.succ[layer][valueIndex].Value
-		DPrintf("reply.Value: %s", reply.Value)
+		DPrintf("reply.Value: %s\n", reply.Value)
 		reply.Err = OK
 	} else {
+		DPrintf("did not find key\n")
 		reply.Err = ErrNoKey
 	}
 	//fmt.Printf("Ending query search: %s", ws.myaddr)
@@ -336,7 +338,7 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 	//start := time.Now()
 	//defer fmt.Printf("CONSTRUCTFINGERS in server %v took %v\n",
-		//ws.myaddr, time.Since(start))
+	//ws.myaddr, time.Since(start))
 
 	DPrintf("In ConstructFingers of %s, layer %d", ws.myaddr, layer)
 	fingers := make([]Finger, 0, ws.rf*2)

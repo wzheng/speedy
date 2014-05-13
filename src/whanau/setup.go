@@ -5,7 +5,8 @@ package whanau
 */
 
 import "time"
-import "fmt"
+
+//import "fmt"
 import "math/rand"
 
 func (ws *WhanauServer) Setup() {
@@ -147,7 +148,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()
 	// send this new cluster to a random master cluster
-	fmt.Printf("Server %v DONE constructing new paxos clusters, new cluster is %v\n", ws.myaddr, new_cluster)
+	//fmt.Printf("Server %v DONE constructing new paxos clusters, new cluster is %v\n", ws.myaddr, new_cluster)
 
 	// enter the SETUP stage
 	ws.mu.Lock()
@@ -167,7 +168,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 	if ok {
 		if receive_paxos_reply.Err == OK {
 
-			fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+			//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 
 			join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
 			var join_reply JoinClusterReply
@@ -204,5 +205,5 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.state = Normal
 	ws.mu.Unlock()
 
-	fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
+	//fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
 }

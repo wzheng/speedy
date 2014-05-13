@@ -5,7 +5,7 @@ import "math/rand"
 //import "fmt"
 import "log"
 
-func IsInList(val string, array []string) bool {
+func IsInList(val int, array []int) bool {
 	for _, v := range array {
 		if v == val {
 			return true

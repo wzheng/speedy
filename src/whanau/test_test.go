@@ -81,17 +81,32 @@ func TestLookup(t *testing.T) {
 		kvh[i] = port("basic", i)
 	}
 
+	var edgeProb float32 = 0.5
+
+	neighbors := make([][]string, nservers)
 	for i := 0; i < nservers; i++ {
-		neighbors := make([]string, 0)
-		for j := 0; j < nservers; j++ {
+		neighbors[i] = make([]string, 0)
+	}
+
+	for i := 0; i < nservers; i++ {
+		for j := 0; j < i; j++ {
 			if j == i {
 				continue
 			}
-			neighbors = append(neighbors, kvh[j])
-		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
+			// create edge with small probability
+			prob := rand.Float32()
+
+			if prob < edgeProb {
+				neighbors[i] = append(neighbors[i], kvh[j])
+				neighbors[j] = append(neighbors[j], kvh[i])
+			}
+		}
+	}
+
+	for k := 0; k < nservers; k++ {
+		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k],
+			make([]string, 0), false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -237,6 +252,53 @@ func TestLookup(t *testing.T) {
 	fmt.Printf("numFound: %d\n", numFound)
 	fmt.Printf("total keys: %d\n", nkeys)
 	fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
+
+}
+
+func TestDataIntegrityBasic(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+
+	fmt.Printf("\033[95m%s\033[0m\n", "Test: Data Integrity Functions")
+	sk, err := rsa.GenerateKey(crand.Reader, 2014)
+
+	if err != nil {
+		t.Fatalf("key gen err", err)
+	}
+
+	err = sk.Validate()
+	if err != nil {
+		t.Fatalf("Validation failed.", err)
+	}
+
+	fmt.Println("Testing verification on true value type")
+	val1 := TrueValueType{"testval", "srv1", nil, &sk.PublicKey}
+
+	sig2, _ := SignTrueValue(val1, sk)
+	val1.Sign = sig2
+
+	if VerifyTrueValue(val1) {
+		fmt.Println("true value verified!")
+	} else {
+		t.Fatalf("TrueValue couldn't verify")
+	}
+
+	val1.TrueValue = "changed"
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value modification detected!")
+	} else {
+		t.Fatalf("True value modification not detected")
+	}
+
+	sk1, _ := rsa.GenerateKey(crand.Reader, 2014)
+
+	val1 = TrueValueType{"testval", "srv1", nil, &sk1.PublicKey}
+	val1.Sign = sig2
+
+	if !VerifyTrueValue(val1) {
+		fmt.Println("true value pk modification detected!")
+	} else {
+		t.Fatalf("True value PK modification not detected")
+	}
 
 }
 

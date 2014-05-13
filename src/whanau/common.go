@@ -88,7 +88,7 @@ type Finger struct {
 // Global Parameters
 
 const (
-	PaxosSize = 3
+	PaxosSize = 7
 	PaxosWalk = 3
 	TIMEOUT   = 10 // number of times to try querying
 )

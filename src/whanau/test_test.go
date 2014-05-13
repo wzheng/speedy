@@ -688,7 +688,7 @@ func TestDemo(t *testing.T) {
 		kvh[i] = port("basic", i)
 	}
 
-	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+	master_servers := []string{kvh[0], kvh[1], kvh[2], kvh[3], kvh[4], kvh[5], kvh[6]}
 
 	for i := 0; i < nservers; i++ {
 		neighbors := make([]string, 0)
@@ -699,7 +699,7 @@ func TestDemo(t *testing.T) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		if i < 3 {
+		if i < 7 {
 			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
@@ -721,10 +721,14 @@ func TestDemo(t *testing.T) {
 	// hard code in records for each server
 	for i := 0; i < nservers; i++ {
 
-		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
+		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers], kvh[(i+3)%nservers], kvh[(i+4)%nservers], kvh[(i+5)%nservers], kvh[(i+6)%nservers]}
 		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
 		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
 		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp3 := StartWhanauPaxos(paxos_cluster, 3, ws[(i+3)%nservers].rpc)
+		wp4 := StartWhanauPaxos(paxos_cluster, 4, ws[(i+4)%nservers].rpc)
+		wp5 := StartWhanauPaxos(paxos_cluster, 5, ws[(i+5)%nservers].rpc)
+		wp6 := StartWhanauPaxos(paxos_cluster, 6, ws[(i+6)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -740,21 +744,46 @@ func TestDemo(t *testing.T) {
 			ws[i].paxosInstances[key] = *wp0
 			ws[(i+1)%nservers].paxosInstances[key] = *wp1
 			ws[(i+2)%nservers].paxosInstances[key] = *wp2
+			ws[(i+3)%nservers].paxosInstances[key] = *wp3
+			ws[(i+4)%nservers].paxosInstances[key] = *wp4
+			ws[(i+5)%nservers].paxosInstances[key] = *wp5
+			ws[(i+6)%nservers].paxosInstances[key] = *wp6
 
 			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
 			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
 			val0.Sign = sig0
 			wp0.db[key] = val0
 
-			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
-			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
-			val1.Sign = sig1
-			wp1.db[key] = val1
+// 			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+// 			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+// 			val1.Sign = sig1
+			wp1.db[key] = val0
 
-			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
-			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
-			val2.Sign = sig2
-			wp2.db[key] = val2
+// 			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+// 			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+// 			val2.Sign = sig2
+			wp2.db[key] = val0
+
+// 			val3 := TrueValueType{"hello", wp3.myaddr, nil, &ws[(i+3)%nservers].secretKey.PublicKey}
+// 			sig3, _ := SignTrueValue(val3, ws[(i+3)%nservers].secretKey)
+// 			val3.Sign = sig3
+			wp3.db[key] = val0
+
+// 			val4 := TrueValueType{"hello", wp4.myaddr, nil, &ws[(i+4)%nservers].secretKey.PublicKey}
+// 			sig4, _ := SignTrueValue(val4, ws[(i+4)%nservers].secretKey)
+// 			val4.Sign = sig4
+			wp4.db[key] = val0
+
+// 			val5 := TrueValueType{"hello", wp5.myaddr, nil, &ws[(i+5)%nservers].secretKey.PublicKey}
+// 			sig5, _ := SignTrueValue(val5, ws[(i+5)%nservers].secretKey)
+// 			val5.Sign = sig5
+			wp5.db[key] = val0
+
+// 			val6 := TrueValueType{"hello", wp6.myaddr, nil, &ws[(i+6)%nservers].secretKey.PublicKey}
+// 			sig6, _ := SignTrueValue(val6, ws[(i+6)%nservers].secretKey)
+// 			val6.Sign = sig6
+			wp6.db[key] = val0
+
 		}
 	}
 
@@ -828,9 +857,9 @@ func TestDemo(t *testing.T) {
 	value = cl.ClientGet("101")
 	fmt.Printf("After setup run: value for key 101 is %v\n\n", value)
 
-	fmt.Printf("Six random node failures...\n")
-	failed := make([]int, 6)
-	for i := 0; i < 6; i++ {
+	fmt.Printf("Three random node failures...\n")
+	failed := make([]int, 3)
+	for i := 0; i < 3; i++ {
 		fail := rand.Intn(20) // pick an idx to fail
 		for IsInList(fail, failed) {
 			fail = rand.Intn(20)

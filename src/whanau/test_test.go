@@ -1191,7 +1191,7 @@ func TestRealLookupSybil(t *testing.T) {
 		for i := 0; i < PaxosSize; i++ {
 			master_servers = append(master_servers, kvh[i])
 		}
-
+		fmt.Printf("Master paxos servers are %v\n", master_servers)
 		neighbors := make([][]string, nservers)
 		for i := 0; i < nservers; i++ {
 			neighbors[i] = make([]string, 0)
@@ -1249,7 +1249,6 @@ func TestRealLookupSybil(t *testing.T) {
 				w, rd, rs, ts)
 		}
 		
-		
 		// Start servers
 		for k := 0; k < nservers; k++ {
 			
@@ -1258,7 +1257,7 @@ func TestRealLookupSybil(t *testing.T) {
 				if k < PaxosSize {
 					// malicious master -- doesn't do anything
 					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, true, false, nlayers, nfingers, w, rd, rs, ts)
-
+					
 				} else {
 					// malicious nonmaster
 					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, true, false, nlayers, nfingers, w, rd, rs, ts)
@@ -1284,7 +1283,7 @@ func TestRealLookupSybil(t *testing.T) {
 
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
-				fmt.Println("Address of Sybil node: %s \n", kvh[i])
+				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
 			}
 		}
 
@@ -1294,7 +1293,6 @@ func TestRealLookupSybil(t *testing.T) {
 		// Hard code records for all servers
 		for i := 0; i < nservers; i++ {
 			for j := 0; j < nkeys/nservers; j++ {
-
 				// make key/true value
 				var key KeyType = KeyType(strconv.Itoa(counter))
 				keys = append(keys, key)
@@ -1306,7 +1304,7 @@ func TestRealLookupSybil(t *testing.T) {
 				args := &PendingArgs{key, val, ws[i].myaddr}
 				reply := &PendingReply{}
 				ws[i].AddPendingRPC(args, reply)
-				
+
 			}
 		}
 

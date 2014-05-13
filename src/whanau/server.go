@@ -161,6 +161,8 @@ func (ws *WhanauServer) AddPendingRPCMaster(args *PendingArgs, reply *PendingRep
 
 	// TODO: put the paxos call in another function, so we don't block
 
+	//fmt.Printf("master cluster is %v\n", ws.master_paxos_cluster)
+
 	var current_view int
 
 	ws.mu.Lock()
@@ -209,7 +211,8 @@ func (ws *WhanauServer) Kill() {
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string,
-	neighbors []string, masters []string, is_master bool, is_sybil bool,
+	neighbors []string, masters []string, newservers []string,
+	is_master bool, is_sybil bool, is_px_server bool,
 	nlayers int, rf int, w int, rd int, rs int, t int) *WhanauServer {
 
 	ws := new(WhanauServer)
@@ -225,8 +228,26 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.is_master = is_master
 	ws.is_sybil = is_sybil
 
-	if is_master {
+	ws.rpc = rpc.NewServer()
+	ws.rpc.Register(ws)
 
+	if is_px_server {
+		// this server exists exclusively to be a paxos handler
+		// so all we really need to do is start the whanaupaxos instance
+
+		var idx int
+
+		for i, m := range newservers {
+			if m == ws.myaddr {
+				idx = i
+				break
+			}
+		}
+
+		StartWhanauPaxos(newservers, idx, ws.rpc)
+	}
+
+	if is_master {
 		var idx int
 
 		for i, m := range masters {
@@ -236,7 +257,9 @@ func StartServer(servers []string, me int, myaddr string,
 			}
 		}
 
-		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
+		// start the whanaupaxos using precreated paxos servers
+		// which exist exclusively for the purpose of being paxos handlers
+		wp_m := StartWhanauPaxos(newservers, idx, ws.rpc)
 		ws.master_paxos_cluster = *wp_m
 		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
 		ws.key_to_server = make(map[PendingInsertsKey]string)
@@ -260,9 +283,6 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.lookup_idx = 0
 
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
-
-	ws.rpc = rpc.NewServer()
-	ws.rpc.Register(ws)
 
 	gob.Register(LookupArgs{})
 	gob.Register(LookupReply{})

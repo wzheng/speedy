@@ -197,6 +197,7 @@ type WhanauPutRPCReply struct {
 type JoinClusterArgs struct {
 	NewCluster []string
 	KV         map[KeyType]TrueValueType
+	Server     string
 }
 
 type JoinClusterReply struct {

@@ -1325,11 +1325,10 @@ func TestRealLookupSybil(t *testing.T) {
 			go ws[i].InitiateSetup()
 		}
 		time.Sleep(30 * time.Second)
-		/*
-			for i := 0; i < nservers; i++ {
-				fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-			}
-		*/
+		
+		for i := 0; i < nservers; i++ {
+			fmt.Printf("ws[%d].kvstore: %s\n\n", i, ws[i].kvstore)
+		}
 
 		elapsed := time.Since(start)
 		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)

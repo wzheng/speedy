@@ -68,7 +68,9 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 
 		// put into one's own kvstore
 		ws.mu.Lock()
-		ws.kvstore[k] = ValueType{args.NewCluster}
+		if (ws.myaddr == args.Server) {
+			ws.kvstore[k] = ValueType{args.NewCluster}
+		}
 		ws.paxosInstances[k] = *wp
 		ws.mu.Unlock()
 	}

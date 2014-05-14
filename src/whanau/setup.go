@@ -178,7 +178,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 				
 				fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 				
-				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
+				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV, ws.myaddr}
 				var join_reply JoinClusterReply
 				
 				for _, srv := range new_cluster {

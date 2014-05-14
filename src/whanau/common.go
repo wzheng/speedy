@@ -90,7 +90,7 @@ type Finger struct {
 const (
 	PaxosSize = 3
 	PaxosWalk = 3
-	TIMEOUT   = 10 // number of times to try querying
+	TIMEOUT   = 20 // number of retries in everything
 )
 
 type PendingInsertsKey struct {

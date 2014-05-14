@@ -115,7 +115,7 @@ func (ck *Clerk) ClientGet(key KeyType) string {
 		return val
 	}
 
-	return ""
+	return ErrNoKey
 }
 
 // Client wrapper for Put.

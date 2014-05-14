@@ -362,9 +362,9 @@ func TestRealGetAndPut(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -556,9 +556,9 @@ func TestPendingWrites(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -742,13 +742,13 @@ func TestDemo(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers], kvh[(i+3)%nservers], kvh[(i+4)%nservers], kvh[(i+5)%nservers], kvh[(i+6)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
-		wp3 := StartWhanauPaxos(paxos_cluster, 3, ws[(i+3)%nservers].rpc)
-		wp4 := StartWhanauPaxos(paxos_cluster, 4, ws[(i+4)%nservers].rpc)
-		wp5 := StartWhanauPaxos(paxos_cluster, 5, ws[(i+5)%nservers].rpc)
-		wp6 := StartWhanauPaxos(paxos_cluster, 6, ws[(i+6)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
+		wp3 := StartWhanauPaxos(paxos_cluster, 3, "", ws[(i+3)%nservers].rpc)
+		wp4 := StartWhanauPaxos(paxos_cluster, 4, "", ws[(i+4)%nservers].rpc)
+		wp5 := StartWhanauPaxos(paxos_cluster, 5, "", ws[(i+5)%nservers].rpc)
+		wp6 := StartWhanauPaxos(paxos_cluster, 6, "", ws[(i+6)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -1146,7 +1146,7 @@ func TestSystolic(t *testing.T) {
 // Redistributing some keys to sybil nodes
 func TestRealLookupSybil(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 1
+	iterations := 5
 	for z := 0; z < iterations; z++ {
 		fmt.Printf("Iteration: %d \n \n", z)
 		const nservers = 10
@@ -1182,7 +1182,7 @@ func TestRealLookupSybil(t *testing.T) {
 			if prob > attackEdgeProb && sybilServerCounter < numSybilServers {
 				sybilServerCounter++
 				// randomly make some of the servers sybil servers
-				ksvh[i] = true
+				//	ksvh[i] = true
 			}
 		}
 
@@ -1324,7 +1324,7 @@ func TestRealLookupSybil(t *testing.T) {
 			go ws[i].InitiateSetup()
 		}
 		time.Sleep(30 * time.Second)
-		
+
 		for i := 0; i < nservers; i++ {
 			fmt.Printf("ws[%d].kvstore: %s\n\n", i, ws[i].kvstore)
 		}
@@ -1334,10 +1334,64 @@ func TestRealLookupSybil(t *testing.T) {
 		for i := 0; i < nservers; i++ {
 			fmt.Printf("ws[%d].kvstore length: %s\n", i, len(ws[i].kvstore))
 
-      for key, val := range ws[i].kvstore {
-        fmt.Printf("Paxos cluster for key %s: %s\n", key, val)
-      }
+			for key, val := range ws[i].kvstore {
+				fmt.Printf("Paxos cluster for key %s: %s\n", key, val)
+			}
 		}
+
+		fmt.Printf("Finished setup, time: %s\n", elapsed)
+
+		fmt.Printf("Check key coverage in all dbs\n")
+
+		keyset := make(map[KeyType]bool)
+		for i := 0; i < len(keys); i++ {
+			keyset[keys[i]] = false
+		}
+
+		for i := 0; i < nservers; i++ {
+			srv := ws[i]
+			for j := 0; j < len(srv.db); j++ {
+				keyset[srv.db[j].Key] = true
+			}
+		}
+
+		// count number of covered keys, all the false keys in keyset
+		covered_count := 0
+		for _, v := range keyset {
+			if v {
+				covered_count++
+			}
+		}
+		fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
+
+		fmt.Printf("Check key coverage in all successor tables\n")
+		keyset = make(map[KeyType]bool)
+		for i := 0; i < len(keys); i++ {
+			keyset[keys[i]] = false
+		}
+
+		for i := 0; i < nservers; i++ {
+			srv := ws[i]
+			for j := 0; j < len(srv.succ); j++ {
+				for k := 0; k < len(srv.succ[j]); k++ {
+					keyset[srv.succ[j][k].Key] = true
+				}
+			}
+		}
+
+		// count number of covered keys, all the false keys in keyset
+		covered_count = 0
+		missing_keys := make([]KeyType, 0)
+		for k, v := range keyset {
+			if v {
+				covered_count++
+			} else {
+				missing_keys = append(missing_keys, k)
+			}
+		}
+
+		fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
+		fmt.Printf("missing keys in succs: %s\n", missing_keys)
 
 		fmt.Printf("Perform client lookup from all honest nodes\n")
 		numFound := 0
@@ -1355,11 +1409,11 @@ func TestRealLookupSybil(t *testing.T) {
 				key := keys[j]
 				val := client.ClientGet(key)
 				if val == trueRecords[key] {
-          fmt.Printf("Found value for key: %s!\n", key)
+					fmt.Printf("Found value for key: %s!\n", key)
 					numFound++
 				} else {
-					if val != trueRecords[key] {
-						t.Fatalf("Wrong true value returned: %s expected: %s\n", val, trueRecords[key])
+					if val != ErrNoKey && val != trueRecords[key] {
+						t.Fatalf("Wrong true value for key %s, returned %s expected: %s\n", key, val, trueRecords[key])
 					}
 					fmt.Printf("Key %s not found D: \n", key)
 				}

@@ -20,8 +20,7 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-	fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
-	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+  fmt.Printf("HONEST SERVER: %s\n", ws.myaddr)
 
 	// How many random walks should we precompute?
 	// the extras are for lookups
@@ -151,6 +150,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 	// wait until all of its current outstanding requests are done processing
 	// TODO: should keep a counter of all of the outstanding requests
 
+	fmt.Printf("StartSetupStage2()\n")
+
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()
 	// send this new cluster to a random master cluster
@@ -160,6 +161,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.mu.Lock()
 	ws.state = Setup
 	ws.mu.Unlock()
+
+	fmt.Printf("%v construct cluster done\n", ws.myaddr)
 
 	// TODO: for every key value in the current kv store, replace with the newest paxos cluster
 
@@ -173,7 +176,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 		if ok {
 			if receive_paxos_reply.Err == OK {
 				
-				//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+				fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 				
 				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
 				var join_reply JoinClusterReply
@@ -190,6 +193,13 @@ func (ws *WhanauServer) StartSetupStage2() {
 					}
 				}
 				
+				for k, v := range receive_paxos_reply.KV {
+					cpargs := &ClientPutArgs{k, v, NRand(), ws.myaddr}
+					cpreply := &ClientPutReply{}
+					ws.PaxosPutRPC(cpargs, cpreply)
+					
+					fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
+				}
 			}
 		}
 	}

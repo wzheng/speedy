@@ -6,7 +6,6 @@ import "math/rand"
 
 // Random walk
 func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply) error {
-	//steps := args.Steps
 	var randomWalkReply RandomWalkReply
 	if ws.is_sybil {
 		randomWalkReply = ws.SybilRandomWalk()
@@ -18,11 +17,15 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 		nextServer, ok := ws.GetNextRWServer()
 		if !ok {
 			// Ran out of servers!!
-			// TODO should we stop here and generate some more...?
-			return nil
+			// Just go ahead and do a regular random walk
+			steps := args.Steps
+			randomWalkReply = ws.HonestRandomWalk(steps)
+			reply.Server = randomWalkReply.Server
+			reply.Err = randomWalkReply.Err
+		} else {
+			reply.Server = nextServer
+			reply.Err = OK
 		}
-		reply.Server = nextServer
-		reply.Err = OK
 	}
 	//fmt.Printf("Random walk reply: %s", randomWalkReply)
 	return nil

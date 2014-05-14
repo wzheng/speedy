@@ -48,7 +48,7 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 
 	var wp *WhanauPaxos
 
-	for k, v := range args.KV {
+	for k, _ := range args.KV {
 
 		if p, ok := ws.paxosInstances[k]; ok {
 			// WHEEEE :(
@@ -71,13 +71,9 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 		ws.kvstore[k] = ValueType{args.NewCluster}
 		ws.paxosInstances[k] = *wp
 		ws.mu.Unlock()
-
-		cpargs := &ClientPutArgs{k, v, NRand(), ws.myaddr}
-		cpreply := &ClientPutReply{}
-		ws.PaxosPutRPC(cpargs, cpreply)
-
 	}
 
+	fmt.Print("")
 	reply.Err = OK
 	return nil
 }

@@ -249,7 +249,7 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Err = pending_reply.Err
 
 	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
-	
+
 	return nil
 }
 
@@ -267,7 +267,6 @@ func StartWhanauPaxos(servers []string, me int,
 	}
 
 	wp.handledRequests = make(map[int64]interface{})
-	fmt.Printf("Servers is %v, me is %v\n", servers, me)
 	wp.px = paxos.Make(servers, me, rpcs)
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)

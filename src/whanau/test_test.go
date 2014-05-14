@@ -1332,35 +1332,36 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 		}
 
-		/*
-			keys := make([]KeyType, 0)
-			trueRecords := make(map[KeyType]TrueValueType)
-			counter := 0
+		keys := make([]KeyType, 0)
+		trueRecords := make(map[KeyType]TrueValueType)
+		counter := 0
 
-			// Hard code records for all servers
+		// Hard code records for all servers
 
-			for i := 0; i < nservers; i++ {
-				for j := 0; j < nkeys/nservers; j++ {
-					// make key/true value
-					var key KeyType = KeyType(strconv.Itoa(counter))
-					keys = append(keys, key)
-					val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
-					sig, _ := SignTrueValue(val, ws[i].secretKey)
-					val.Sign = sig
-					trueRecords[key] = val
-					args := &PendingArgs{key, val, ws[i].myaddr}
-					reply := &PendingReply{}
-					ws[i].AddPendingRPC(args, reply)
+		for i := 0; i < nservers; i++ {
+			// only store keys in nonsybil nodes
+			if _, ok := ksvh[i]; !ok {
+				continue
+			}
 
-					counter++
+			for j := 0; j < nkeys/nservers; j++ {
 
-					/*
-						if _, ok := ksvh[i]; !ok {
-							keys = append(keys, key)
-						}
-		*/
-		//			}
-		//		}
+				// make key/true value
+				var key KeyType = KeyType(strconv.Itoa(counter))
+				keys = append(keys, key)
+				val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+				sig, _ := SignTrueValue(val, ws[i].secretKey)
+				val.Sign = sig
+				trueRecords[key] = val
+				args := &PendingArgs{key, val, ws[i].myaddr}
+				reply := &PendingReply{}
+				ws[i].AddPendingRPC(args, reply)
+
+				counter++
+
+			}
+
+		}
 
 		// initiate setup from all masters
 
@@ -1370,72 +1371,71 @@ func TestRealLookupSybil(t *testing.T) {
 
 		// initiate setup from all masters
 
-    /*
 		for i := 0; i < PaxosSize; i++ {
 			go ws[i].InitiateSetup()
 		}
-    for i := 0; i < PaxosSize; i++ {
+		for i := 0; i < PaxosSize; i++ {
 			fmt.Printf("ws[%v]'s pending writes are %v\n", i, ws[i].master_paxos_cluster.pending_writes)
 		}
 		time.Sleep(30 * time.Second)
-    */
 
+		/*
+			c := make(chan bool) // writes true of done
+			fmt.Printf("Starting setup\n")
+			for i := 0; i < nservers; i++ {
+				go func(srv int) {
+					ws[srv].Setup()
+					c <- true
+				}(i)
+			}
 
-		c := make(chan bool) // writes true of done
-		fmt.Printf("Starting setup\n")
-		for i := 0; i < nservers; i++ {
-			go func(srv int) {
-				ws[srv].Setup()
-				c <- true
-			}(i)
-		}
-
-		// wait for all setups to finish
-		for i := 0; i < nservers; i++ {
-			done := <-c
-			DPrintf("ws[%d] setup done: %b", i, done)
-		}
+			// wait for all setups to finish
+			for i := 0; i < nservers; i++ {
+				done := <-c
+				DPrintf("ws[%d] setup done: %b", i, done)
+			}
+		*/
 
 		elapsed := time.Since(start)
 		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
 
-    /*
-		fmt.Printf("Checking Try for every key from every node\n")
-		numFound := 0
-		numTotal := 0
+		/*
+			fmt.Printf("Checking Try for every key from every node\n")
+			numFound := 0
+			numTotal := 0
 
-		fmt.Printf("All test keys: %s\n", keys)
-		for i := 0; i < nservers; i++ {
-			if _, ok := ksvh[i]; !ok {
-				for j := 0; j < len(keys); j++ {
-					key := KeyType(keys[j])
-					largs := &LookupArgs{key, nil}
-					lreply := &LookupReply{}
-					ws[i].Lookup(largs, lreply)
-					if lreply.Err != OK {
-						//fmt.Printf("Did not find key: %s\n", key)
-					} else {
-						value := lreply.Value
-						// compare string arrays...
-						if len(value.Servers) != len(records[key].Servers) {
-							t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
-						}
-						for k := 0; k < len(value.Servers); k++ {
-							if value.Servers[k] != records[key].Servers[k] {
-								t.Fatalf("Wrong value returned for key(%s): %s expected: %s", key, value, records[key])
+			fmt.Printf("All test keys: %s\n", keys)
+			for i := 0; i < nservers; i++ {
+				if _, ok := ksvh[i]; !ok {
+					for j := 0; j < len(keys); j++ {
+						key := KeyType(keys[j])
+						largs := &LookupArgs{key, nil}
+						lreply := &LookupReply{}
+						ws[i].Lookup(largs, lreply)
+						if lreply.Err != OK {
+							//fmt.Printf("Did not find key: %s\n", key)
+						} else {
+							value := lreply.Value
+							// compare string arrays...
+							if len(value.Servers) != len(records[key].Servers) {
+								t.Fatalf("Wrong value returned (length test): %s expected: %s", value, records[key])
 							}
+							for k := 0; k < len(value.Servers); k++ {
+								if value.Servers[k] != records[key].Servers[k] {
+									t.Fatalf("Wrong value returned for key(%s): %s expected: %s", key, value, records[key])
+								}
+							}
+							numFound++
 						}
-						numFound++
+						numTotal++
 					}
-					numTotal++
 				}
 			}
-		}
 
-		fmt.Printf("numFound: %d\n", numFound)
-		fmt.Printf("total keys: %d\n", numTotal)
-		fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
-    */
+			fmt.Printf("numFound: %d\n", numFound)
+			fmt.Printf("total keys: %d\n", numTotal)
+			fmt.Printf("Percent lookups successful: %f\n", float64(numFound)/float64(numTotal))
+		*/
 	}
 
 }

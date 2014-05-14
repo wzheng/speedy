@@ -20,13 +20,13 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-	//fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
+	fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
 	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
 
 	// How many random walks should we precompute?
 	// the extras are for lookups
 	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
-  //fmt.Printf("numToSample: %d\n", numToSample)
+  fmt.Printf("numToSample: %d\n", numToSample)
 	ws.PerformSystolicMixing(numToSample)
 	ws.doneMixing = true // turn off server handler
 	//fmt.Printf("server %v done with performsystolic\n", ws.me)

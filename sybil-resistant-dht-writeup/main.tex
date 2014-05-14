@@ -10,13 +10,14 @@
 \usepackage{tikz}
 \usetikzlibrary{plotmarks}
 
-\newcommand{\sys}{\textit{Speedy}\space}
+\newcommand{\sys}{\textit{Speedy}}
+\newcommand{\whanau}{\textit{Wh\={a}nau}}
 
 \addbibresource{literature.bib}
 
 \usepackage{fontspec}
 
-\title{\sys\!: a Sybil-resistant DHT implementation\footnote{https://www.github.com/wzheng/speedy}}
+\title{\sys: a Sybil-resistant DHT implementation\footnote{https://www.github.com/wzheng/speedy}}
 
 \author{Quanquan Liu, Qian Long, Pratiksha Thaker, Wenting Zheng}
 
@@ -102,7 +103,7 @@ The routing table setup outlined above builds a static routing table on each nod
 
 The Wh\={a}nau protocol naturally results in a large amount of replication,
 but does not specify consistency guarantees or a protocol for key inserts
-and value updates. \sys trades this large amount of replication for
+and value updates. \sys{} trades this large amount of replication for
 stronger consistency guarantees by creating Paxos clusters within
 the DHT which store the values for each key, rather than storing them
 in the Wh\={a}nau routing tables. This gives us two advantages: first,
@@ -112,7 +113,7 @@ updates and node failures are resolved through the master clusters, which will b
 explained in section 3.6.
 
 The Paxos cluster for each node is chosen by using random walks. Given user defined
-${PaxosSize}$, \sys uses ${PaxosSize-1}$ random walks to construct the Paxos cluster.
+${PaxosSize}$, \sys{} uses ${PaxosSize-1}$ random walks to construct the Paxos cluster.
 Each server's paxos cluster is constructed during the $SETUP$ stage. Each server,
 once it enters the set up stage, will perform random walks in order to find $PaxosSize-1$
 servers. The server then starts a two phase commit with those nodes in order to form
@@ -167,7 +168,7 @@ After the master servers agree on a key-server mapping, all subsequent pending
 inserts will always be sent to that server. This Paxos operation takes care of
 concurrent inserts to the same key by multiple servers. Note that one master server
 could solve the problem, but we have multiple master servers in order to make
-\sys more tolerant. Also note that masters are only used for insert operations, and
+\sys{} more tolerant. Also note that masters are only used for insert operations, and
 only have limited powers.
 
 \subsection{Fault tolerance}
@@ -205,7 +206,7 @@ time step. This reduced the time for Setup with large numbers of servers (over 1
 to less than 10\% of the time it took using recursive random walks.
 
 \subsection{Whanau Lookup hop count}
-The Whanau Protocol guarantees a one hop lookup with high probability \cite{whanau}. Recall in \sys, the whanau lookup is the first part of the protocol where we look up the Paxos cluster responsible for a key. One hop means that we do steps 2 and 3 of the Lookup Protocol (3.4) from the node issuing the request. If that fails, we hop to another node (via random walk) and try again.
+The Whanau Protocol guarantees a one hop lookup with high probability \cite{whanau}. Recall in \sys{}, the whanau lookup is the first part of the protocol where we look up the Paxos cluster responsible for a key. One hop means that we do steps 2 and 3 of the Lookup Protocol (3.4) from the node issuing the request. If that fails, we hop to another node (via random walk) and try again.
 
 
 We tested this claim experimentally using a 100 node network that is well connected and 5 pre-inserted key/value(Paxos cluster list) pairs per node, giving a total of 500 keys in the network.
@@ -237,13 +238,13 @@ Edge Prob & Fraction of Successful Lookups needed > 1 Hop & Total Lookup Success
 \section{Security Analysis}
 
 \subsection{Thread Model}
-The "Sybil Proof" security of \sys is based upon the assumption that there is a sparse cut between the fast mixing honest region and the Sybil region of the underlying p2p network. There are no further assumptions on the graph structure of the Sybil region. The routing tables and Paxos clusters are all built up from taking random walks on the network. The main intuition is that a random walk from an honest region is unlikely to end up in the Sybil region because of the sparse cut, unless, of course that honest node is on the edge of the graph.
+The "Sybil Proof" security of \sys{} is based upon the assumption that there is a sparse cut between the fast mixing honest region and the Sybil region of the underlying p2p network. There are no further assumptions on the graph structure of the Sybil region. The routing tables and Paxos clusters are all built up from taking random walks on the network. The main intuition is that a random walk from an honest region is unlikely to end up in the Sybil region because of the sparse cut, unless, of course that honest node is on the edge of the graph.
 
 Besides the sparse cut assumption, Sybil nodes are free to behave however they wish. This can include dropping routing packets, flooding the neighbors, clustering attacks, modifying data values from within the DHT, blatantly returning wrong values, etc.
 
-The main security guarantee \sys provides is that Lookups return correct values most of the time even in the presence of a majority of Sybil nodes. This is based on the security guarantees of Whanau shown in \cite{whanau}. Though we extended the protocol with a layer of indirection for providing data consistency, we believe the security guarantees should still be valid.
+The main security guarantee \sys{} provides is that Lookups return correct values most of the time even in the presence of a majority of Sybil nodes. This is based on the security guarantees of Whanau shown in \cite{whanau}. Though we extended the protocol with a layer of indirection for providing data consistency, we believe the security guarantees should still be valid.
 
-The security analysis of \sys can be broken down into the security of the routing layer (looking up the Paxos cluster for a particular key) and the security of the data layer (looking up the true value from the Paxos cluster). We explain some of the theoretical guarantees and show experimental results.
+The security analysis of \sys{} can be broken down into the security of the routing layer (looking up the Paxos cluster for a particular key) and the security of the data layer (looking up the true value from the Paxos cluster). We explain some of the theoretical guarantees and show experimental results.
 
 % Include experimental results and pretty charts here that take up lots of space =D
 \subsection{Whanau Routing Layer Security}
@@ -273,8 +274,10 @@ We see that the \emph{number} of Sybil nodes does affect the fraction of success
 
 \subsection{Data Layer Security}
 
-\subsubsection{Data Integrity}
-\sys provides some data integrity guarantees using signing. In a public DHT, Sybil nodes could constantly update
+We analyze the security of the Paxos data layer in this section.
+
+\subsubsection{Put Security and Data Integrity}
+\sys{} provides some data integrity guarantees using signing. In a public DHT, Sybil nodes could constantly update
 new values for existing keys. There is no good way to know whether a particular
 put operation inserted an ``incorrect'' value because we cannot tell whether
 a node is malicious or not. We can only provide a guarantee that a particular
@@ -299,6 +302,19 @@ but then say that the information came from an honest node's IP. This problem ca
 requiring the originator IP address to be included in the true value so that any node can ask the originator for its public key to check with the one that is attached.
 
 Of course, sybil nodes can still coordinate with each other to verify each others public keys. In this case, we can build a reputation system to keep track of suspicious nodes. For example, if the data received is a virus, then that ip address/public key pair will get a low ranking in the reputation system. More research is needed in this area, but we believe that our scheme is a good start for providing some basic data integrity in \sys.
+
+\subsubsection{Lookup Security}
+
+Lookup security of the data layer is partially guaranteed by the \whanau{} layer. Because each key resides
+in both the \whanau{} layer and the Paxos layer, we know that every single key that is found in the \whanau{}
+layer \emph{must} be found in the data layer as well. If a Sybil node decides to return an error saying that
+no key was found, we know that is Sybil behavior because we have already found the key in the \whanau{} layer.
+In this case, the server can retry at another node in the cluster.
+
+If a Sybil node decides to return an incorrect value instead of the correct value, then the client should accept 
+that value. The client could try to do another lookup to make sure that it was indeed the correct value that was returned,
+but this extra work is unnecessary because a Sybil node can always legitly update an existing with that incorrect
+value. We believe that this problem is taken care of by the digital signature.
 
 
 \subsubsection{Paxos Security}

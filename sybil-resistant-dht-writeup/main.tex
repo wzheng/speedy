@@ -193,33 +193,6 @@ Fault tolerance in the routing layer (in particular, the effects of
 Sybil nodes which may re-route queries) is the same as described in
 \cite{whanau}.
 
-\subsection{Data Integrity}
-In addition to fault tolerance and consistency, \sys also provides some data integrity guarantees. In a public DHT, Sybil nodes could constantly update
-new values for existing keys. There is no good way to know whether a particular
-put operation inserted an ``incorrect'' value because we cannot tell whether
-a node is malicious or not. We can only provide a guarantee that a particular
-value will always be tracked back to the node that executed that put operation.
-This information could then be used in a reputation system for this public DHT.
-The reputation system is outside the scope of this project, so we will only
-provide an explanation for a method for ensuring data integrity.
-
-In our data integrity model,
-each node in the network has a secret key and public key. We refer to the originator as the node who performs the put request. When a \texttt{(key, true value)} is inserted, the originator signs a concatenation of \texttt{(true value || originator ip address || originator public key)} with its secret key.
-The originator then concatenates the true value, originator ip address, signature, and his public together as the new true value of the key.
-If a node does not include all of the valid information, then its put request will be rejected.
-
-During a lookup, after the true value is retrieved from a Paxos cluster, the receiving node can verify the integrity of the data by verifying the signature with the attached public key.
-
-Note that this scheme does not provide any confidentiality because the original value
-is always stored in plain text. Therefore, a malicious node can always take someone else's value and sign with its own secret key. Information requiring confidentiality should be
-encrypted using public key encryption, and it should be taken care of on the client side.
-
-Sybil nodes could potentially try to imitate an honest node by signing with its secret key,
-but then say that the information came from an honest node's IP. This problem can be solved by
-requiring the originator IP address to be included in the true value so that any node can ask the originator for its public key to check with the one that is attached.
-
-Of course, sybil nodes can still coordinate with each other to verify each others public keys. In this case, we can build a reputation system to keep track of suspicious nodes. For example, if the data received is a virus, then that ip address/public key pair will get a low ranking in the reputation system. More research is needed in this area, but we believe that our scheme is a good start for providing some basic data integrity in \sys.
-
 \section{Performance}
 
 \subsection{Setup: systolic mixing}
@@ -300,8 +273,44 @@ We see that the \emph{number} of Sybil nodes does affect the fraction of success
 
 \subsection{Data Layer Security}
 
+\subsubsection{Data Integrity}
+\sys provides some data integrity guarantees using signing. In a public DHT, Sybil nodes could constantly update
+new values for existing keys. There is no good way to know whether a particular
+put operation inserted an ``incorrect'' value because we cannot tell whether
+a node is malicious or not. We can only provide a guarantee that a particular
+value will always be tracked back to the node that executed that put operation.
+This information could then be used in a reputation system for this public DHT.
+The reputation system is outside the scope of this project, so we will only
+provide an explanation for a method for ensuring data integrity.
+
+In our data integrity model,
+each node in the network has a secret key and public key. We refer to the originator as the node who performs the put request. When a \texttt{(key, true value)} is inserted, the originator signs a concatenation of \texttt{(true value || originator ip address || originator public key)} with its secret key.
+The originator then concatenates the true value, originator ip address, signature, and his public together as the new true value of the key.
+If a node does not include all of the valid information, then its put request will be rejected.
+
+During a lookup, after the true value is retrieved from a Paxos cluster, the receiving node can verify the integrity of the data by verifying the signature with the attached public key.
+
+Note that this scheme does not provide any confidentiality because the original value
+is always stored in plain text. Therefore, a malicious node can always take someone else's value and sign with its own secret key. Information requiring confidentiality should be
+encrypted using public key encryption, and it should be taken care of on the client side.
+
+Sybil nodes could potentially try to imitate an honest node by signing with its secret key,
+but then say that the information came from an honest node's IP. This problem can be solved by
+requiring the originator IP address to be included in the true value so that any node can ask the originator for its public key to check with the one that is attached.
+
+Of course, sybil nodes can still coordinate with each other to verify each others public keys. In this case, we can build a reputation system to keep track of suspicious nodes. For example, if the data received is a virus, then that ip address/public key pair will get a low ranking in the reputation system. More research is needed in this area, but we believe that our scheme is a good start for providing some basic data integrity in \sys.
+
+
 \subsubsection{Paxos Security}
-While paxos security on the Paxos protocol level is out of the scope of this project, we
+While the security on the Paxos protocol level is out of the scope of this project, \sys's
+design does try to minimize the number of Sybil nodes within a Paxos cluster.
+A Paxos cluster for a particular key is formed by taking some random walks from the node which a key is inserted/updated.
+If that node does not lie on an attack edge with the Sybil region, then their is a high probability
+all of the nodes contacted will stay within the honest region.
+
+As long as a majority of the nodes in a Paxos cluster is honest, then the agreement part of the protocol
+will work correctly because this is analagous to a majority of nodes not failing.
+
 \section{Future work}
 
 We have implemented the Whanau protocol as it is described in

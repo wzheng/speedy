@@ -901,14 +901,14 @@ func TestDemo(t *testing.T) {
 // Redistributing some keys to sybil nodes
 func TestLookupWithSybilsMalicious(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 25
+	iterations := 20
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
 		const nservers = 20
 		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
-
+        attackEdgeProb := float32(z%10)/10 + 0.1
 		// run setup in parallel
 		// parameters
 		constant := 5
@@ -918,12 +918,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 9                              //(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
-		numSybilServers := 50
+		numSybilServers := 10
 		sybilServerCounter := 0
-
-		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
+        var edgeProb float32 = 0.8
 
 		var ws []*WhanauServer = make([]*WhanauServer, nservers)
 		var kvh []string = make([]string, nservers)
@@ -960,9 +958,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 					} else {
 						// one node is a sybil node
 						// create edge with small probability
+			            rand.Seed(time.Now().UTC().UnixNano())
 						prob := rand.Float32()
 
-						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
+						if prob > attackEdgeProb {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
@@ -970,14 +969,20 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 						}
 					}
 				} else {
-					// neither is sybil, create edge with 100% probability
-					neighbors[i] = append(neighbors[i], kvh[j])
-					neighbors[j] = append(neighbors[j], kvh[i])
+					// neither is sybil, create edge with given edge probability
+			        rand.Seed(time.Now().UTC().UnixNano())
+                    prob := rand.Float32()
+                    if prob < edgeProb {
+					    neighbors[i] = append(neighbors[i], kvh[j])
+					    neighbors[j] = append(neighbors[j], kvh[i])
+                    }
 				}
 			}
 		}
 
-		fmt.Printf("Actual number of attack edges: %d", attackCounter)
+		fmt.Printf("Actual number of attack edges: %d \n", attackCounter)
+        fmt.Printf("Edge probability: %d \n", edgeProb)
+        fmt.Printf("Attack edge probability: %d \n", attackEdgeProb)
 
 		for k := 0; k < nservers; k++ {
 			if _, ok := ksvh[k]; ok {
@@ -997,7 +1002,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup With Sybils")
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
-				fmt.Println("Address of Sybil node: %s \n", kvh[i])
+				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
 			}
 		}
 
@@ -1147,7 +1152,7 @@ func TestSystolic(t *testing.T) {
 func TestRealLookupSybil(t *testing.T) {
 	runtime.GOMAXPROCS(8)
 	for attackEdgeProb := 0.0; attackEdgeProb < 1.0; attackEdgeProb = attackEdgeProb + 0.1 {
-		iterations := 5
+		iterations := 1
 		for z := 0; z < iterations; z++ {
 			fmt.Printf("Iteration: %d \n \n", z)
 			const nservers = 100
@@ -1171,7 +1176,6 @@ func TestRealLookupSybil(t *testing.T) {
 
 			fmt.Printf("Max attack edges: %d \n", numAttackEdges)
 
-      time1 := time.Now()
 			var ws []*WhanauServer = make([]*WhanauServer, nservers)
 			var kvh []string = make([]string, nservers)
 			var ksvh map[int]bool = make(map[int]bool)
@@ -1214,6 +1218,7 @@ func TestRealLookupSybil(t *testing.T) {
 						} else {
 							// one node is a sybil node
 							// create edge with small probability
+                            rand.Seed(time.Now().UTC().UnixNano())
 							prob := rand.Float64()
 
 							if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
@@ -1319,7 +1324,6 @@ func TestRealLookupSybil(t *testing.T) {
 				}
 			}
 
-      fmt.Printf("Network creating and AddPendingrpc time: %s\n", time.Since(start))
 			// initiate setup from all masters
 
 			start := time.Now()

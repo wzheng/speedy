@@ -410,6 +410,9 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 
 	} else {
 		// choose finger randomly from layer - 1, use id of that finger
+    if len(ws.fingers[layer-1]) == 0 {
+      return ErrNoKey
+    }
 		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
 		return randFinger.Id
 	}

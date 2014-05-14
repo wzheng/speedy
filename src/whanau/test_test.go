@@ -1229,7 +1229,6 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 		}
 
-
 		newservers := make([]string, len(master_servers))
 		for i, _ := range master_servers {
 			// we need to actually create new servers
@@ -1278,7 +1277,7 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
-    fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
+		fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
 
 		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		for i := 0; i < len(kvh); i++ {
@@ -1332,6 +1331,13 @@ func TestRealLookupSybil(t *testing.T) {
 
 		elapsed := time.Since(start)
 		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
+		for i := 0; i < nservers; i++ {
+			fmt.Printf("ws[%d].kvstore length: %s\n", i, len(ws[i].kvstore))
+
+      for key, val := range ws[i].kvstore {
+        fmt.Printf("Paxos cluster for key %s: %s\n", key, val)
+      }
+		}
 
 		fmt.Printf("Perform client lookup from all honest nodes\n")
 		numFound := 0
@@ -1339,27 +1345,29 @@ func TestRealLookupSybil(t *testing.T) {
 		for i := 0; i < nservers; i++ {
 			// skip sybil node
 			if _, present := ksvh[i]; present {
-        fmt.Printf("skipping sybil node %s\n", cka[i])
+				fmt.Printf("skipping sybil node %s\n", cka[i])
 				continue
 			}
 
 			client := cka[i]
-      fmt.Printf("Looking up all keys from client %s\n", client)
+			fmt.Printf("Looking up all keys from client %s\n", client)
 			for j := 0; j < len(keys); j++ {
 				key := keys[j]
 				val := client.ClientGet(key)
 				if val == trueRecords[key] {
+          fmt.Printf("Found value for key: %s!\n", key)
 					numFound++
 				} else {
 					if val != trueRecords[key] {
 						t.Fatalf("Wrong true value returned: %s expected: %s\n", val, trueRecords[key])
 					}
+					fmt.Printf("Key %s not found D: \n", key)
 				}
-        numTotal++
+				numTotal++
 			}
 
 		}
-    fmt.Printf("numFound: %d\n", numFound)
+		fmt.Printf("numFound: %d\n", numFound)
 		fmt.Printf("total keys: %d\n", numTotal)
 		fmt.Printf("Percent True lookups successful: %f\n", float64(numFound)/float64(numTotal))
 

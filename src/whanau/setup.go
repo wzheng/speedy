@@ -20,7 +20,7 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-  fmt.Printf("HONEST SERVER: %s\n", ws.myaddr)
+  //fmt.Printf("HONEST SERVER: %s\n", ws.myaddr)
 
 	// How many random walks should we precompute?
 	// the extras are for lookups
@@ -176,7 +176,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 		if ok {
 			if receive_paxos_reply.Err == OK {
 				
-				fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+				//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 				
 				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV, ws.myaddr}
 				var join_reply JoinClusterReply
@@ -198,7 +198,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 					cpreply := &ClientPutReply{}
 					ws.PaxosPutRPC(cpargs, cpreply)
 					
-					fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
+					//fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
 				}
 			}
 		}

@@ -90,8 +90,9 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	get_args.Key = key
 	get_args.RequestID = NRand()
 
+  
 	for _, server := range server_list {
-		//fmt.Printf("Get(): calling server %s\n", server)
+		fmt.Printf("Get(): calling server %s\n", server)
 		ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
 			&get_reply)
 		if ok && (get_reply.Err != ErrNoKey) &&
@@ -108,7 +109,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 // Client wrapper for Get.
 func (ck *Clerk) ClientGet(key KeyType) string {
 	server_list, err := ck.FindServers(key)
-	//fmt.Printf("server_list: %v\n", server_list)
+  fmt.Printf("server_list: %v\n", server_list)
 	if err == OK {
 		val := ck.Get(key, server_list)
 		return val

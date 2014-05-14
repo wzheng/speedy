@@ -1,0 +1,180 @@
+% $ biblatex auxiliary file $
+% $ biblatex version 1.7 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated as
+% required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+\entry{sybilcontrol}{inproceedings}{}
+  \name{author}{4}{}{%
+    {{}%
+     {Li}{L.}%
+     {Frank}{F.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Mittal}{M.}%
+     {Prateek}{P.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Caesar}{C.}%
+     {Matthew}{M.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Borisov}{B.}%
+     {Nikita}{N.}%
+     {}{}%
+     {}{}}%
+  }
+  \list{organization}{1}{%
+    {ACM}%
+  }
+  \strng{namehash}{LF+1}
+  \strng{fullhash}{LFMPCMBN1}
+  \field{labelalpha}{Li+12}
+  \field{sortinit}{7}
+  \field{booktitle}{Proceedings of the seventh ACM workshop on scalable trusted
+  computing}
+  \field{pages}{67\bibrangedash 78}
+  \field{title}{SybilControl: practical sybil defense with computational
+  puzzles}
+  \field{year}{2012}
+\endentry
+
+\entry{whanau}{inproceedings}{}
+  \name{author}{2}{}{%
+    {{}%
+     {Lesniewski-Laas}{L.-L.}%
+     {Chris}{C.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Kaashoek}{K.}%
+     {M~Frans}{M.~F.}%
+     {}{}%
+     {}{}}%
+  }
+  \strng{namehash}{LLCKMF1}
+  \strng{fullhash}{LLCKMF1}
+  \field{labelalpha}{LLK10}
+  \field{sortinit}{7}
+  \field{booktitle}{7th USENIX Symposium on Network Design and Implementation}
+  \field{pages}{3\bibrangedash 17}
+  \field{title}{Whanau: A sybil-proof distributed hash table}
+  \field{year}{2010}
+\endentry
+
+\entry{whanauthesis}{thesis}{}
+  \name{author}{1}{}{%
+    {{}%
+     {Lesniewski-Laas}{L.-L.}%
+     {Christopher~T}{C.~T.}%
+     {}{}%
+     {}{}}%
+  }
+  \strng{namehash}{LLCT1}
+  \strng{fullhash}{LLCT1}
+  \field{labelalpha}{LL10}
+  \field{sortinit}{7}
+  \field{title}{Design and Applications of a Secure and Decentralized
+  Distributed Hash Table}
+  \list{institution}{1}{%
+    {Massachusetts Institute of Technology}%
+  }
+  \field{type}{phdthesis}
+  \field{year}{2010}
+\endentry
+
+\entry{sybillimit}{inproceedings}{}
+  \name{author}{4}{}{%
+    {{}%
+     {Yu}{Y.}%
+     {Haifeng}{H.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Gibbons}{G.}%
+     {Phillip~B}{P.~B.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Kaminsky}{K.}%
+     {Michael}{M.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Xiao}{X.}%
+     {Feng}{F.}%
+     {}{}%
+     {}{}}%
+  }
+  \list{organization}{1}{%
+    {IEEE}%
+  }
+  \strng{namehash}{YH+1}
+  \strng{fullhash}{YHGPBKMXF1}
+  \field{labelalpha}{Yu+08}
+  \field{sortinit}{7}
+  \field{booktitle}{IEEE Symposium on Security and Privacy, 2008.}
+  \field{pages}{3\bibrangedash 17}
+  \field{title}{Sybillimit: A near-optimal social network defense against sybil
+  attacks}
+  \field{year}{2008}
+\endentry
+
+\entry{sybilguard}{article}{}
+  \name{author}{4}{}{%
+    {{}%
+     {Yu}{Y.}%
+     {Haifeng}{H.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Kaminsky}{K.}%
+     {Michael}{M.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Gibbons}{G.}%
+     {Phillip~B}{P.~B.}%
+     {}{}%
+     {}{}}%
+    {{}%
+     {Flaxman}{F.}%
+     {Abraham}{A.}%
+     {}{}%
+     {}{}}%
+  }
+  \list{publisher}{1}{%
+    {ACM}%
+  }
+  \strng{namehash}{YH+1}
+  \strng{fullhash}{YHKMGPBFA1}
+  \field{labelalpha}{Yu+06}
+  \field{sortinit}{7}
+  \field{number}{4}
+  \field{pages}{267\bibrangedash 278}
+  \field{title}{Sybilguard: defending against sybil attacks via social
+  networks}
+  \field{volume}{36}
+  \field{journaltitle}{ACM SIGCOMM Computer Communication Review}
+  \field{year}{2006}
+\endentry
+
+\lossort
+\endlossort
+
+\endinput

@@ -970,7 +970,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		const nservers = 20
 		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
-		const sybilProb = 0.2
+		const sybilProb = 0.49
 
 		// run setup in parallel
 		// parameters
@@ -981,7 +981,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
+		numAttackEdges := 9 //(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
 		numSybilServers := 50
 		sybilServerCounter := 0

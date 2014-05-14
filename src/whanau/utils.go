@@ -3,6 +3,7 @@ package whanau
 import "math/rand"
 
 import "fmt"
+
 //import "log"
 
 func IsInList(val int, array []int) bool {
@@ -74,4 +75,16 @@ func (ws *WhanauServer) GetNextRWServer() (string, bool) {
 	retval := ws.rw_servers[0]
 	ws.rw_servers = ws.rw_servers[1:]
 	return retval, true
+}
+
+func (ws *WhanauServer) FindWPInstanceIfCreated(uid string) (WhanauPaxos, bool) {
+	var wp WhanauPaxos
+
+	for _, wp = range ws.paxosInstances {
+		if wp.uid == uid {
+			return wp, true
+		}
+	}
+
+	return wp, false
 }

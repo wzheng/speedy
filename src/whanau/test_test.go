@@ -362,9 +362,9 @@ func TestRealGetAndPut(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -556,9 +556,9 @@ func TestPendingWrites(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -742,13 +742,13 @@ func TestDemo(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers], kvh[(i+3)%nservers], kvh[(i+4)%nservers], kvh[(i+5)%nservers], kvh[(i+6)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
-		wp3 := StartWhanauPaxos(paxos_cluster, 3, ws[(i+3)%nservers].rpc)
-		wp4 := StartWhanauPaxos(paxos_cluster, 4, ws[(i+4)%nservers].rpc)
-		wp5 := StartWhanauPaxos(paxos_cluster, 5, ws[(i+5)%nservers].rpc)
-		wp6 := StartWhanauPaxos(paxos_cluster, 6, ws[(i+6)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
+		wp3 := StartWhanauPaxos(paxos_cluster, 3, "", ws[(i+3)%nservers].rpc)
+		wp4 := StartWhanauPaxos(paxos_cluster, 4, "", ws[(i+4)%nservers].rpc)
+		wp5 := StartWhanauPaxos(paxos_cluster, 5, "", ws[(i+5)%nservers].rpc)
+		wp6 := StartWhanauPaxos(paxos_cluster, 6, "", ws[(i+6)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -1182,7 +1182,7 @@ func TestRealLookupSybil(t *testing.T) {
 			if prob > attackEdgeProb && sybilServerCounter < numSybilServers {
 				sybilServerCounter++
 				// randomly make some of the servers sybil servers
-				ksvh[i] = true
+				//	ksvh[i] = true
 			}
 		}
 
@@ -1228,7 +1228,6 @@ func TestRealLookupSybil(t *testing.T) {
 				}
 			}
 		}
-
 
 		newservers := make([]string, len(master_servers))
 		for i, _ := range master_servers {
@@ -1278,7 +1277,7 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
-    fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
+		fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
 
 		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		for i := 0; i < len(kvh); i++ {
@@ -1340,12 +1339,12 @@ func TestRealLookupSybil(t *testing.T) {
 		for i := 0; i < nservers; i++ {
 			// skip sybil node
 			if _, present := ksvh[i]; present {
-        fmt.Printf("skipping sybil node %s\n", cka[i])
+				fmt.Printf("skipping sybil node %s\n", cka[i])
 				continue
 			}
 
 			client := cka[i]
-      fmt.Printf("Looking up all keys from client %s\n", client)
+			fmt.Printf("Looking up all keys from client %s\n", client)
 			for j := 0; j < len(keys); j++ {
 				key := keys[j]
 				val := client.ClientGet(key)
@@ -1356,11 +1355,11 @@ func TestRealLookupSybil(t *testing.T) {
 						t.Fatalf("Wrong true value returned: %s expected: %s\n", val, trueRecords[key])
 					}
 				}
-        numTotal++
+				numTotal++
 			}
 
 		}
-    fmt.Printf("numFound: %d\n", numFound)
+		fmt.Printf("numFound: %d\n", numFound)
 		fmt.Printf("total keys: %d\n", numTotal)
 		fmt.Printf("Percent True lookups successful: %f\n", float64(numFound)/float64(numTotal))
 

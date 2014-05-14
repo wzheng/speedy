@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -140,13 +141,13 @@ func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 
 func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 	reply *ClientGetReply) error {
-  if !ws.is_sybil {
-    ws.HonestPaxosGetRPC(args, reply)
-  } else {
-    ws.SybilPaxosGetRPC(args, reply)
-  }
+	if !ws.is_sybil {
+		ws.HonestPaxosGetRPC(args, reply)
+	} else {
+		ws.SybilPaxosGetRPC(args, reply)
+	}
 
-  return nil
+	return nil
 }
 
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
@@ -174,18 +175,16 @@ func (ws *WhanauServer) HonestPaxosGetRPC(args *ClientGetArgs,
 	return nil
 }
 
-
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
 // sybil behavior returns no key
 func (ws *WhanauServer) SybilPaxosGetRPC(args *ClientGetArgs,
 	reply *ClientGetReply) error {
-  fmt.Printf("SYBILPAXOSGET WUAHAHAHAHA\n")
-  reply.Value = "I am a Sybil"
-  reply.Err = ErrNoKey
+	fmt.Printf("SYBILPAXOSGET WUAHAHAHAHA\n")
+	reply.Value = "I am a Sybil"
+	reply.Err = ErrNoKey
 	return nil
 }
-
 
 // RPC to actually do a Put on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
@@ -297,7 +296,11 @@ func StartServer(servers []string, me int, myaddr string,
 			}
 		}
 
-		StartWhanauPaxos(newservers, idx, ws.rpc)
+		uid := ""
+		for _, srv := range newservers {
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+		}
+		StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 	}
 
 	if is_master {
@@ -312,13 +315,16 @@ func StartServer(servers []string, me int, myaddr string,
 
 		// start the whanaupaxos using precreated paxos servers
 		// which exist exclusively for the purpose of being paxos handlers
-		wp_m := StartWhanauPaxos(newservers, idx, ws.rpc)
+		uid := ""
+		for _, srv := range newservers {
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+		}
+		wp_m := StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 		ws.master_paxos_cluster = *wp_m
 		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
 		ws.key_to_server = make(map[PendingInsertsKey]string)
 		ws.new_paxos_clusters = make([][]string, 0)
 	}
-
 
 	// whanau routing parameters
 	ws.nlayers = nlayers

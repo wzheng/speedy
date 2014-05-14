@@ -1159,7 +1159,7 @@ func TestRealLookupSybil(t *testing.T) {
 		const nkeys = 500          // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
-		attackEdgeProb := 0.1
+		attackEdgeProb := 0.01
 
 		// run setup in parallel
 		// parameters
@@ -1218,37 +1218,28 @@ func TestRealLookupSybil(t *testing.T) {
 						neighbors[i] = append(neighbors[i], kvh[j])
 						neighbors[j] = append(neighbors[j], kvh[i])
 					} else {
+
 						// one node is a sybil node
 						// create edge with small probability
+						rand.Seed(time.Now().UTC().UnixNano())
 						prob := rand.Float64()
 
-						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
-							attackCounter++
-							//Sybil neighbor, print out neighbors
-							neighbors[i] = append(neighbors[i], kvh[j])
-							neighbors[j] = append(neighbors[j], kvh[i])
-						} else {
-							// one node is a sybil node
-							// create edge with small probability
-							rand.Seed(time.Now().UTC().UnixNano())
-							prob := rand.Float64()
-
-							/*
-								if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
-									attackCounter++
-									//Sybil neighbor, print out neighbors
-									neighbors[i] = append(neighbors[i], kvh[j])
-									neighbors[j] = append(neighbors[j], kvh[i])
-								}
-							*/
-							if prob > attackEdgeProb {
+						/*
+							if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
 								attackCounter++
 								//Sybil neighbor, print out neighbors
 								neighbors[i] = append(neighbors[i], kvh[j])
 								neighbors[j] = append(neighbors[j], kvh[i])
 							}
+						*/
+						if prob < attackEdgeProb {
+							attackCounter++
+							//Sybil neighbor, print out neighbors
+							neighbors[i] = append(neighbors[i], kvh[j])
+							neighbors[j] = append(neighbors[j], kvh[i])
 						}
 					}
+
 				} else {
 					// neither is sybil, create edge with 100% probability
 					neighbors[i] = append(neighbors[i], kvh[j])

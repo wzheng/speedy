@@ -103,6 +103,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	}
 
 	// TODO how to return verification error?
+  fmt.Printf("KEY NOT FOUND IN PAXOS CLUSTER\n")
 	return ErrNoKey
 }
 

@@ -902,14 +902,14 @@ func TestDemo(t *testing.T) {
 // Redistributing some keys to sybil nodes
 func TestLookupWithSybilsMalicious(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 25
+	iterations := 20
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
 		const nservers = 20
 		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
-
+		attackEdgeProb := float32(z%10)/10 + 0.1
 		// run setup in parallel
 		// parameters
 		constant := 5
@@ -919,12 +919,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 9                              //(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
-		numSybilServers := 50
+		numSybilServers := 10
 		sybilServerCounter := 0
-
-		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
+		var edgeProb float32 = 0.8
 
 		var ws []*WhanauServer = make([]*WhanauServer, nservers)
 		var kvh []string = make([]string, nservers)
@@ -961,9 +959,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 					} else {
 						// one node is a sybil node
 						// create edge with small probability
+						rand.Seed(time.Now().UTC().UnixNano())
 						prob := rand.Float32()
 
-						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
+						if prob > attackEdgeProb {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
@@ -971,14 +970,20 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 						}
 					}
 				} else {
-					// neither is sybil, create edge with 100% probability
-					neighbors[i] = append(neighbors[i], kvh[j])
-					neighbors[j] = append(neighbors[j], kvh[i])
+					// neither is sybil, create edge with given edge probability
+					rand.Seed(time.Now().UTC().UnixNano())
+					prob := rand.Float32()
+					if prob < edgeProb {
+						neighbors[i] = append(neighbors[i], kvh[j])
+						neighbors[j] = append(neighbors[j], kvh[i])
+					}
 				}
 			}
 		}
 
-		fmt.Printf("Actual number of attack edges: %d", attackCounter)
+		fmt.Printf("Actual number of attack edges: %d \n", attackCounter)
+		fmt.Printf("Edge probability: %d \n", edgeProb)
+		fmt.Printf("Attack edge probability: %d \n", attackEdgeProb)
 
 		for k := 0; k < nservers; k++ {
 			if _, ok := ksvh[k]; ok {
@@ -998,7 +1003,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Lookup With Sybils")
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
-				fmt.Println("Address of Sybil node: %s \n", kvh[i])
+				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
 			}
 		}
 
@@ -1151,9 +1156,10 @@ func TestRealLookupSybil(t *testing.T) {
 	for z := 0; z < iterations; z++ {
 		fmt.Printf("Iteration: %d \n \n", z)
 		const nservers = 100
-		const nkeys = 500           // keys are strings from 0 to nkeys
+		const nkeys = 500          // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
-		const sybilProb = 0.5
+		const sybilProb = 0.49
+		attackEdgeProb := 0.1
 
 		// run setup in parallel
 		// parameters
@@ -1221,6 +1227,26 @@ func TestRealLookupSybil(t *testing.T) {
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
 							neighbors[j] = append(neighbors[j], kvh[i])
+						} else {
+							// one node is a sybil node
+							// create edge with small probability
+							rand.Seed(time.Now().UTC().UnixNano())
+							prob := rand.Float64()
+
+							/*
+								if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
+									attackCounter++
+									//Sybil neighbor, print out neighbors
+									neighbors[i] = append(neighbors[i], kvh[j])
+									neighbors[j] = append(neighbors[j], kvh[i])
+								}
+							*/
+							if prob > attackEdgeProb {
+								attackCounter++
+								//Sybil neighbor, print out neighbors
+								neighbors[i] = append(neighbors[i], kvh[j])
+								neighbors[j] = append(neighbors[j], kvh[i])
+							}
 						}
 					}
 				} else {
@@ -1279,9 +1305,6 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
-		fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v\n", nservers, nkeys, sybilProb, len(ksvh))
-
-		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
 				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
@@ -1289,17 +1312,17 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		keys := make([]KeyType, 0)
-    nonsybilkeys := make([]KeyType, 0)
+		nonsybilkeys := make([]KeyType, 0)
 		trueRecords := make(map[KeyType]string)
 		counter := 0
 		// Hard code records for all servers
 		for i := 0; i < nservers; i++ {
 			// give keys to sybil nodes as well
-      /*
-			if _, present := ksvh[i]; present {
-				fmt.Printf(" Sybil server %d\n", i)
-			}
-      */
+			/*
+				if _, present := ksvh[i]; present {
+					fmt.Printf(" Sybil server %d\n", i)
+				}
+			*/
 
 			for j := 0; j < nkeys/nservers; j++ {
 				// make key/true value
@@ -1307,9 +1330,9 @@ func TestRealLookupSybil(t *testing.T) {
 				var trueval string = "val" + strconv.Itoa(counter)
 
 				keys = append(keys, key)
-        if _, present := ksvh[i]; !present {
-          nonsybilkeys = append(nonsybilkeys, key)
-        }
+				if _, present := ksvh[i]; !present {
+					nonsybilkeys = append(nonsybilkeys, key)
+				}
 				trueRecords[key] = trueval
 
 				val := TrueValueType{trueval, ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
@@ -1346,59 +1369,59 @@ func TestRealLookupSybil(t *testing.T) {
 
 		fmt.Printf("Finished setup, time: %s\n", elapsed)
 
-    /*
-		fmt.Printf("Check key coverage in all dbs\n")
+		/*
+			fmt.Printf("Check key coverage in all dbs\n")
 
-		keyset := make(map[KeyType]bool)
-		for i := 0; i < len(keys); i++ {
-			keyset[keys[i]] = false
-		}
-
-		for i := 0; i < nservers; i++ {
-			srv := ws[i]
-			for j := 0; j < len(srv.db); j++ {
-				keyset[srv.db[j].Key] = true
+			keyset := make(map[KeyType]bool)
+			for i := 0; i < len(keys); i++ {
+				keyset[keys[i]] = false
 			}
-		}
 
-		// count number of covered keys, all the false keys in keyset
-		covered_count := 0
-		for _, v := range keyset {
-			if v {
-				covered_count++
-			}
-		}
-		fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
-
-		fmt.Printf("Check key coverage in all successor tables\n")
-		keyset = make(map[KeyType]bool)
-		for i := 0; i < len(keys); i++ {
-			keyset[keys[i]] = false
-		}
-
-		for i := 0; i < nservers; i++ {
-			srv := ws[i]
-			for j := 0; j < len(srv.succ); j++ {
-				for k := 0; k < len(srv.succ[j]); k++ {
-					keyset[srv.succ[j][k].Key] = true
+			for i := 0; i < nservers; i++ {
+				srv := ws[i]
+				for j := 0; j < len(srv.db); j++ {
+					keyset[srv.db[j].Key] = true
 				}
 			}
-		}
 
-		// count number of covered keys, all the false keys in keyset
-		covered_count = 0
-		missing_keys := make([]KeyType, 0)
-		for k, v := range keyset {
-			if v {
-				covered_count++
-			} else {
-				missing_keys = append(missing_keys, k)
+			// count number of covered keys, all the false keys in keyset
+			covered_count := 0
+			for _, v := range keyset {
+				if v {
+					covered_count++
+				}
 			}
-		}
+			fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
 
-		fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
-		fmt.Printf("missing keys in succs: %s\n", missing_keys)
-    */
+			fmt.Printf("Check key coverage in all successor tables\n")
+			keyset = make(map[KeyType]bool)
+			for i := 0; i < len(keys); i++ {
+				keyset[keys[i]] = false
+			}
+
+			for i := 0; i < nservers; i++ {
+				srv := ws[i]
+				for j := 0; j < len(srv.succ); j++ {
+					for k := 0; k < len(srv.succ[j]); k++ {
+						keyset[srv.succ[j][k].Key] = true
+					}
+				}
+			}
+
+			// count number of covered keys, all the false keys in keyset
+			covered_count = 0
+			missing_keys := make([]KeyType, 0)
+			for k, v := range keyset {
+				if v {
+					covered_count++
+				} else {
+					missing_keys = append(missing_keys, k)
+				}
+			}
+
+			fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
+			fmt.Printf("missing keys in succs: %s\n", missing_keys)
+		*/
 
 		fmt.Printf("Perform client lookup from all honest nodes\n")
 		numFound := 0
@@ -1413,16 +1436,16 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 
 			client := cka[i]
-      // only lookup key space in nonsybil nodes
+			// only lookup key space in nonsybil nodes
 			go func(client *Clerk, keys []KeyType, trueRecords map[KeyType]string) {
 				fmt.Printf("Looking up all keys from client %s\n", client)
-        myNumFound := 0
+				myNumFound := 0
 				for j := 0; j < len(keys); j++ {
 					key := keys[j]
 					val := client.ClientGet(key)
 					if val == trueRecords[key] {
-            //fmt.Printf("%s found key %s!\n", client, key)
-            myNumFound++
+						//fmt.Printf("%s found key %s!\n", client, key)
+						myNumFound++
 					} else {
 						if val != ErrNoKey && val != trueRecords[key] {
 							t.Fatalf("Wrong true value for key %s, returned %s expected: %s\n", key, val, trueRecords[key])
@@ -1431,23 +1454,25 @@ func TestRealLookupSybil(t *testing.T) {
 					}
 				}
 
-        fmt.Printf("total found by client %s, %d\n", client, myNumFound)
-        chfound <- myNumFound
+				fmt.Printf("total found by client %s, %d\n", client, myNumFound)
+				chfound <- myNumFound
 			}(client, nonsybilkeys, trueRecords)
 
-      numTotal += len(nonsybilkeys)
+			numTotal += len(nonsybilkeys)
 		}
 
-    var mutex sync.Mutex
-    for i:= 0; i < nservers - len(ksvh); i++ {
-      tmp := <-chfound
-      fmt.Printf("Received myNumFound: %d\n", tmp)
+		var mutex sync.Mutex
+		for i := 0; i < nservers-len(ksvh); i++ {
+			tmp := <-chfound
+			fmt.Printf("Received myNumFound: %d\n", tmp)
 
-      mutex.Lock()
-      numFound += tmp
-      mutex.Unlock()
-    }
+			mutex.Lock()
+			numFound += tmp
+			mutex.Unlock()
+		}
 
+		fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v\n", nservers, nkeys, sybilProb, len(ksvh))
+		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		fmt.Printf("numFound: %d\n", numFound)
 		fmt.Printf("total keys: %d\n", numTotal)
 		fmt.Printf("Percent True lookups successful: %f\n", float64(numFound)/float64(numTotal))

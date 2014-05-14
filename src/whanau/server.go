@@ -235,7 +235,9 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 
 	// this will add a pending write to one of the master nodes
 
-	for _, server := range ws.masters {
+	for {
+		randIdx := rand.Intn(len(ws.masters))
+		server := ws.masters[randIdx]
 		rpc_reply := &PendingReply{}
 		ok := call(server, "WhanauServer.AddPendingRPCMaster", args, rpc_reply)
 		if ok {
@@ -276,25 +278,6 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.is_master = is_master
 	ws.is_sybil = is_sybil
 
-	if is_master {
-
-		var idx int
-
-    fmt.Printf("masters: %v\n", masters)
-		for i, m := range masters {
-			if m == ws.myaddr {
-				idx = i
-				break
-			}
-		}
-
-		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
-		ws.master_paxos_cluster = *wp_m
-		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
-		ws.key_to_server = make(map[PendingInsertsKey]string)
-		ws.new_paxos_clusters = make([][]string, 0)
-	}
-
 	// whanau routing parameters
 	ws.nlayers = nlayers
 	ws.rf = rf
@@ -315,6 +298,23 @@ func StartServer(servers []string, me int, myaddr string,
 
 	ws.rpc = rpc.NewServer()
 	ws.rpc.Register(ws)
+
+	if is_master {
+
+		var idx int
+
+		for i, m := range masters {
+			if m == ws.myaddr {
+				idx = i
+				break
+			}
+		}
+		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
+		ws.master_paxos_cluster = *wp_m
+		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
+		ws.key_to_server = make(map[PendingInsertsKey]string)
+		ws.new_paxos_clusters = make([][]string, 0)
+	}
 
 	gob.Register(LookupArgs{})
 	gob.Register(LookupReply{})

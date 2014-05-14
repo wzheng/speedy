@@ -1192,6 +1192,7 @@ func TestRealLookupSybil(t *testing.T) {
 			master_servers = append(master_servers, kvh[i])
 		}
 		fmt.Printf("Master paxos servers are %v\n", master_servers)
+
 		neighbors := make([][]string, nservers)
 		for i := 0; i < nservers; i++ {
 			neighbors[i] = make([]string, 0)
@@ -1248,6 +1249,8 @@ func TestRealLookupSybil(t *testing.T) {
 				master_servers, newservers, false, false, true, nlayers, nfingers,
 				w, rd, rs, ts)
 		}
+
+		fmt.Printf("newservers is %v\n", newservers)
 		
 		// Start servers
 		for k := 0; k < nservers; k++ {
@@ -1304,7 +1307,8 @@ func TestRealLookupSybil(t *testing.T) {
 				args := &PendingArgs{key, val, ws[i].myaddr}
 				reply := &PendingReply{}
 				ws[i].AddPendingRPC(args, reply)
-
+				
+				counter++
 			}
 		}
 
@@ -1315,12 +1319,10 @@ func TestRealLookupSybil(t *testing.T) {
 			go ws[i].InitiateSetup()
 		}
 		
-		time.Sleep(60 * time.Second)
-
+		time.Sleep(30 * time.Second)
 		for i := 0; i < nservers; i++ {
 			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-		}
-		
+		}		
 
 		elapsed := time.Since(start)
 		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)

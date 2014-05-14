@@ -163,6 +163,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.state = Setup
 	ws.mu.Unlock()
 
+	fmt.Printf("%v construct cluster done\n", ws.myaddr)
+
 	// TODO: for every key value in the current kv store, replace with the newest paxos cluster
 
 	for _, master_server := range ws.masters {
@@ -175,7 +177,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 		if ok {
 			if receive_paxos_reply.Err == OK {
 				
-				//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+				fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 				
 				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
 				var join_reply JoinClusterReply

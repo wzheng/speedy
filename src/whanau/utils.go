@@ -2,7 +2,7 @@ package whanau
 
 import "math/rand"
 
-//import "fmt"
+import "fmt"
 //import "log"
 
 func IsInList(val int, array []int) bool {

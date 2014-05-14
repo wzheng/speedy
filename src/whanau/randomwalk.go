@@ -19,10 +19,13 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 			// Ran out of servers!!
 			// Just go ahead and do a regular random walk
 			steps := args.Steps
-			ws.HonestRandomWalk(steps)
+			randomWalkReply = ws.HonestRandomWalk(steps)
+			reply.Server = randomWalkReply.Server
+			reply.Err = randomWalkReply.Err
+		} else {
+			reply.Server = nextServer
+			reply.Err = OK
 		}
-		reply.Server = nextServer
-		reply.Err = OK
 	}
 	//fmt.Printf("Random walk reply: %s", randomWalkReply)
 	return nil

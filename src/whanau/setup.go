@@ -26,6 +26,7 @@ func (ws *WhanauServer) SetupHonest() {
 	// How many random walks should we precompute?
 	// the extras are for lookups
 	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
+  //fmt.Printf("numToSample: %d\n", numToSample)
 	ws.PerformSystolicMixing(numToSample)
 	ws.doneMixing = true // turn off server handler
 	//fmt.Printf("server %v done with performsystolic\n", ws.me)
@@ -44,21 +45,27 @@ func (ws *WhanauServer) SetupHonest() {
 	ws.succ = make([][]Record, 0)
 	for i := 0; i < ws.nlayers; i++ {
 		// populate tables in layers
-		//fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
-		ws.ids = append(ws.ids, ws.ChooseID(i))
+    chosenid := ws.ChooseID(i)
+    if chosenid != ErrNoKey {
+		  ws.ids = append(ws.ids, chosenid)
+    }
+
 		curFingerTable := ws.ConstructFingers(i)
-		//fmt.Printf("Choosing Fingers: %s", curFingerTable)
+
+		//fmt.Printf("Choosing Fingers: %s\n", curFingerTable)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
-		//fmt.Printf("Finished choosing fingers")
+		//fmt.Printf("Finished choosing fingers\n")
 		curSuccessorTable := ws.Successors(i)
-		//fmt.Printf("Choosing successors: %s", curSuccessorTable)
+		//fmt.Printf("Choosing successors: %s\n", curSuccessorTable)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 	}
-	//fmt.Printf("Server ids: %s", ws.ids)
-	//fmt.Printf("Server fingers: %s", ws.fingers)
-	//fmt.Printf("Server successors: %s", ws.succ)
+  /*
+	fmt.Printf("Server ids: %s\n", ws.ids)
+	fmt.Printf("Server fingers: %s\n", ws.fingers)
+	fmt.Printf("Server successors: %s\n", ws.succ)
+  */
 }
 
 // Server for Sybil nodes

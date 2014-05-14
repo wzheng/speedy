@@ -2,7 +2,6 @@
 
 package whanau
 
-//import "fmt"
 import "math/rand"
 
 // Random walk
@@ -14,7 +13,7 @@ func (ws *WhanauServer) RandomWalk(args *RandomWalkArgs, reply *RandomWalkReply)
 		reply.Server = randomWalkReply.Server
 		reply.Err = randomWalkReply.Err
 	} else {
-		//fmt.Printf("Doing an honest random walk")
+		//fmt.Printf("Doing an honest random walk\n")
 		//randomWalkReply = ws.HonestRandomWalk(steps)
 		nextServer, ok := ws.GetNextRWServer()
 		if !ok {

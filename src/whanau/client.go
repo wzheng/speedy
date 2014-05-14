@@ -102,7 +102,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	}
 
 	// TODO how to return verification error?
-	return ""
+	return ErrNoKey
 }
 
 // Client wrapper for Get.

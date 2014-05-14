@@ -1150,7 +1150,7 @@ func TestRealLookupSybil(t *testing.T) {
 	for z := 0; z < iterations; z++ {
 		fmt.Printf("Iteration: %d \n \n", z)
 		const nservers = 10
-		const nkeys = 50          // keys are strings from 0 to nkeys
+		const nkeys = 50           // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
 		const attackEdgeProb = 0.0
 
@@ -1229,38 +1229,33 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 		}
 
-		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 
 		newservers := make([]string, len(master_servers))
 		for i, _ := range master_servers {
 			// we need to actually create new servers
 			// to disambiguate Paxos instances
 			// so that masters don't overlap
-			
 			newservers[i] = port("masterpaxos", i)
 		}
-		
 		for j, srv := range newservers {
 			// This is just a dummy, only for the purpose
 			// of starting the Paxos handler properly.
 			// No routing should happen here!
-			
 			StartServer(newservers, j, srv, nil,
 				master_servers, newservers, false, false, true, nlayers, nfingers,
 				w, rd, rs, ts)
 		}
 
 		fmt.Printf("newservers is %v\n", newservers)
-		
 		// Start servers
 		for k := 0; k < nservers; k++ {
-			
+
 			// if malicious
 			if _, ok := ksvh[k]; ok {
 				if k < PaxosSize {
 					// malicious master -- doesn't do anything
 					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, true, false, nlayers, nfingers, w, rd, rs, ts)
-					
+
 				} else {
 					// malicious nonmaster
 					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, true, false, nlayers, nfingers, w, rd, rs, ts)
@@ -1283,7 +1278,9 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
+    fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
 
+		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		for i := 0; i < len(kvh); i++ {
 			if _, ok := ksvh[i]; ok {
 				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
@@ -1291,23 +1288,32 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		keys := make([]KeyType, 0)
-		trueRecords := make(map[KeyType]TrueValueType)
+		trueRecords := make(map[KeyType]string)
 		counter := 0
 		// Hard code records for all servers
 		for i := 0; i < nservers; i++ {
+			// don't give keys to sybil nodes
+			if _, present := ksvh[i]; present {
+				continue
+			}
+
 			for j := 0; j < nkeys/nservers; j++ {
 				// make key/true value
 				var key KeyType = KeyType(strconv.Itoa(counter))
+				var trueval string = "val" + strconv.Itoa(counter)
+
 				keys = append(keys, key)
-				val := TrueValueType{"val" + strconv.Itoa(counter), ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+				trueRecords[key] = trueval
+
+				val := TrueValueType{trueval, ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
 				sig, _ := SignTrueValue(val, ws[i].secretKey)
 				val.Sign = sig
-				
-				trueRecords[key] = val
+
 				args := &PendingArgs{key, val, ws[i].myaddr}
 				reply := &PendingReply{}
+
+				// insert key to DHT, gets processed at setup phase
 				ws[i].AddPendingRPC(args, reply)
-				
 				counter++
 			}
 		}
@@ -1318,15 +1324,45 @@ func TestRealLookupSybil(t *testing.T) {
 		for i := 0; i < PaxosSize; i++ {
 			go ws[i].InitiateSetup()
 		}
-		
 		time.Sleep(30 * time.Second)
-		for i := 0; i < nservers; i++ {
-			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
-		}		
+		/*
+			for i := 0; i < nservers; i++ {
+				fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
+			}
+		*/
 
 		elapsed := time.Since(start)
 		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
-		
+
+		fmt.Printf("Perform client lookup from all honest nodes\n")
+		numFound := 0
+		numTotal := 0
+		for i := 0; i < nservers; i++ {
+			// skip sybil node
+			if _, present := ksvh[i]; present {
+        fmt.Printf("skipping sybil node %s\n", cka[i])
+				continue
+			}
+
+			client := cka[i]
+      fmt.Printf("Looking up all keys from client %s\n", client)
+			for j := 0; j < len(keys); j++ {
+				key := keys[j]
+				val := client.ClientGet(key)
+				if val == trueRecords[key] {
+					numFound++
+				} else {
+					if val != trueRecords[key] {
+						t.Fatalf("Wrong true value returned: %s expected: %s\n", val, trueRecords[key])
+					}
+				}
+        numTotal++
+			}
+
+		}
+    fmt.Printf("numFound: %d\n", numFound)
+		fmt.Printf("total keys: %d\n", numTotal)
+		fmt.Printf("Percent True lookups successful: %f\n", float64(numFound)/float64(numTotal))
+
 	}
-  
 }

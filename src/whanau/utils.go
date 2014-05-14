@@ -2,8 +2,9 @@ package whanau
 
 import "math/rand"
 
-//import "fmt"
-import "log"
+import "fmt"
+
+//import "log"
 
 func IsInList(val int, array []int) bool {
 	for _, v := range array {
@@ -64,13 +65,26 @@ func (ws *WhanauServer) GetNextRWServer() (string, bool) {
 	//fmt.Printf("asking ws %v: idx wants %d, len is %d\n",
 	//	ws.me, ws.rw_idx, len(ws.rw_servers))
 
+	fmt.Printf("")
 	if len(ws.rw_servers) <= ws.nreserved {
-		log.Fatalf("not enough servers in ws %v: idx wants %d, len is %d\n",
-			ws.me, ws.rw_idx, len(ws.rw_servers))
+		// 		log.Fatalf("not enough servers in ws %v: idx wants %d, len is %d\n",
+		// 			ws.me, ws.rw_idx, len(ws.rw_servers))
 		return "", false
 	}
 
 	retval := ws.rw_servers[0]
 	ws.rw_servers = ws.rw_servers[1:]
 	return retval, true
+}
+
+func (ws *WhanauServer) FindWPInstanceIfCreated(uid string) (WhanauPaxos, bool) {
+	var wp WhanauPaxos
+
+	for _, wp = range ws.paxosInstances {
+		if wp.uid == uid {
+			return wp, true
+		}
+	}
+
+	return wp, false
 }

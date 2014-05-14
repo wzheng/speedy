@@ -20,12 +20,12 @@ func (ws *WhanauServer) Setup() {
 
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
-	//fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
-	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+  //fmt.Printf("HONEST SERVER: %s\n", ws.myaddr)
 
 	// How many random walks should we precompute?
 	// the extras are for lookups
 	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
+  fmt.Printf("numToSample: %d\n", numToSample)
 	ws.PerformSystolicMixing(numToSample)
 	ws.doneMixing = true // turn off server handler
 	//fmt.Printf("server %v done with performsystolic\n", ws.me)
@@ -44,21 +44,27 @@ func (ws *WhanauServer) SetupHonest() {
 	ws.succ = make([][]Record, 0)
 	for i := 0; i < ws.nlayers; i++ {
 		// populate tables in layers
-		//fmt.Printf("Choosing ID: %s", ws.ChooseID(i))
-		ws.ids = append(ws.ids, ws.ChooseID(i))
+    chosenid := ws.ChooseID(i)
+    if chosenid != ErrNoKey {
+		  ws.ids = append(ws.ids, chosenid)
+    }
+
 		curFingerTable := ws.ConstructFingers(i)
-		//fmt.Printf("Choosing Fingers: %s", curFingerTable)
+
+		//fmt.Printf("Choosing Fingers: %s\n", curFingerTable)
 		ByFinger(FingerId).Sort(curFingerTable)
 		ws.fingers = append(ws.fingers, curFingerTable)
-		//fmt.Printf("Finished choosing fingers")
+		//fmt.Printf("Finished choosing fingers\n")
 		curSuccessorTable := ws.Successors(i)
-		//fmt.Printf("Choosing successors: %s", curSuccessorTable)
+		//fmt.Printf("Choosing successors: %s\n", curSuccessorTable)
 		By(RecordKey).Sort(curSuccessorTable)
 		ws.succ = append(ws.succ, curSuccessorTable)
 	}
-	//fmt.Printf("Server ids: %s", ws.ids)
-	//fmt.Printf("Server fingers: %s", ws.fingers)
-	//fmt.Printf("Server successors: %s", ws.succ)
+  /*
+	fmt.Printf("Server ids: %s\n", ws.ids)
+	fmt.Printf("Server fingers: %s\n", ws.fingers)
+	fmt.Printf("Server successors: %s\n", ws.succ)
+  */
 }
 
 // Server for Sybil nodes
@@ -144,6 +150,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 	// wait until all of its current outstanding requests are done processing
 	// TODO: should keep a counter of all of the outstanding requests
 
+	fmt.Printf("StartSetupStage2()\n")
+
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()
 	// send this new cluster to a random master cluster
@@ -153,6 +161,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.mu.Lock()
 	ws.state = Setup
 	ws.mu.Unlock()
+
+	fmt.Printf("%v construct cluster done\n", ws.myaddr)
 
 	// TODO: for every key value in the current kv store, replace with the newest paxos cluster
 
@@ -168,7 +178,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 				
 				//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
 				
-				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
+				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV, ws.myaddr}
 				var join_reply JoinClusterReply
 				
 				for _, srv := range new_cluster {
@@ -183,6 +193,13 @@ func (ws *WhanauServer) StartSetupStage2() {
 					}
 				}
 				
+				for k, v := range receive_paxos_reply.KV {
+					cpargs := &ClientPutArgs{k, v, NRand(), ws.myaddr}
+					cpreply := &ClientPutReply{}
+					ws.PaxosPutRPC(cpargs, cpreply)
+					
+					//fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
+				}
 			}
 		}
 	}

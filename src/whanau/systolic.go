@@ -2,6 +2,7 @@ package whanau
 
 import "time"
 import "log"
+import "fmt"
 
 func (ws *WhanauServer) ServerHandler() {
 	for !ws.doneMixing {
@@ -37,6 +38,7 @@ func (ws *WhanauServer) GetRandomServers(args *SystolicMixingArgs,
 
 // Perform systolic mixing, cf section 9.2 of thesis
 func (ws *WhanauServer) PerformSystolicMixing(numWalks int) {
+	fmt.Printf("")
 	ws.doneMixing = false
 	go ws.ServerHandler()
 

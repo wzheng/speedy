@@ -7,6 +7,8 @@ package whanau
 import "fmt"
 import "math/rand"
 import "strings"
+import "os"
+import "strconv"
 
 // Master node function
 // When a server tells the master node what paxos cluster it's a part
@@ -64,7 +66,7 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 
 			uid := ""
 			for _, srv := range args.NewCluster {
-				uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+				uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 			}
 			if new_wp, found := ws.FindWPInstanceIfCreated(uid); !found {
 				wp = StartWhanauPaxos(args.NewCluster, index, uid, ws.rpc)
@@ -77,7 +79,7 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 
 		// put into one's own kvstore
 		ws.mu.Lock()
-		if (ws.myaddr == args.Server) {
+		if ws.myaddr == args.Server {
 			ws.kvstore[k] = ValueType{args.NewCluster}
 		}
 		ws.paxosInstances[k] = *wp
@@ -110,7 +112,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *Init
 				// create new paxos cluster
 				uid := ""
 				for _, srv := range servers {
-					uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+					uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 				}
 
 				var wp *WhanauPaxos

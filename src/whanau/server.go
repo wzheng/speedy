@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -172,6 +173,8 @@ func (ws *WhanauServer) HonestPaxosGetRPC(args *ClientGetArgs,
 		reply.Value = ""
 		reply.Err = ErrFailVerify
 	}
+
+	fmt.Printf("ClientGet got reply %v\n", reply)
 	return nil
 }
 
@@ -298,7 +301,7 @@ func StartServer(servers []string, me int, myaddr string,
 
 		uid := ""
 		for _, srv := range newservers {
-			uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 		}
 		StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 	}
@@ -317,7 +320,7 @@ func StartServer(servers []string, me int, myaddr string,
 		// which exist exclusively for the purpose of being paxos handlers
 		uid := ""
 		for _, srv := range newservers {
-			uid += strings.Join(strings.Split(srv, "/var/tmp/824-1000/"), "")
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 		}
 		wp_m := StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 		ws.master_paxos_cluster = *wp_m

@@ -750,10 +750,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 	iterations := 1
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
-		const nservers = 20
-		const nkeys = 100           // keys are strings from 0 to 99
+		const nservers = 100
+		const nkeys = 500           // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
-		const sybilProb = 0.2
+		const sybilProb = 0.49
 
 		// run setup in parallel
 		// parameters
@@ -764,7 +764,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 0 //4*(int(nservers / math.Log(nservers)) + 1)
+		numAttackEdges := 9 //(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
 		numSybilServers := 50
 		sybilServerCounter := 0
@@ -808,7 +808,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 						// create edge with small probability
 						prob := rand.Float32()
 	
-						if prob > sybilProb + 0.455 && attackCounter < numAttackEdges {
+						if prob > sybilProb + 0.509 && attackCounter < numAttackEdges {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])

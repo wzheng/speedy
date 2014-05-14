@@ -266,9 +266,9 @@ Edge Prob & Fraction of Successful Lookups needed > 1 Hop & Total Lookup Success
 \subsection{Thread Model}
 The "Sybil Proof" security of \sys is based upon the assumption that there is a sparse cut between the fast mixing honest region and the Sybil region of the underlying p2p network. There are no further assumptions on the graph structure of the Sybil region. The routing tables and Paxos clusters are all built up from taking random walks on the network. The main intuition is that a random walk from an honest region is unlikely to end up in the Sybil region because of the sparse cut, unless, of course that honest node is on the edge of the graph.
 
-Besides the sparse cut assumption, Sybil nodes are free to behave however they wish. This can include
+Besides the sparse cut assumption, Sybil nodes are free to behave however they wish. This can include dropping routing packets, flooding the neighbors, clustering attacks, modifying data values from within the DHT, blatantly returning wrong values, etc.
 
-The main security guarantee \sys provides is that Lookups return correct values most of the time even in the presence of a majority of Sybil nodes. Because Whanau
+The main security guarantee \sys provides is that Lookups return correct values most of the time even in the presence of a majority of Sybil nodes. This is based on the security guarantees of Whanau shown in \cite{whanau}. Though we extended the protocol with a layer of indirection for providing data consistency, we believe the security guarantees should still be valid.
 
 The security analysis of \sys can be broken down into the security of the routing layer (looking up the Paxos cluster for a particular key) and the security of the data layer (looking up the true value from the Paxos cluster). We explain some of the theoretical guarantees and show experimental results.
 

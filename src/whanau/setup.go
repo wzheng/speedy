@@ -25,7 +25,7 @@ func (ws *WhanauServer) SetupHonest() {
 	// How many random walks should we precompute?
 	// the extras are for lookups
 	numToSample := ws.rd*(ws.nlayers*(1+ws.rf+ws.rs)) + ws.nreserved
-  fmt.Printf("numToSample: %d\n", numToSample)
+  //fmt.Printf("numToSample: %d\n", numToSample)
 	ws.PerformSystolicMixing(numToSample)
 	ws.doneMixing = true // turn off server handler
 	//fmt.Printf("server %v done with performsystolic\n", ws.me)

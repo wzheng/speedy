@@ -20,7 +20,7 @@ import (
 
 //import "encoding/gob"
 
-const Debug = 1
+const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug > 0 {
@@ -174,7 +174,7 @@ func (ws *WhanauServer) HonestPaxosGetRPC(args *ClientGetArgs,
 		reply.Err = ErrFailVerify
 	}
 
-	fmt.Printf("ClientGet got reply %v\n", reply)
+	//fmt.Printf("ClientGet got reply %v\n", reply)
 	return nil
 }
 

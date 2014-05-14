@@ -138,7 +138,7 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 // Try finds the value associated with the key in honest node
 func (ws *WhanauServer) HonestTry(key KeyType) TryReply {
 	nlayers := ws.nlayers
-	DPrintf("In Honest Try RPC, trying key: %s", key)
+	DPrintf("In %s Honest Try RPC, trying key: %s", ws.myaddr, key)
 
 	var reply TryReply
 
@@ -151,6 +151,7 @@ func (ws *WhanauServer) HonestTry(key KeyType) TryReply {
 	}
 
 	var fingerLength int
+  DPrintf("ws.fingers: %s", ws.fingers)
 	if len(ws.fingers) > 0 {
 		fingerLength = len(ws.fingers[0])
 		j := sort.Search(fingerLength, func(i int) bool {

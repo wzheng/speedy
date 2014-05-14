@@ -1153,7 +1153,7 @@ func TestRealLookupSybil(t *testing.T) {
 		const nservers = 100
 		const nkeys = 500           // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
-		const attackEdgeProb = 0.0
+		const sybilProb = 0.5
 
 		// run setup in parallel
 		// parameters
@@ -1166,7 +1166,7 @@ func TestRealLookupSybil(t *testing.T) {
 		ts := 5                                          // number of successors sampled per node
 		numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
-		numSybilServers := 0
+		numSybilServers := 50
 		sybilServerCounter := 0
 
 		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
@@ -1181,10 +1181,10 @@ func TestRealLookupSybil(t *testing.T) {
 			kvh[i] = port("basic", i)
 			rand.Seed(time.Now().UTC().UnixNano())
 			prob := rand.Float64()
-			if prob > attackEdgeProb && sybilServerCounter < numSybilServers {
+			if prob > sybilProb && sybilServerCounter < numSybilServers {
 				sybilServerCounter++
 				// randomly make some of the servers sybil servers
-				//	ksvh[i] = true
+				ksvh[i] = true
 			}
 		}
 
@@ -1216,7 +1216,7 @@ func TestRealLookupSybil(t *testing.T) {
 						// create edge with small probability
 						prob := rand.Float64()
 
-						if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
+						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
@@ -1279,7 +1279,7 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
-		fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
+		fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v\n", nservers, nkeys, sybilProb, len(ksvh))
 
 		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
 		for i := 0; i < len(kvh); i++ {
@@ -1289,15 +1289,17 @@ func TestRealLookupSybil(t *testing.T) {
 		}
 
 		keys := make([]KeyType, 0)
+    nonsybilkeys := make([]KeyType, 0)
 		trueRecords := make(map[KeyType]string)
 		counter := 0
 		// Hard code records for all servers
 		for i := 0; i < nservers; i++ {
-			// don't give keys to sybil nodes
-			if s, present := ksvh[i]; present {
-				fmt.Printf("skipping Sybil server %s\n", s)
-				continue
+			// give keys to sybil nodes as well
+      /*
+			if _, present := ksvh[i]; present {
+				fmt.Printf(" Sybil server %d\n", i)
 			}
+      */
 
 			for j := 0; j < nkeys/nservers; j++ {
 				// make key/true value
@@ -1305,6 +1307,9 @@ func TestRealLookupSybil(t *testing.T) {
 				var trueval string = "val" + strconv.Itoa(counter)
 
 				keys = append(keys, key)
+        if _, present := ksvh[i]; !present {
+          nonsybilkeys = append(nonsybilkeys, key)
+        }
 				trueRecords[key] = trueval
 
 				val := TrueValueType{trueval, ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
@@ -1341,6 +1346,7 @@ func TestRealLookupSybil(t *testing.T) {
 
 		fmt.Printf("Finished setup, time: %s\n", elapsed)
 
+    /*
 		fmt.Printf("Check key coverage in all dbs\n")
 
 		keyset := make(map[KeyType]bool)
@@ -1392,6 +1398,7 @@ func TestRealLookupSybil(t *testing.T) {
 
 		fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
 		fmt.Printf("missing keys in succs: %s\n", missing_keys)
+    */
 
 		fmt.Printf("Perform client lookup from all honest nodes\n")
 		numFound := 0
@@ -1406,6 +1413,7 @@ func TestRealLookupSybil(t *testing.T) {
 			}
 
 			client := cka[i]
+      // only lookup key space in nonsybil nodes
 			go func(client *Clerk, keys []KeyType, trueRecords map[KeyType]string) {
 				fmt.Printf("Looking up all keys from client %s\n", client)
         myNumFound := 0
@@ -1413,8 +1421,7 @@ func TestRealLookupSybil(t *testing.T) {
 					key := keys[j]
 					val := client.ClientGet(key)
 					if val == trueRecords[key] {
-            fmt.Printf("%s found key %s!\n", client, key)
-						//numFound++
+            //fmt.Printf("%s found key %s!\n", client, key)
             myNumFound++
 					} else {
 						if val != ErrNoKey && val != trueRecords[key] {
@@ -1422,14 +1429,13 @@ func TestRealLookupSybil(t *testing.T) {
 						}
 						fmt.Printf("Key %s not found D: \n", key)
 					}
-					//numTotal++
 				}
 
         fmt.Printf("total found by client %s, %d\n", client, myNumFound)
         chfound <- myNumFound
-			}(client, keys, trueRecords)
+			}(client, nonsybilkeys, trueRecords)
 
-      numTotal += len(keys)
+      numTotal += len(nonsybilkeys)
 		}
 
     var mutex sync.Mutex

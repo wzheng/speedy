@@ -6,7 +6,7 @@
 package whanau
 
 import "net/rpc"
-import "fmt"
+//import "fmt"
 
 type Clerk struct {
 	server string // the "host" server
@@ -47,7 +47,7 @@ func call(srv string, rpcname string,
 		return true
 	}
 
-	fmt.Println(err)
+	//fmt.Println(err)
 	return false
 }
 
@@ -90,6 +90,7 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	get_args.Key = key
 	get_args.RequestID = NRand()
 
+  
 	for _, server := range server_list {
 		//fmt.Printf("Get(): calling server %s\n", server)
 		ok := call(server, "WhanauServer.PaxosGetRPC", get_args,
@@ -102,19 +103,19 @@ func (ck *Clerk) Get(key KeyType, server_list []string) string {
 	}
 
 	// TODO how to return verification error?
-	return ""
+	return ErrNoKey
 }
 
 // Client wrapper for Get.
 func (ck *Clerk) ClientGet(key KeyType) string {
 	server_list, err := ck.FindServers(key)
-	//fmt.Printf("server_list: %v\n", server_list)
+  //fmt.Printf("server_list: %v\n", server_list)
 	if err == OK {
 		val := ck.Get(key, server_list)
 		return val
 	}
 
-	return ""
+	return ErrNoKey
 }
 
 // Client wrapper for Put.

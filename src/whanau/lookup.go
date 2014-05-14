@@ -138,7 +138,7 @@ func (ws *WhanauServer) Try(args *TryArgs, reply *TryReply) error {
 // Try finds the value associated with the key in honest node
 func (ws *WhanauServer) HonestTry(key KeyType) TryReply {
 	nlayers := ws.nlayers
-	DPrintf("In Honest Try RPC, trying key: %s", key)
+	DPrintf("In %s Honest Try RPC, trying key: %s", ws.myaddr, key)
 
 	var reply TryReply
 
@@ -151,6 +151,7 @@ func (ws *WhanauServer) HonestTry(key KeyType) TryReply {
 	}
 
 	var fingerLength int
+  DPrintf("ws.fingers: %s", ws.fingers)
 	if len(ws.fingers) > 0 {
 		fingerLength = len(ws.fingers[0])
 		j := sort.Search(fingerLength, func(i int) bool {
@@ -275,6 +276,11 @@ func (ws *WhanauServer) SampleRecord(args *SampleRecordArgs, reply *SampleRecord
 
 // honest node samplerecord
 func (ws *WhanauServer) HonestSampleRecord() SampleRecordReply {
+  if len(ws.kvstore) < 1 {
+    var sampleRecordReply SampleRecordReply
+    sampleRecordReply.Err = ErrNoKey
+    return sampleRecordReply
+  }
 	randIndex := rand.Intn(len(ws.kvstore))
 	keys := make([]KeyType, 0)
 	for k, _ := range ws.kvstore {
@@ -326,6 +332,7 @@ func (ws *WhanauServer) SampleRecords(rd int, steps int) []Record {
 		counter = 0
 		for srreply.Err != OK && counter < TIMEOUT {
 			call(server, "WhanauServer.SampleRecord", srargs, srreply)
+      counter++
 		}
 
 		if srreply.Err == OK {
@@ -348,10 +355,10 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 		reply := &RandomWalkReply{}
 
 		// Keep trying until succeed or timeout
-		//counter := 0
-		for reply.Err != OK {
+		counter := 0
+		for reply.Err != OK && counter < TIMEOUT {
 			ws.RandomWalk(args, reply)
-			//counter++
+			counter++
 		}
 
 		server := reply.Server
@@ -362,11 +369,11 @@ func (ws *WhanauServer) ConstructFingers(layer int) []Finger {
 		ok := false
 
 		// block until succeeds
-		//counter = 0
-		for !ok || (getIdReply.Err != OK) {
+    counter = 0
+		for (!ok || (getIdReply.Err != OK)) && counter < TIMEOUT {
 			DPrintf("rpc to getid of %s from ConstructFingers %s layer %d", server, ws.myaddr, layer)
 			ok = call(server, "WhanauServer.GetId", getIdArg, getIdReply)
-			//counter++
+			counter++
 		}
 
 		if getIdReply.Err == OK {
@@ -391,6 +398,10 @@ func (ws *WhanauServer) ChooseID(layer int) KeyType {
 // Honest choose id
 func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 	//fmt.Printf("In ChooseID of honest %s, layer %d \n", ws.myaddr, layer)
+  if len(ws.db) < 1 {
+    return ErrNoKey
+  }
+
 	if layer == 0 {
 		// choose randomly from db
 		randIndex := rand.Intn(len(ws.db))
@@ -400,6 +411,9 @@ func (ws *WhanauServer) HonestChooseID(layer int) KeyType {
 
 	} else {
 		// choose finger randomly from layer - 1, use id of that finger
+    if len(ws.fingers[layer-1]) == 0 {
+      return ErrNoKey
+    }
 		randFinger := ws.fingers[layer-1][rand.Intn(len(ws.fingers[layer-1]))]
 		return randFinger.Id
 	}
@@ -448,6 +462,9 @@ func (ws *WhanauServer) Successors(layer int) []Record {
 	//	ws.myaddr, time.Since(start))
 
 	//fmt.Printf("In Sucessors of %s, layer %d \n", ws.myaddr, layer)
+  if layer >= len(ws.ids) || len(ws.ids[layer]) < 1 {
+    return make([]Record, 0)
+  }
 
 	// overallocate memory for array
 	successors := make([]Record, 0, ws.rs*ws.t*2)

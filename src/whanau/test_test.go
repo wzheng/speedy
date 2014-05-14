@@ -106,7 +106,7 @@ func TestLookup(t *testing.T) {
 
 	for k := 0; k < nservers; k++ {
 		ws[k] = StartServer(kvh, k, kvh[k], neighbors[k],
-			make([]string, 0), false, false,
+			make([]string, 0), nil, false, false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -340,10 +340,10 @@ func TestRealGetAndPut(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -362,9 +362,9 @@ func TestRealGetAndPut(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -478,10 +478,10 @@ func TestEndToEnd(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -534,10 +534,10 @@ func TestPendingWrites(t *testing.T) {
 		}
 
 		if i < 3 {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, true, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, master_servers, true, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		} else {
-			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, false, false,
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
 				nlayers, nfingers, w, rd, rs, ts)
 		}
 	}
@@ -556,9 +556,9 @@ func TestPendingWrites(t *testing.T) {
 	for i := 0; i < nservers; i++ {
 
 		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers]}
-		wp0 := StartWhanauPaxos(paxos_cluster, 0, ws[i].rpc)
-		wp1 := StartWhanauPaxos(paxos_cluster, 1, ws[(i+1)%nservers].rpc)
-		wp2 := StartWhanauPaxos(paxos_cluster, 2, ws[(i+2)%nservers].rpc)
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
 
 		for j := 0; j < nkeys/nservers; j++ {
 			//var key KeyType = testKeys[counter]
@@ -660,23 +660,25 @@ func TestPendingWrites(t *testing.T) {
 	fmt.Printf("After setup: value is %v\n", value)
 }
 
-// Time setup
-func BenchmarkSetup(b *testing.B) {
-	runtime.GOMAXPROCS(8)
+// In-class demo
+func TestDemo(t *testing.T) {
+
+	runtime.GOMAXPROCS(4)
 
 	const nservers = 20
-	const nkeys = 80           // keys are strings from 0 to 99
+	const nkeys = 100          // keys are strings from 0 to 99
 	const k = nkeys / nservers // keys per node
 
-	// run setup in parallel
 	// parameters
 	constant := 5
-	nlayers := int(math.Log(float64(k*nservers))) + 1
-	nfingers := int(math.Sqrt(k * nservers))
+	nlayers := constant*int(math.Log(float64(k*nservers))) + 1
+	nfingers := constant * int(math.Sqrt(k*nservers))
 	w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
-	rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+	rd := constant * int(math.Sqrt(k*nservers))      // number of records in the db
 	rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
-	ts := 5                                          // number of successors sampled per node
+	ts := constant                                   // number of successors sampled per node
+
+	//fmt.Printf("nlayers is %d, w is %d\n", nlayers, w)
 
 	var ws []*WhanauServer = make([]*WhanauServer, nservers)
 	var kvh []string = make([]string, nservers)
@@ -684,6 +686,28 @@ func BenchmarkSetup(b *testing.B) {
 
 	for i := 0; i < nservers; i++ {
 		kvh[i] = port("basic", i)
+	}
+
+	//master_servers := []string{kvh[0], kvh[1], kvh[2], kvh[3], kvh[4], kvh[5], kvh[6]}
+	master_servers := []string{kvh[0], kvh[1], kvh[2]}
+
+	newservers := make([]string, len(master_servers))
+	for i, _ := range master_servers {
+		// we need to actually create new servers
+		// to disambiguate Paxos instances
+		// so that masters don't overlap
+
+		newservers[i] = port("masterpaxos", i)
+	}
+
+	for j, srv := range newservers {
+		// This is just a dummy, only for the purpose
+		// of starting the Paxos handler properly.
+		// No routing should happen here!
+
+		StartServer(newservers, j, srv, nil,
+			master_servers, newservers, false, false, true, nlayers, nfingers,
+			w, rd, rs, ts)
 	}
 
 	for i := 0; i < nservers; i++ {
@@ -695,9 +719,13 @@ func BenchmarkSetup(b *testing.B) {
 			neighbors = append(neighbors, kvh[j])
 		}
 
-		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
-			nlayers, nfingers, w, rd, rs, ts)
+		if i < 3 {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, newservers, true, false, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		} else {
+			ws[i] = StartServer(kvh, i, kvh[i], neighbors, master_servers, nil, false, false, false,
+				nlayers, nfingers, w, rd, rs, ts)
+		}
 	}
 
 	var cka [nservers]*Clerk
@@ -705,32 +733,86 @@ func BenchmarkSetup(b *testing.B) {
 		cka[i] = MakeClerk(kvh[i])
 	}
 
-	fmt.Printf("\033[95m%s\033[0m\n", "Setup benchmark")
+	fmt.Printf("\033[95m%s\033[0m\n", "Demo")
 
 	keys := make([]KeyType, 0)
 	records := make(map[KeyType]ValueType)
 	counter := 0
 	// hard code in records for each server
 	for i := 0; i < nservers; i++ {
+
+		paxos_cluster := []string{kvh[i], kvh[(i+1)%nservers], kvh[(i+2)%nservers], kvh[(i+3)%nservers], kvh[(i+4)%nservers], kvh[(i+5)%nservers], kvh[(i+6)%nservers]}
+		wp0 := StartWhanauPaxos(paxos_cluster, 0, "", ws[i].rpc)
+		wp1 := StartWhanauPaxos(paxos_cluster, 1, "", ws[(i+1)%nservers].rpc)
+		wp2 := StartWhanauPaxos(paxos_cluster, 2, "", ws[(i+2)%nservers].rpc)
+		wp3 := StartWhanauPaxos(paxos_cluster, 3, "", ws[(i+3)%nservers].rpc)
+		wp4 := StartWhanauPaxos(paxos_cluster, 4, "", ws[(i+4)%nservers].rpc)
+		wp5 := StartWhanauPaxos(paxos_cluster, 5, "", ws[(i+5)%nservers].rpc)
+		wp6 := StartWhanauPaxos(paxos_cluster, 6, "", ws[(i+6)%nservers].rpc)
+
 		for j := 0; j < nkeys/nservers; j++ {
+			//var key KeyType = testKeys[counter]
 			var key KeyType = KeyType(strconv.Itoa(counter))
 			keys = append(keys, key)
 			counter++
-			val := ValueType{}
-			// randomly pick 5 servers
-			for kp := 0; kp < PaxosSize; kp++ {
-				val.Servers = append(val.Servers, "ws"+strconv.Itoa(rand.Intn(PaxosSize)))
-			}
+
+			//fmt.Printf("paxos_cluster is %v\n", paxos_cluster)
+			val := ValueType{paxos_cluster}
 			records[key] = val
 			ws[i].kvstore[key] = val
+
+			ws[i].paxosInstances[key] = *wp0
+			ws[(i+1)%nservers].paxosInstances[key] = *wp1
+			ws[(i+2)%nservers].paxosInstances[key] = *wp2
+			ws[(i+3)%nservers].paxosInstances[key] = *wp3
+			ws[(i+4)%nservers].paxosInstances[key] = *wp4
+			ws[(i+5)%nservers].paxosInstances[key] = *wp5
+			ws[(i+6)%nservers].paxosInstances[key] = *wp6
+
+			val0 := TrueValueType{"hello", wp0.myaddr, nil, &ws[i].secretKey.PublicKey}
+			sig0, _ := SignTrueValue(val0, ws[i].secretKey)
+			val0.Sign = sig0
+			wp0.db[key] = val0
+
+			// 			val1 := TrueValueType{"hello", wp1.myaddr, nil, &ws[(i+1)%nservers].secretKey.PublicKey}
+			// 			sig1, _ := SignTrueValue(val1, ws[(i+1)%nservers].secretKey)
+			// 			val1.Sign = sig1
+			wp1.db[key] = val0
+
+			// 			val2 := TrueValueType{"hello", wp2.myaddr, nil, &ws[(i+2)%nservers].secretKey.PublicKey}
+			// 			sig2, _ := SignTrueValue(val2, ws[(i+2)%nservers].secretKey)
+			// 			val2.Sign = sig2
+			wp2.db[key] = val0
+
+			// 			val3 := TrueValueType{"hello", wp3.myaddr, nil, &ws[(i+3)%nservers].secretKey.PublicKey}
+			// 			sig3, _ := SignTrueValue(val3, ws[(i+3)%nservers].secretKey)
+			// 			val3.Sign = sig3
+			wp3.db[key] = val0
+
+			// 			val4 := TrueValueType{"hello", wp4.myaddr, nil, &ws[(i+4)%nservers].secretKey.PublicKey}
+			// 			sig4, _ := SignTrueValue(val4, ws[(i+4)%nservers].secretKey)
+			// 			val4.Sign = sig4
+			wp4.db[key] = val0
+
+			// 			val5 := TrueValueType{"hello", wp5.myaddr, nil, &ws[(i+5)%nservers].secretKey.PublicKey}
+			// 			sig5, _ := SignTrueValue(val5, ws[(i+5)%nservers].secretKey)
+			// 			val5.Sign = sig5
+			wp5.db[key] = val0
+
+			// 			val6 := TrueValueType{"hello", wp6.myaddr, nil, &ws[(i+6)%nservers].secretKey.PublicKey}
+			// 			sig6, _ := SignTrueValue(val6, ws[(i+6)%nservers].secretKey)
+			// 			val6.Sign = sig6
+			wp6.db[key] = val0
+
 		}
 	}
 
 	c := make(chan bool) // writes true of done
-	fmt.Printf("Starting setup\n")
-
+	fmt.Printf("Starting setup: %d servers, %d keys\n", nservers, nkeys)
+	start := time.Now()
 	for i := 0; i < nservers; i++ {
 		go func(srv int) {
+			DPrintf("running ws[%d].Setup", srv)
 			ws[srv].Setup()
 			c <- true
 		}(i)
@@ -741,17 +823,89 @@ func BenchmarkSetup(b *testing.B) {
 		done := <-c
 		DPrintf("ws[%d] setup done: %b", i, done)
 	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Finished setup, time: %s\n\n", elapsed)
+
+	// start clients
+
+	largs := &LookupArgs{"0", nil}
+	lreply := &LookupReply{}
+	ws[3].Lookup(largs, lreply)
+
+	cl := MakeClerk(kvh[0])
+
+	fmt.Printf("Client lookup of existing key 0...\n")
+
+	value := cl.ClientGet("0")
+	fmt.Printf("Value for key 0 is %s\n\n", value)
+
+	// test single value put -- an update, NOT an insert!
+
+	fmt.Printf("Client update of existing key 0 with new value helloworld...\n")
+	cl.ClientPut("0", "helloworld")
+	value = cl.ClientGet("0")
+
+	fmt.Printf("After put, without re-running Setup: value for key 0 is %v\n\n", value)
+
+	fmt.Printf("Client performing insert of new key 101 with value cantbefound...\n")
+	cl.ClientPut("101", "cantbefound")
+
+	fmt.Printf("Client performing update of new key 101 with value newvalue...\n")
+	cl.ClientPut("101", "newvalue")
+
+	// look in the masters' pending inserts table:
+
+	time.Sleep(1 * time.Second)
+
+	value = cl.ClientGet("101")
+	fmt.Printf("After insert, before Setup run: value for key 101 is %v\n\n", value)
+
+	time.Sleep(5 * time.Second)
+
+	fmt.Printf("Starting setup from masters\n")
+
+	go ws[0].InitiateSetup()
+	go ws[1].InitiateSetup()
+	go ws[2].InitiateSetup()
+
+	time.Sleep(30 * time.Second)
+
+	fmt.Printf("Setup finished\n\n")
+
+	fmt.Printf("Client lookup of inserted key 101...\n")
+	value = cl.ClientGet("101")
+	fmt.Printf("After setup run: value for key 101 is %v\n\n", value)
+
+	fmt.Printf("Three random node failures...\n")
+	failed := make([]int, 3)
+	for i := 0; i < 3; i++ {
+		fail := rand.Intn(20) // pick an idx to fail
+		for IsInList(fail, failed) {
+			fail = rand.Intn(20)
+		}
+
+		failed[i] = fail
+		os.Remove(kvh[fail])
+	}
+
+	fmt.Printf("Failed nodes: %v\n\n", failed)
+
+	fmt.Printf("Client lookup of existing key 5...\n")
+
+	value = cl.ClientGet("5")
+	fmt.Printf("Value for key 5 is %s\n\n", value)
 }
 
 // Testing malicious sybils, should NOT have the same output as lookup
 // Redistributing some keys to sybil nodes
 func TestLookupWithSybilsMalicious(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 1
+	iterations := 25
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
-		const nservers = 100
-		const nkeys = 500         // keys are strings from 0 to 99
+		const nservers = 20
+		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
 
@@ -764,9 +918,9 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
 		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
 		ts := 5                                          // number of successors sampled per node
-		numAttackEdges := 9 //(int(nservers / math.Log(nservers)) + 1)
+		numAttackEdges := 9                              //(int(nservers / math.Log(nservers)) + 1)
 		attackCounter := 0
-		numSybilServers := 30
+		numSybilServers := 50
 		sybilServerCounter := 0
 
 		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
@@ -808,7 +962,7 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 						// create edge with small probability
 						prob := rand.Float32()
 
-						if prob > sybilProb + 0.49 && attackCounter < numAttackEdges {
+						if prob > sybilProb+0.455 && attackCounter < numAttackEdges {
 							attackCounter++
 							//Sybil neighbor, print out neighbors
 							neighbors[i] = append(neighbors[i], kvh[j])
@@ -827,10 +981,10 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 
 		for k := 0; k < nservers; k++ {
 			if _, ok := ksvh[k]; ok {
-				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, true,
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), nil, false, true, false,
 					nlayers, nfingers, w, rd, rs, ts)
 			} else {
-				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), false, false,
+				ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], make([]string, 0), nil, false, false, false,
 					nlayers, nfingers, w, rd, rs, ts)
 			}
 		}
@@ -961,7 +1115,7 @@ func TestSystolic(t *testing.T) {
 		}
 
 		ws[i] = StartServer(kvh, i, kvh[i], neighbors, make([]string, 0),
-			false, false,
+			nil, false, false, false,
 			nlayers, nfingers, w, rd, rs, ts)
 	}
 
@@ -986,4 +1140,289 @@ func TestSystolic(t *testing.T) {
 		DPrintf("ws[%d] mixing done: %b", i, done)
 	}
 
+}
+
+// Testing malicious sybils end to end, should NOT have the same output as lookup
+// Redistributing some keys to sybil nodes
+func TestRealLookupSybil(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+	for attackEdgeProb := 0.0; attackEdgeProb < 1.0; attackEdgeProb = attackEdgeProb + 0.1 {
+		iterations := 5
+		for z := 0; z < iterations; z++ {
+			fmt.Printf("Iteration: %d \n \n", z)
+			const nservers = 100
+			const nkeys = 500          // keys are strings from 0 to nkeys
+			const k = nkeys / nservers // keys per node
+			//const attackEdgeProb = 0.0
+
+			// run setup in parallel
+			// parameters
+			constant := 5
+			nlayers := int(math.Log(float64(k*nservers))) + 1
+			nfingers := int(math.Sqrt(k * nservers))
+			w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+			rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+			rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+			ts := 5                                          // number of successors sampled per node
+			numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
+			attackCounter := 0
+			numSybilServers := 50
+			sybilServerCounter := 0
+
+			fmt.Printf("Max attack edges: %d \n", numAttackEdges)
+
+      time1 := time.Now()
+			var ws []*WhanauServer = make([]*WhanauServer, nservers)
+			var kvh []string = make([]string, nservers)
+			var ksvh map[int]bool = make(map[int]bool)
+			defer cleanup(ws)
+
+			for i := 0; i < nservers; i++ {
+				kvh[i] = port("basic", i)
+				rand.Seed(time.Now().UTC().UnixNano())
+				prob := rand.Float64()
+				if prob > attackEdgeProb && sybilServerCounter < numSybilServers {
+					sybilServerCounter++
+					// randomly make some of the servers sybil servers
+					//	ksvh[i] = true
+				}
+			}
+
+			master_servers := make([]string, 0)
+			// first PaxosSize servers are master servers
+			for i := 0; i < PaxosSize; i++ {
+				master_servers = append(master_servers, kvh[i])
+			}
+			fmt.Printf("Master paxos servers are %v\n", master_servers)
+
+			neighbors := make([][]string, nservers)
+			for i := 0; i < nservers; i++ {
+				neighbors[i] = make([]string, 0)
+			}
+
+			for i := 0; i < nservers; i++ {
+				for j := 0; j < i; j++ {
+					_, ok := ksvh[j]
+					_, ok2 := ksvh[i]
+
+					if ok || ok2 {
+						if ok && ok2 {
+							// both nodes are sybil nodes
+							// create edge with 100% probability
+							neighbors[i] = append(neighbors[i], kvh[j])
+							neighbors[j] = append(neighbors[j], kvh[i])
+						} else {
+							// one node is a sybil node
+							// create edge with small probability
+							prob := rand.Float64()
+
+							if prob > attackEdgeProb+0.455 && attackCounter < numAttackEdges {
+								attackCounter++
+								//Sybil neighbor, print out neighbors
+								neighbors[i] = append(neighbors[i], kvh[j])
+								neighbors[j] = append(neighbors[j], kvh[i])
+							}
+						}
+					} else {
+						// neither is sybil, create edge with 100% probability
+						neighbors[i] = append(neighbors[i], kvh[j])
+						neighbors[j] = append(neighbors[j], kvh[i])
+					}
+				}
+			}
+
+			newservers := make([]string, len(master_servers))
+			for i, _ := range master_servers {
+				// we need to actually create new servers
+				// to disambiguate Paxos instances
+				// so that masters don't overlap
+				newservers[i] = port("masterpaxos", i)
+			}
+			for j, srv := range newservers {
+				// This is just a dummy, only for the purpose
+				// of starting the Paxos handler properly.
+				// No routing should happen here!
+				StartServer(newservers, j, srv, nil,
+					master_servers, newservers, false, false, true, nlayers, nfingers,
+					w, rd, rs, ts)
+			}
+
+			fmt.Printf("newservers is %v\n", newservers)
+			// Start servers
+			for k := 0; k < nservers; k++ {
+
+				// if malicious
+				if _, ok := ksvh[k]; ok {
+					if k < PaxosSize {
+						// malicious master -- doesn't do anything
+						ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, true, false, nlayers, nfingers, w, rd, rs, ts)
+
+					} else {
+						// malicious nonmaster
+						ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, true, false, nlayers, nfingers, w, rd, rs, ts)
+					}
+				} else {
+					// not malicious
+					if k < PaxosSize {
+						// non malicious master
+						ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, false, false, nlayers, nfingers, w, rd, rs, ts)
+					} else {
+						// normal villager
+						ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, false, false, nlayers, nfingers, w, rd, rs, ts)
+					}
+				}
+			}
+
+			var cka [nservers]*Clerk
+			for i := 0; i < nservers; i++ {
+				cka[i] = MakeClerk(kvh[i])
+			}
+
+			fmt.Printf("\033[95m%s\033[0m\n", "Test: Real Lookup With Sybils")
+			fmt.Printf("nservers: %d, nkeys: %d, attackEdgeProb: %v, numSybilServers: %v\n", nservers, nkeys, attackEdgeProb, numSybilServers)
+
+			fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
+			for i := 0; i < len(kvh); i++ {
+				if _, ok := ksvh[i]; ok {
+					fmt.Printf("Address of Sybil node: %s \n", kvh[i])
+				}
+			}
+
+			keys := make([]KeyType, 0)
+			trueRecords := make(map[KeyType]string)
+			counter := 0
+			// Hard code records for all servers
+			for i := 0; i < nservers; i++ {
+				// don't give keys to sybil nodes
+				if _, present := ksvh[i]; present {
+					continue
+				}
+
+				for j := 0; j < nkeys/nservers; j++ {
+					// make key/true value
+					var key KeyType = KeyType(strconv.Itoa(counter))
+					var trueval string = "val" + strconv.Itoa(counter)
+
+					keys = append(keys, key)
+					trueRecords[key] = trueval
+
+					val := TrueValueType{trueval, ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+					sig, _ := SignTrueValue(val, ws[i].secretKey)
+					val.Sign = sig
+
+					args := &PendingArgs{key, val, ws[i].myaddr}
+					reply := &PendingReply{}
+
+					// insert key to DHT, gets processed at setup phase
+					ws[i].AddPendingRPC(args, reply)
+					counter++
+				}
+			}
+
+      fmt.Printf("Network creating and AddPendingrpc time: %s\n", time.Since(start))
+			// initiate setup from all masters
+
+			start := time.Now()
+			for i := 0; i < PaxosSize; i++ {
+				go ws[i].InitiateSetup()
+			}
+			time.Sleep(120 * time.Second)
+
+			elapsed := time.Since(start)
+			fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
+			for i := 0; i < nservers; i++ {
+				fmt.Printf("ws[%d].kvstore length: %s\n", i, len(ws[i].kvstore))
+
+				for key, val := range ws[i].kvstore {
+					fmt.Printf("Paxos cluster for key %s: %s\n", key, val)
+				}
+			}
+
+			fmt.Printf("Finished setup, time: %s\n", elapsed)
+
+			fmt.Printf("Check key coverage in all dbs\n")
+
+			keyset := make(map[KeyType]bool)
+			for i := 0; i < len(keys); i++ {
+				keyset[keys[i]] = false
+			}
+
+			for i := 0; i < nservers; i++ {
+				srv := ws[i]
+				for j := 0; j < len(srv.db); j++ {
+					keyset[srv.db[j].Key] = true
+				}
+			}
+
+			// count number of covered keys, all the false keys in keyset
+			covered_count := 0
+			for _, v := range keyset {
+				if v {
+					covered_count++
+				}
+			}
+			fmt.Printf("key coverage in all dbs: %f\n", float64(covered_count)/float64(len(keys)))
+
+			fmt.Printf("Check key coverage in all successor tables\n")
+			keyset = make(map[KeyType]bool)
+			for i := 0; i < len(keys); i++ {
+				keyset[keys[i]] = false
+			}
+
+			for i := 0; i < nservers; i++ {
+				srv := ws[i]
+				for j := 0; j < len(srv.succ); j++ {
+					for k := 0; k < len(srv.succ[j]); k++ {
+						keyset[srv.succ[j][k].Key] = true
+					}
+				}
+			}
+
+			// count number of covered keys, all the false keys in keyset
+			covered_count = 0
+			missing_keys := make([]KeyType, 0)
+			for k, v := range keyset {
+				if v {
+					covered_count++
+				} else {
+					missing_keys = append(missing_keys, k)
+				}
+			}
+
+			fmt.Printf("key coverage in all succ: %f\n", float64(covered_count)/float64(len(keys)))
+			fmt.Printf("missing keys in succs: %s\n", missing_keys)
+
+			fmt.Printf("Perform client lookup from all honest nodes\n")
+			numFound := 0
+			numTotal := 0
+			for i := 0; i < nservers; i++ {
+				// skip sybil node
+				if _, present := ksvh[i]; present {
+					fmt.Printf("skipping sybil node %s\n", cka[i])
+					continue
+				}
+
+				client := cka[i]
+				fmt.Printf("Looking up all keys from client %s\n", client)
+				for j := 0; j < len(keys); j++ {
+					key := keys[j]
+					val := client.ClientGet(key)
+					if val == trueRecords[key] {
+						numFound++
+					} else {
+						if val != ErrNoKey && val != trueRecords[key] {
+							t.Fatalf("Wrong true value for key %s, returned %s expected: %s\n", key, val, trueRecords[key])
+						}
+						fmt.Printf("Key %s not found D: \n", key)
+					}
+					numTotal++
+				}
+
+			}
+			fmt.Printf("numFound: %d\n", numFound)
+			fmt.Printf("total keys: %d\n", numTotal)
+			fmt.Printf("Percent True lookups successful: %f\n", float64(numFound)/float64(numTotal))
+
+		}
+	}
 }

@@ -3,6 +3,7 @@
 
 package whanau
 
+import "net"
 import "paxos"
 import "time"
 import "sync"
@@ -10,13 +11,13 @@ import "math"
 import "net/rpc"
 import "encoding/gob"
 
-import "fmt"
-
 type WhanauPaxos struct {
 	mu     sync.Mutex
 	me     int
 	dead   bool // for testing
 	myaddr string
+	l      net.Listener
+	rpc    *rpc.Server
 
 	px              *paxos.Paxos
 	handledRequests map[int64]interface{}
@@ -31,6 +32,8 @@ type WhanauPaxos struct {
 	// only applicable if this server is a master
 	pwLock         sync.Mutex
 	pending_writes map[PendingInsertsKey]string // this is a mapping from a pending write keys to servers
+
+	uid string // concatenation of server names...
 }
 
 type Op struct {
@@ -118,6 +121,7 @@ func (wp *WhanauPaxos) LogPending(args *PaxosPendingInsertsArgs, reply *PaxosPen
 func (wp *WhanauPaxos) LogUpdates(fromSeq int, toSeq int) {
 	for i := fromSeq; i <= toSeq; i++ {
 		decided, value := wp.px.Status(i)
+
 		for !decided {
 			// wait for instance to reach agreement
 			// TODO should time out after a while in case too many
@@ -248,12 +252,12 @@ func (wp *WhanauPaxos) PaxosPendingInsert(args *PaxosPendingInsertsArgs, reply *
 	reply.Server = pending_reply.Server
 	reply.Err = pending_reply.Err
 
-	fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
-	
+	//fmt.Printf("PENDING INSERT DECIDED ON %v\n", reply.Server)
+
 	return nil
 }
 
-func StartWhanauPaxos(servers []string, me int,
+func StartWhanauPaxos(servers []string, me int, uid string,
 	rpcs *rpc.Server) *WhanauPaxos {
 
 	wp := new(WhanauPaxos)
@@ -266,12 +270,20 @@ func StartWhanauPaxos(servers []string, me int,
 		rpcs.Register(wp)
 	}
 
+	newservers := make([]string, len(servers))
+	for i, _ := range servers {
+		newservers[i] = port(uid+"-wp", i)
+	}
+
 	wp.handledRequests = make(map[int64]interface{})
-	wp.px = paxos.Make(servers, me, rpcs)
+	wp.px = paxos.Make(newservers, me, nil)
 	wp.db = make(map[KeyType]TrueValueType)
 	wp.pending_writes = make(map[PendingInsertsKey]string)
 	wp.currSeq = 0
 	wp.currView = 0
+	wp.me = me
+	wp.myaddr = servers[me]
+	wp.uid = uid
 
 	gob.Register(Op{})
 	gob.Register(PaxosGetArgs{})

@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -113,6 +115,7 @@ func (ws *WhanauServer) GetSucc() [][]Record {
 
 // RPC to actually do a Get on the server's WhanauPaxos cluster.
 // Essentially just passes the call on to the WhanauPaxos servers.
+/*
 func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 	reply *ClientGetReply) error {
 
@@ -133,6 +136,56 @@ func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
 		reply.Value = ""
 		reply.Err = ErrFailVerify
 	}
+	return nil
+}
+*/
+
+func (ws *WhanauServer) PaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+	if !ws.is_sybil {
+		ws.HonestPaxosGetRPC(args, reply)
+	} else {
+		ws.SybilPaxosGetRPC(args, reply)
+	}
+
+	return nil
+}
+
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+func (ws *WhanauServer) HonestPaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+
+	if _, ok := ws.paxosInstances[args.Key]; !ok {
+		reply.Err = ErrNoKey
+	}
+
+	get_args := PaxosGetArgs{args.Key, args.RequestID}
+	var get_reply PaxosGetReply
+
+	instance := ws.paxosInstances[args.Key]
+	instance.PaxosGet(&get_args, &get_reply)
+
+	if VerifyTrueValue(get_reply.Value) {
+		reply.Value = get_reply.Value.TrueValue
+		reply.Err = OK
+	} else {
+		reply.Value = ""
+		reply.Err = ErrFailVerify
+	}
+
+	//fmt.Printf("ClientGet got reply %v\n", reply)
+	return nil
+}
+
+// RPC to actually do a Get on the server's WhanauPaxos cluster.
+// Essentially just passes the call on to the WhanauPaxos servers.
+// sybil behavior returns no key
+func (ws *WhanauServer) SybilPaxosGetRPC(args *ClientGetArgs,
+	reply *ClientGetReply) error {
+	fmt.Printf("SYBILPAXOSGET WUAHAHAHAHA\n")
+	reply.Value = "I am a Sybil"
+	reply.Err = ErrNoKey
 	return nil
 }
 
@@ -161,6 +214,8 @@ func (ws *WhanauServer) AddPendingRPCMaster(args *PendingArgs, reply *PendingRep
 
 	// TODO: put the paxos call in another function, so we don't block
 
+	//fmt.Printf("master cluster is %v\n", ws.master_paxos_cluster)
+
 	var current_view int
 
 	ws.mu.Lock()
@@ -184,7 +239,9 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 
 	// this will add a pending write to one of the master nodes
 
-	for _, server := range ws.masters {
+	for {
+		randIdx := rand.Intn(len(ws.masters))
+		server := ws.masters[randIdx]
 		rpc_reply := &PendingReply{}
 		ok := call(server, "WhanauServer.AddPendingRPCMaster", args, rpc_reply)
 		if ok {
@@ -209,7 +266,8 @@ func (ws *WhanauServer) Kill() {
 
 // TODO servers is for a paxos cluster
 func StartServer(servers []string, me int, myaddr string,
-	neighbors []string, masters []string, is_master bool, is_sybil bool,
+	neighbors []string, masters []string, newservers []string,
+	is_master bool, is_sybil bool, is_px_server bool,
 	nlayers int, rf int, w int, rd int, rs int, t int) *WhanauServer {
 
 	ws := new(WhanauServer)
@@ -225,8 +283,30 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.is_master = is_master
 	ws.is_sybil = is_sybil
 
-	if is_master {
+	ws.rpc = rpc.NewServer()
+	ws.rpc.Register(ws)
 
+	if is_px_server {
+		// this server exists exclusively to be a paxos handler
+		// so all we really need to do is start the whanaupaxos instance
+
+		var idx int
+
+		for i, m := range newservers {
+			if m == ws.myaddr {
+				idx = i
+				break
+			}
+		}
+
+		uid := ""
+		for _, srv := range newservers {
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
+		}
+		StartWhanauPaxos(newservers, idx, uid, ws.rpc)
+	}
+
+	if is_master {
 		var idx int
 
 		for i, m := range masters {
@@ -236,7 +316,13 @@ func StartServer(servers []string, me int, myaddr string,
 			}
 		}
 
-		wp_m := StartWhanauPaxos(masters, idx, ws.rpc)
+		// start the whanaupaxos using precreated paxos servers
+		// which exist exclusively for the purpose of being paxos handlers
+		uid := ""
+		for _, srv := range newservers {
+			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
+		}
+		wp_m := StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 		ws.master_paxos_cluster = *wp_m
 		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)
 		ws.key_to_server = make(map[PendingInsertsKey]string)
@@ -260,9 +346,6 @@ func StartServer(servers []string, me int, myaddr string,
 	ws.lookup_idx = 0
 
 	ws.paxosInstances = make(map[KeyType]WhanauPaxos)
-
-	ws.rpc = rpc.NewServer()
-	ws.rpc.Register(ws)
 
 	gob.Register(LookupArgs{})
 	gob.Register(LookupReply{})

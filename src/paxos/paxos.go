@@ -73,7 +73,7 @@ func call(srv string, name string, args interface{}, reply interface{}) bool {
 	if err != nil {
 		err1 := err.(*net.OpError)
 		if err1.Err != syscall.ENOENT && err1.Err != syscall.ECONNREFUSED {
-			fmt.Printf("paxos Dial() failed: %v\n", err1)
+			fmt.Printf("paxos Dial() failed: %v for server %v\n", err1, srv)
 		}
 		return false
 	}
@@ -351,7 +351,6 @@ func (px *Paxos) Accept(args *AcceptArgs, reply *AcceptReply) error {
 
 	reply.OK = false
 	existingInstance := px.instances[args.Seq]
-
 	if args.ProposalNum >= existingInstance.h_prepare {
 		newInstance := Instance{args.ProposalNum, args.ProposalNum,
 			args.ValueToAccept, existingInstance.decided,
@@ -406,7 +405,7 @@ func Make(peers []string, me int, rpcs *rpc.Server) *Paxos {
 	px.me = me
 
 	// pick a reasonably close time
-	px.ref_time = time.Date(2014, time.February, 25, 0, 0, 0, 0, time.UTC)
+	px.ref_time = time.Date(2014, time.May, 10, 0, 0, 0, 0, time.UTC)
 
 	px.instances = make(map[int]Instance)
 	px.my_done = -1

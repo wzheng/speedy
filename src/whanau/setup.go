@@ -194,6 +194,13 @@ func (ws *WhanauServer) StartSetupStage2() {
 					}
 				}
 				
+				for k, v := range receive_paxos_reply.KV {
+					cpargs := &ClientPutArgs{k, v, NRand(), ws.myaddr}
+					cpreply := &ClientPutReply{}
+					ws.PaxosPutRPC(cpargs, cpreply)
+					
+					fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
+				}
 			}
 		}
 	}

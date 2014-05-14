@@ -1470,3 +1470,247 @@ func TestRealLookupSybil(t *testing.T) {
 
 	}
 }
+
+// Testing paxos cluster composition
+func TestClusterComp(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+	iterations := 1
+	for z := 0; z < iterations; z++ {
+		fmt.Printf("Iteration: %d \n \n", z)
+		const nservers = 100
+		const nkeys = 500          // keys are strings from 0 to nkeys
+		const k = nkeys / nservers // keys per node
+		const sybilProb = 0.49
+		attackEdgeProb := 0.01
+
+		// run setup in parallel
+		// parameters
+		constant := 5
+		nlayers := int(math.Log(float64(k*nservers))) + 1
+		nfingers := int(math.Sqrt(k * nservers))
+		w := constant * int(math.Log(float64(nservers))) // number of steps in random walks, O(log n) where n = nservers
+		rd := 2 * int(math.Sqrt(k*nservers))             // number of records in the db
+		rs := constant * int(math.Sqrt(k*nservers))      // number of nodes to sample to get successors
+		ts := 5                                          // number of successors sampled per node
+		numAttackEdges := 0                              //4*(int(nservers / math.Log(nservers)) + 1)
+		attackCounter := 0
+		numSybilServers := 50
+		sybilServerCounter := 0
+
+		fmt.Printf("Max attack edges: %d \n", numAttackEdges)
+
+		time1 := time.Now()
+		var ws []*WhanauServer = make([]*WhanauServer, nservers)
+		var kvh []string = make([]string, nservers)
+		var ksvh map[int]bool = make(map[int]bool)
+		defer cleanup(ws)
+
+		for i := 0; i < nservers; i++ {
+			kvh[i] = port("basic", i)
+			rand.Seed(time.Now().UTC().UnixNano())
+			prob := rand.Float64()
+			if prob > sybilProb && sybilServerCounter < numSybilServers {
+				sybilServerCounter++
+				// randomly make some of the servers sybil servers
+				ksvh[i] = true
+			}
+		}
+
+		master_servers := make([]string, 0)
+		// first PaxosSize servers are master servers
+		for i := 0; i < PaxosSize; i++ {
+			master_servers = append(master_servers, kvh[i])
+		}
+		fmt.Printf("Master paxos servers are %v\n", master_servers)
+
+		neighbors := make([][]string, nservers)
+		for i := 0; i < nservers; i++ {
+			neighbors[i] = make([]string, 0)
+		}
+
+		for i := 0; i < nservers; i++ {
+			for j := 0; j < i; j++ {
+				_, ok := ksvh[j]
+				_, ok2 := ksvh[i]
+
+				if ok || ok2 {
+					if ok && ok2 {
+						// both nodes are sybil nodes
+						// create edge with 100% probability
+						neighbors[i] = append(neighbors[i], kvh[j])
+						neighbors[j] = append(neighbors[j], kvh[i])
+					} else {
+
+						// one node is a sybil node
+						// create edge with small probability
+						rand.Seed(time.Now().UTC().UnixNano())
+						prob := rand.Float64()
+
+						if prob < attackEdgeProb {
+							attackCounter++
+							//Sybil neighbor, print out neighbors
+							neighbors[i] = append(neighbors[i], kvh[j])
+							neighbors[j] = append(neighbors[j], kvh[i])
+						}
+					}
+
+				} else {
+					// neither is sybil, create edge with 100% probability
+					neighbors[i] = append(neighbors[i], kvh[j])
+					neighbors[j] = append(neighbors[j], kvh[i])
+				}
+			}
+		}
+
+		newservers := make([]string, len(master_servers))
+		for i, _ := range master_servers {
+			// we need to actually create new servers
+			// to disambiguate Paxos instances
+			// so that masters don't overlap
+			newservers[i] = port("masterpaxos", i)
+		}
+		for j, srv := range newservers {
+			// This is just a dummy, only for the purpose
+			// of starting the Paxos handler properly.
+			// No routing should happen here!
+			StartServer(newservers, j, srv, nil,
+				master_servers, newservers, false, false, true, nlayers, nfingers,
+				w, rd, rs, ts)
+		}
+
+		fmt.Printf("newservers is %v\n", newservers)
+		// Start servers
+		for k := 0; k < nservers; k++ {
+
+			// if malicious
+			if _, ok := ksvh[k]; ok {
+				if k < PaxosSize {
+					// malicious master -- doesn't do anything
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, true, false, nlayers, nfingers, w, rd, rs, ts)
+
+				} else {
+					// malicious nonmaster
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, true, false, nlayers, nfingers, w, rd, rs, ts)
+				}
+			} else {
+				// not malicious
+				if k < PaxosSize {
+					// non malicious master
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, newservers, true, false, false, nlayers, nfingers, w, rd, rs, ts)
+				} else {
+					// normal villager
+					ws[k] = StartServer(kvh, k, kvh[k], neighbors[k], master_servers, nil, false, false, false, nlayers, nfingers, w, rd, rs, ts)
+				}
+			}
+		}
+
+		var cka [nservers]*Clerk
+		for i := 0; i < nservers; i++ {
+			cka[i] = MakeClerk(kvh[i])
+		}
+
+		fmt.Printf("\033[95m%s\033[0m\n", "Test: Paxos Cluster Composition")
+		sybiladdrs := make(map[string]bool)
+		for i := 0; i < len(kvh); i++ {
+			if _, ok := ksvh[i]; ok {
+				fmt.Printf("Address of Sybil node: %s \n", kvh[i])
+				sybiladdrs[kvh[i]] = true
+			}
+		}
+
+		keys := make([]KeyType, 0)
+		nonsybilkeys := make([]KeyType, 0)
+		trueRecords := make(map[KeyType]string)
+		counter := 0
+		// Hard code records for all servers
+		for i := 0; i < nservers; i++ {
+			// give keys to sybil nodes as well
+			/*
+				if _, present := ksvh[i]; present {
+					fmt.Printf(" Sybil server %d\n", i)
+				}
+			*/
+
+			for j := 0; j < nkeys/nservers; j++ {
+				// make key/true value
+				var key KeyType = KeyType(strconv.Itoa(counter))
+				var trueval string = "val" + strconv.Itoa(counter)
+
+				keys = append(keys, key)
+				if _, present := ksvh[i]; !present {
+					nonsybilkeys = append(nonsybilkeys, key)
+				}
+				trueRecords[key] = trueval
+
+				val := TrueValueType{trueval, ws[i].myaddr, nil, &ws[i].secretKey.PublicKey}
+				sig, _ := SignTrueValue(val, ws[i].secretKey)
+				val.Sign = sig
+
+				args := &PendingArgs{key, val, ws[i].myaddr}
+				reply := &PendingReply{}
+
+				// insert key to DHT, gets processed at setup phase
+				ws[i].AddPendingRPC(args, reply)
+				counter++
+			}
+		}
+
+		fmt.Printf("Network creating and AddPendingrpc time: %s\n", time.Since(time1))
+		// initiate setup from all masters
+
+		start := time.Now()
+		for i := 0; i < PaxosSize; i++ {
+			go ws[i].InitiateSetup()
+		}
+		time.Sleep(120 * time.Second)
+
+		elapsed := time.Since(start)
+		fmt.Printf("Finished setup from initiate setup, time: %s\n", elapsed)
+		for i := 0; i < nservers; i++ {
+			fmt.Printf("ws[%d].kvstore length: %s\n", i, len(ws[i].kvstore))
+
+			for key, val := range ws[i].kvstore {
+				fmt.Printf("Paxos cluster for key %s: %s\n", key, val)
+			}
+		}
+
+		fmt.Printf("Finished setup, time: %s\n", elapsed)
+
+		fmt.Printf("Count paxos cluster composition\n")
+
+		totalClusters := 0
+		numMajority := 0
+		for i := 0; i < nservers; i++ {
+			// skip sybil node
+			if _, present := ksvh[i]; present {
+				//fmt.Printf("skipping sybil node %s\n", cka[i])
+				continue
+			}
+
+			for key, cluster := range ws[i].kvstore {
+				//fmt.Printf("Cluster for key %s is %s\n", key, cluster)
+				numSybil := 0
+
+				for s := 0; s < len(cluster.Servers); s++ {
+					srv := cluster.Servers[s]
+					if _, present := sybiladdrs[srv]; present {
+						numSybil++
+					}
+				}
+				if (float64(numSybil) / float64(len(cluster.Servers))) > 0.5 {
+					fmt.Printf("Majority found for key %s numSybil: %d, cluster size %d\n", key, numSybil, len(cluster.Servers))
+					numMajority++
+				}
+				totalClusters++
+			}
+
+		}
+
+    fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v\n", nservers, nkeys, sybilProb, len(ksvh))
+		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
+    fmt.Printf("Cluster size: %d\n", PaxosSize)
+		fmt.Printf("totalClusters: %d\n", totalClusters)
+		fmt.Printf("numMajority: %d\n", numMajority)
+		fmt.Printf("Percent clusters with sybil majoriy: %v\n", float64(numMajority)/float64(totalClusters))
+	}
+}

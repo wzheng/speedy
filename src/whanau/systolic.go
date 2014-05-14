@@ -46,6 +46,17 @@ func (ws *WhanauServer) PerformSystolicMixing(numWalks int) {
 		server_pool[i] = ws.myaddr
 	}
 
+	if len(ws.neighbors) == 0 {
+		ws.rw_mu.Lock()
+
+		ws.rw_servers = make([]string, len(server_pool))
+		copy(ws.rw_servers, server_pool)
+		ws.rw_idx = 0
+
+		ws.rw_mu.Unlock()
+		return
+	}
+
 	// perform w iterations to get sufficient mixing
 	for iter := 0; iter < ws.w; iter++ {
 		naddresses := int(float64(len(server_pool)) /

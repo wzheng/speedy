@@ -190,6 +190,7 @@ func (ws *WhanauServer) AddPendingRPC(args *PendingArgs,
 		if ok {
 			if rpc_reply.Err == OK {
 				reply.Err = ErrPending
+				break
 			} else {
 				reply.Err = rpc_reply.Err
 			}

@@ -5,8 +5,8 @@ package whanau
 */
 
 import "time"
-import "fmt"
-import "math/rand"
+//import "fmt"
+//import "math/rand"
 
 func (ws *WhanauServer) Setup() {
 	//fmt.Printf("In setup of honest node: %s", ws.is_sybil)
@@ -147,7 +147,7 @@ func (ws *WhanauServer) StartSetupStage2() {
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()
 	// send this new cluster to a random master cluster
-	fmt.Printf("Server %v DONE constructing new paxos clusters, new cluster is %v\n", ws.myaddr, new_cluster)
+	//fmt.Printf("Server %v DONE constructing new paxos clusters, new cluster is %v\n", ws.myaddr, new_cluster)
 
 	// enter the SETUP stage
 	ws.mu.Lock()
@@ -156,34 +156,34 @@ func (ws *WhanauServer) StartSetupStage2() {
 
 	// TODO: for every key value in the current kv store, replace with the newest paxos cluster
 
-	randInt := rand.Intn(len(ws.masters))
-	master_server := ws.masters[randInt]
+	for _, master_server := range ws.masters {
 
-	receive_paxos_args := &ReceiveNewPaxosClusterArgs{ws.myaddr, new_cluster}
-	receive_paxos_reply := &ReceiveNewPaxosClusterReply{}
-
-	ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster",
-		receive_paxos_args, receive_paxos_reply)
-	if ok {
-		if receive_paxos_reply.Err == OK {
-
-			fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
-
-			join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
-			var join_reply JoinClusterReply
-
-			for _, srv := range new_cluster {
-				if srv == ws.myaddr {
-					ws.JoinClusterRPC(&join_args, &join_reply)
-				} else {
-					ok := call(srv, "WhanauServer.JoinClusterRPC",
-						join_args, &join_reply)
-					if !ok {
-						// TODO error
+		receive_paxos_args := &ReceiveNewPaxosClusterArgs{ws.myaddr, new_cluster}
+		receive_paxos_reply := &ReceiveNewPaxosClusterReply{}
+		
+		ok := call(master_server, "WhanauServer.ReceiveNewPaxosCluster",
+			receive_paxos_args, receive_paxos_reply)
+		if ok {
+			if receive_paxos_reply.Err == OK {
+				
+				//fmt.Printf("Server %v received pending write %v\n", ws.myaddr, receive_paxos_reply.KV)
+				
+				join_args := JoinClusterArgs{new_cluster, receive_paxos_reply.KV}
+				var join_reply JoinClusterReply
+				
+				for _, srv := range new_cluster {
+					if srv == ws.myaddr {
+						ws.JoinClusterRPC(&join_args, &join_reply)
+					} else {
+						ok := call(srv, "WhanauServer.JoinClusterRPC",
+							join_args, &join_reply)
+						if !ok {
+							// TODO error
+						}
 					}
 				}
+				
 			}
-
 		}
 	}
 
@@ -204,5 +204,5 @@ func (ws *WhanauServer) StartSetupStage2() {
 	ws.state = Normal
 	ws.mu.Unlock()
 
-	fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
+	//fmt.Printf("Server %v finished entire setup stage\n", ws.myaddr)
 }

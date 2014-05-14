@@ -1315,7 +1315,8 @@ func TestRealLookupSybil(t *testing.T) {
 			go ws[i].InitiateSetup()
 		}
 		
-		time.Sleep(30 * time.Second)
+		time.Sleep(60 * time.Second)
+
 		for i := 0; i < nservers; i++ {
 			fmt.Printf("ws[%d].kvstore: %s\n", i, ws[i].kvstore)
 		}

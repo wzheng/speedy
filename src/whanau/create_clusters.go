@@ -76,6 +76,7 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 		cpreply := &ClientPutReply{}
 		ws.PaxosPutRPC(cpargs, cpreply)
 
+		fmt.Printf("Server %v processed %v\n", ws.myaddr, k)
 	}
 
 	reply.Err = OK

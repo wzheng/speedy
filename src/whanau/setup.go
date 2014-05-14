@@ -21,7 +21,7 @@ func (ws *WhanauServer) Setup() {
 // Setup for honest nodes
 func (ws *WhanauServer) SetupHonest() {
 	//fmt.Printf("In Setup of honest server %s \n", ws.myaddr)
-	//DPrintf("HONEST SERVER: %s", "HONEST SERVER")
+	fmt.Printf("HONEST SERVER: %s", "HONEST SERVER")
 
 	// How many random walks should we precompute?
 	// the extras are for lookups
@@ -150,6 +150,8 @@ func (ws *WhanauServer) StartSetupStage2() {
 
 	// wait until all of its current outstanding requests are done processing
 	// TODO: should keep a counter of all of the outstanding requests
+
+	fmt.Printf("StartSetupStage2()\n")
 
 	// try to construct a new paxos cluster
 	new_cluster := ws.ConstructPaxosCluster()

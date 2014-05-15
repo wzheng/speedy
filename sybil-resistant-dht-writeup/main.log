@@ -1,8 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012) (format=xelatex 2012.6.30)  14 MAY 2014 23:58
 =======
 This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012/Debian) (format=xelatex 2014.5.14)  14 MAY 2014 23:30
 >>>>>>> 3ebc710de478c28b4834cfa23543cb2b8098aec6
+=======
+This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012/Debian) (format=xelatex 2014.5.14)  14 MAY 2014 23:44
+>>>>>>> 9bf59f2c31ee7dbd1bae2cac4081e35b6f9bd74c
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1368,7 +1372,7 @@ File: sybilattackedges30.png Graphic file (type QTm)
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 [7]
-Overfull \hbox (0.65001pt too wide) in paragraph at lines 271--272
+Overfull \hbox (0.65001pt too wide) in paragraph at lines 272--273
 []\EU1/lmr/m/n/10 Real life social networks might not be made of graphs that ar
 e well-connected.
  []
@@ -1384,7 +1388,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.275 ...[width=0.9\columnwidth]{4probattackedges}
+l.276 ...[width=0.9\columnwidth]{4probattackedges}
                                                   
 ? 
 [8]

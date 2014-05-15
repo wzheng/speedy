@@ -278,7 +278,6 @@ Real life social networks might not be made of graphs that are well-connected. F
 \end{figure}
 
 We see that the connectivity of the graph affects the success rate of lookups although not to the extent that we would have predicted. The lookup success rate at fewer than $500$ attack edges has a lower success rate than when the edge probability is $1$. However, as the attack edges increase, the success rate does decrease rapidly, indicating the robustness of the protocol against Sybil attacks even in graphs that are not well-connected.
-
 \subsubsection{Clustering Attack}
 
 One form of clustering attack is when Sybil nodes all choose their ids to cluster
@@ -358,13 +357,15 @@ In the experiment, we construct a $100$ node network with $50$ honest and $50$ s
 We insert 5 keys into each node and run the entire setup protocol. We count the fraction of
 Sybil nodes in the Paxos clusters for all the keys that were inserted by honest nodes.
 In the experiment, $n$ is 50, so the $O(n/logn)$ upper bound is around 12 attack edges.
-As seen in Figure 3, the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges
+As seen in Fig.~\ref{fig:sybilcluster-3} , the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges
 and increases linearly with the number of attack edges.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=1.0\columnwidth]{sybilcluster-3}
-\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. The Paxos cluster size was set to $3$.}
+\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. The Paxos cluster size was set to $3$.
+The x axis shows the number of attack edges between the honest and Sybil region. The y axis shows the percent of Paxos clusters that contained
+majority of Sybil nodes.}
 \label{fig:sybilcluster-3}
 \end{figure}
 

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012) (format=xelatex 2012.6.30)  14 MAY 2014 23:36
+This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012) (format=xelatex 2012.6.30)  14 MAY 2014 23:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1410,18 +1410,22 @@ File: 4probattackedges.png Graphic file (type QTm)
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[8]
-LaTeX Font Info:    Try loading font information for EU1+lmtt on input line 299
+[8] [9]
+LaTeX Font Info:    Try loading font information for EU1+lmtt on input line 303
 .
  (/usr/local/texlive/2012/texmf-dist/tex/latex/euenc/eu1lmtt.fd
 File: eu1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
-) [9]
+)
 [10]
 
-LaTeX Warning: Citation 'Whanau' on page 11 undefined on input line 341.
+LaTeX Warning: Citation 'Whanau' on page 11 undefined on input line 345.
 
 File: sybilcluster-3.png Graphic file (type QTm)
-<use  "sybilcluster-3.png" > [11] [12] (./main.aux)
+<use  "sybilcluster-3.png" >
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[11] [12] [13] (./main.aux)
 
 LaTeX Warning: There were undefined references.
 
@@ -1443,4 +1447,4 @@ Here is how much of TeX's memory you used:
  1144 hyphenation exceptions out of 8191
  63i,6n,57p,934b,1310s stack positions out of 5000i,500n,10000p,200000b,50000s
 
-Output written on main.pdf (12 pages).
+Output written on main.pdf (13 pages).

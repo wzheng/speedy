@@ -268,22 +268,26 @@ Fig.~\ref{fig:sybilattackedges} shows that the fraction of successful lookups dr
 
 We see that the \emph{number} of Sybil nodes does affect the fraction of successful lookups. This is a surprising result because we expected to see that the fraction of successful lookups depend more on the number of honest nodes and the number of attack edges between honest nodes and Sybil nodes. In other words, a larger number of honest nodes leads to more edges between honest nodes, thus leading to a higher threshold for the number of attack edges that can be tolerated before the number of successful lookups decreases significantly. However, Fig.~\ref{fig:sybilattackedges30} shows that despite having $800$ attack edges ($1/3$ of the number of honest edges), the fraction of success still hovers around $88\%$. We are not quite sure why this occurs but one explanation could be that the number of potential Sybil clusters that could occur decreases as the number of Sybil nodes decreases.
 
-Real life social networks might not be made of graphs that are well-connected. For the next set of simulations we performed, we looked at whether varying the edge connectivity probability of honest nodes with other honest nodes will affect fraction of lookup success. The specific connectivity probabilities we tested were $0.2$, $0.4$, $0.6$, and $0.8$ on a graph with $50$ Sybil nodes, $50$ honest nodes, and $5$ keys per node. Fig.~\ref{fig:4probattackedges} shows the fraction of successful lookups when the edge probability between honest nodes is $0.4$. 
+Real life social networks might not be made of graphs that are well-connected. For the next set of simulations we performed, we looked at whether varying the edge connectivity probability of honest nodes with other honest nodes will affect fraction of lookup success. We tested the connectivity probability, $0.4$, on a graph with $50$ Sybil nodes, $50$ honest nodes, and $5$ keys per node. Fig.~\ref{fig:4probattackedges} shows the fraction of successful lookups when the edge probability between honest nodes is $0.4$. 
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\columnwidth]{4probattackedges}
-\caption{Number of attack edges in a graph with $70$ honest nodes, $30$ Sybil nodes, and $5$ keys per node. The protocol has a fraction of success of approximate $88\%$ for $800$ attack edges (again approximately $1/3$ the number of edges between honest nodes).}
+\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node and honest node edge probability of $0.4$. The protocol successful lookup rates remains around $80\%$ even as attack edges increase.}
 \label{fig:4probattackedges}
 \end{figure}
 
-\subsubsection{Sparse Cut Assumption Relaxed}
+We see that the connectivity of the graph affects the success rate of lookups although not to the extent that we would have predicted. The lookup success rate at fewer than $500$ attack edges has a lower success rate than when the edge probability is $1$. However, as the attack edges increase, the success rate does decrease rapidly, indicating the robustness of the protocol against Sybil attacks even in graphs that are not well-connected.  
 
 \subsubsection{Clustering Attack}
 
-\subsection{Data Consistency Layer Security}
+One form of clustering attack is when Sybil nodes all choose their ids to cluster around a particular key. This clustering could leak into the finger tables during the routing protocol so that requests for that particular key are likely to be routed to a Sybil node.
+ 
+ One of the main contributions of the Whanau protocol is to prevent against clustering attacks. This is done by the layered construction of routing tables described in section 3.1. The intuition for preventing clustering attacks is that if Sybil nodes choose their ids to cluster around a particular key in one layer, then in the next layer, that clustering will be replicated in the honest node ids. This is because node ids for one layer is chosen randomly from the previous layer's finger tables. Sybil nodes can anticipate this layered routing table construction and choose a particular layer to cluster in, which is why many layers are used. \cite{whanau} shows that $O(log n)$ layers is the optimal number.
 
-We analyze the security of the Paxos data layer in this section.
+During lookup, one layer is chosen at random, so an honest node is likely to be chosen even in the presence of a clustering attack.
+
+Our results did show show a major difference in lookup success rate when a simulation was performed on a network of $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. 
 
 \subsubsection{Put Security and Data Integrity}
 \sys{} provides some data integrity guarantees using signing. In a public DHT, Sybil nodes could constantly update

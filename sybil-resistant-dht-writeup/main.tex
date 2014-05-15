@@ -76,7 +76,7 @@ and the Sybil region.
 \section{Design}
 
 We separate our design into two "layers": the routing layer, based on
-\cite{whanau}, and the consistency layer, composed of multiple clusters of
+\cite{whanau}, and the data consistency layer, composed of multiple clusters of
 servers which coordinate key operations using Paxos.
 
 \subsection{Routing protocol}
@@ -88,9 +88,9 @@ and the fast mixing properties of the honest node region,
 random walks from any node are likely to stay within the honest region
 unless the node is part of the sybil edges.
 
-Each node maintains a local key/value store for the keys that are inserted from this node. Each key in the local kv store will get assigned a Paxos cluster value as explained in secton 3.3.
+Each node maintains a local key/value store for the keys that are inserted from this node. Each key in the local kv store will get assigned a Paxos cluster value as explained in secton 3.2.
 After this assignment, each node creates an intermediate key/value store, called db, that contains $r_d$ samples of key/value pairs collected from random walks on the network.
-The Wh\={a}nau protocol introduces the idea of layers of routing tables provably useful for mitigating some Sybil attacks \cite{whanau}.
+Furthermore, the Wh\={a}nau protocol also creates layers of routing tables, which provably mitigates Sybil attacks \cite{whanau} such as clustering attacks.
 
 In each layer, there are three routing tables created: id, fingers, successors.
 The id for a layer is used to identify the node; it comes from the keyspace. This is chosen randomly from the db for the first layer and chosen randomly from the previous layer's fingers in subsequent layers.
@@ -237,14 +237,14 @@ Edge Prob & Fraction of Successful Lookups needed > 1 Hop & Total Lookup Success
 
 \section{Security Analysis}
 
-\subsection{Thread Model}
+\subsection{Threat Model}
 The "Sybil Proof" security of \sys{} is based upon the assumption that there is a sparse cut between the fast mixing honest region and the Sybil region of the underlying p2p network. There are no further assumptions on the graph structure of the Sybil region. The routing tables and Paxos clusters are all built up from taking random walks on the network. The main intuition is that a random walk from an honest region is unlikely to end up in the Sybil region because of the sparse cut, unless, of course that honest node is on the edge of the graph.
 
 Besides the sparse cut assumption, Sybil nodes are free to behave however they wish. This can include dropping routing packets, flooding the neighbors, clustering attacks, modifying data values from within the DHT, blatantly returning wrong values, etc.
 
 The main security guarantee \sys{} provides is that Lookups return correct values most of the time even in the presence of a majority of Sybil nodes. This is based on the security guarantees of Whanau shown in \cite{whanau}. Though we extended the protocol with a layer of indirection for providing data consistency, we believe the security guarantees should still be valid.
 
-The security analysis of \sys{} can be broken down into the security of the routing layer (looking up the Paxos cluster for a particular key) and the security of the data layer (looking up the true value from the Paxos cluster). We explain some of the theoretical guarantees and show experimental results.
+The security analysis of \sys{} can be broken down into the security of the routing layer (looking up the Paxos cluster for a particular key) and the security of the data layer (looking up the true value from the Paxos cluster). We explain the main theoretical guarantees and show experimental results.
 
 % Include experimental results and pretty charts here that take up lots of space =D
 \subsection{Whanau Routing Layer Security}
@@ -268,11 +268,9 @@ Fig.~\ref{fig:sybilattackedges} shows that the fraction of successful lookups dr
 
 We see that the \emph{number} of Sybil nodes does affect the fraction of successful lookups. This is a surprising result because we expected to see that the fraction of successful lookups depend more on the number of honest nodes and the number of attack edges between honest nodes and Sybil nodes. In other words, a larger number of honest nodes leads to more edges between honest nodes, thus leading to a higher threshold for the number of attack edges that can be tolerated before the number of successful lookups decreases significantly. However, Fig.~\ref{fig:sybilattackedges30} shows that despite having $800$ attack edges ($1/3$ of the number of honest edges), the fraction of success still hovers around $88\%$. We are not quite sure why this occurs but one explanation could be that the number of potential Sybil clusters that could occur decreases as the number of Sybil nodes decreases.
 
-\subsubsection{Sparse Cut Assumption Relaxed}
-
 \subsubsection{Clustering Attack}
 
-\subsection{Data Layer Security}
+\subsection{Data Consistency Layer Security}
 
 We analyze the security of the Paxos data layer in this section.
 
@@ -328,14 +326,15 @@ As long as a majority of the nodes in a Paxos cluster is honest, then the agreem
 will work correctly because this is analagous to a majority of nodes not failing.
 
 We tested the robustness of the random walk by experimentally showing the relationship between the number
-of attack edges and the percent of paxos clusters that end up with a Sybil node majority after the setup phase.
+of attack edges and the percent of Paxos clusters that end up with a Sybil node majority after the setup phase.
 As proven in \cite{Whanau}, the security of the Whanau protocol can support
 up to $O(n/logn)$ attack edges, where $n$ is the number of honest nodes in the network.
-We relax this assumption and vary the number of edges (attack edges) between the two regions and observe the effect of the
-number of Sybil nodes that end up in the Paxos clusters.
+We relax this assumption and vary the number of edges (attack edges) between the two regions 
+and observe the effect of the number of Sybil nodes that end up in the Paxos clusters.
 
 In the experiment, we construct a $100$ node network with $50$ honest and $50$ sybil nodes, where each region is well connected within the partition.
-We insert 5 keys into each node and run the entire setup protocol. We count the fraction of Sybil nodes in the Paxos clusters for all the keys that were inserted by honest nodes.
+We insert 5 keys into each node and run the entire setup protocol. We count the fraction of
+Sybil nodes in the Paxos clusters for all the keys that were inserted by honest nodes.
 In the experiment, $n$ is 50, so the $O(n/logn)$ upper bound is around 12 attack edges.
 As seen in Figure 3, the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges
 and increases linearly with the number of attack edges.

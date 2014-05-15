@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012) (format=xelatex 2012.6.30)  15 MAY 2014 00:03
+This is XeTeX, Version 3.1415926-2.4-0.9998 (TeX Live 2012) (format=xelatex 2012.6.30)  15 MAY 2014 00:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1263,24 +1263,7 @@ Package biblatex Warning: 'babel' detected but 'csquotes' missing.
 LaTeX Warning: Unused global option(s):
     [letter].
 
-(./main.aux
-
-! LaTeX Error: Missing \begin{document}.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.46 <
-      <<<<<< HEAD
-? 
-
-LaTeX Warning: Label `fig:4probattackedges' multiply defined.
-
-
-LaTeX Warning: Label `fig:sybilcluster-3' multiply defined.
-
-)
+(./main.aux)
 \openout1 = `main.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 26.
@@ -1317,19 +1300,7 @@ Package biblatex Warning: Data encoding is 'utf8'.
 
 Package biblatex Info: Trying to load bibliographic data...
 Package biblatex Info: ... file 'main.bbl' found.
-(./main.bbl
-Overfull \hbox (43.88126pt too wide) in paragraph at lines 46--18
-[]\EU1/lmr/m/n/10 «««< HEAD        =======          »»»> 3ebc710de478c28b
-4834cfa23543cb2b8098aec6
- []
-
-
-Overfull \hbox (4.76453pt too wide) in paragraph at lines 46--18
-\EU1/lmr/m/n/10 «««< HEAD     =======   »»»> 9bf59f2c31ee7dbd1bae2cac4081
-e35b6f9bd74c
- []
-
-)
+(./main.bbl)
 Package biblatex Info: Reference section=0 on input line 26.
 Package biblatex Info: Reference segment=0 on input line 26.
 
@@ -1397,14 +1368,14 @@ LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
 (Font)                  OT1/cmss/bx/n --> EU1/lmss/bx/n on input line 26.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 (Font)                  OT1/cmtt/m/n --> EU1/lmtt/bx/n on input line 26.
-[1
 
-]
 Underfull \hbox (badness 10000) in paragraph at lines 61--68
 
  []
 
-[2] [3] [4] [5]
+[1
+
+] [2] [3] [4]
 Overfull \hbox (7.57pt too wide) in paragraph at lines 209--210
 \EU1/lmr/m/n/10 The Whanau Protocol guarantees a one hop lookup with high proba
 bility [LLK10].
@@ -1420,7 +1391,7 @@ Overfull \hbox (41.49007pt too wide) in paragraph at lines 222--236
  [] 
  []
 
-[6] [7]
+[5] [6]
 File: sybilattackedges.png Graphic file (type QTm)
  <use  "sybilattackedges.png" >
 File: sybilattackedges30.png Graphic file (type QTm)
@@ -1428,7 +1399,7 @@ File: sybilattackedges30.png Graphic file (type QTm)
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[8]
+[7]
 Overfull \hbox (0.65001pt too wide) in paragraph at lines 271--272
 []\EU1/lmr/m/n/10 Real life social networks might not be made of graphs that ar
 e well-connected.
@@ -1439,27 +1410,24 @@ File: 4probattackedges.png Graphic file (type QTm)
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[9] [10]
+[8] [9]
 LaTeX Font Info:    Try loading font information for EU1+lmtt on input line 309
 .
  (/usr/local/texlive/2012/texmf-dist/tex/latex/euenc/eu1lmtt.fd
 File: eu1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
 )
-[11]
+[10]
 
-LaTeX Warning: Citation 'Whanau' on page 12 undefined on input line 351.
+LaTeX Warning: Citation 'Whanau' on page 11 undefined on input line 351.
 
 File: sybilcluster-3.png Graphic file (type QTm)
 <use  "sybilcluster-3.png" >
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[12] [13] [14] (./main.aux)
+[11] [12] [13] (./main.aux)
 
 LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: There were multiply-defined labels.
 
 
 Package biblatex Warning: Please (re)run BibTeX on the file(s):
@@ -1473,10 +1441,10 @@ Package logreq Info: Writing requests to 'main.run.xml'.
 Here is how much of TeX's memory you used:
  27934 strings out of 494004
  564080 string characters out of 3150890
- 792862 words of memory out of 3000000
+ 792863 words of memory out of 3000000
  30779 multiletter control sequences out of 15000+200000
  8770 words of font info for 48 fonts, out of 3000000 for 9000
  1144 hyphenation exceptions out of 8191
- 63i,6n,57p,934b,1310s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 63i,6n,57p,903b,1310s stack positions out of 5000i,500n,10000p,200000b,50000s
 
-Output written on main.pdf (14 pages).
+Output written on main.pdf (13 pages).

@@ -321,11 +321,29 @@ value. We believe that this problem is taken care of by the digital signature.
 While the security on the Paxos protocol level is out of the scope of this project, \sys's
 design does try to minimize the number of Sybil nodes within a Paxos cluster.
 A Paxos cluster for a particular key is formed by taking some random walks from the node which a key is inserted/updated.
-If that node does not lie on an attack edge with the Sybil region, then their is a high probability
-all of the nodes contacted will stay within the honest region.
+If that node does not lie on an attack edge with the Sybil region, then there is a high probability
+all of the nodes contacted will stay within the honest region due to the sparse cut assumption
 
 As long as a majority of the nodes in a Paxos cluster is honest, then the agreement part of the protocol
 will work correctly because this is analagous to a majority of nodes not failing.
+
+We tested the robustness of the random walk by experimentally showing the relationship between the number
+of attack edges and the percent of paxos clusters that end up with a Sybil node majority after the setup phase.
+Figure 3 shows a linear relationship between the two. As mentioned above, the security of the Whanau protocol can support
+up to $O(n/logn)$ attack edges, where $n$ is the number of honest nodes in the network. In the experiment, we construct
+a 100 node network with $50$ honest and $50$ sybil nodes, each region is well connected with each other.
+We vary the number of edges (attack edges) between the two regions and observe the effect of the
+number of Sybil nodes that end up in the Paxos clusters. In the experiment, the $n$ is 50, so the $O(n/logn)$ cut off is around 12 attack edges.
+As seen from the graph, the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\columnwidth]{sybilcluster-3}
+\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. The Paxos cluster size was set to $3$.
+The honest region is well connected and the sybil region is well connected.}
+\label{fig:sybilcluster-3}
+\end{figure}
+
 
 \section{Future work}
 

@@ -88,9 +88,9 @@ type Finger struct {
 // Global Parameters
 
 const (
-	PaxosSize = 3
+	PaxosSize = 5
 	PaxosWalk = 3
-	TIMEOUT   = 20 // number of retries in everything
+	TIMEOUT   = 10 // number of retries in everything
 )
 
 type PendingInsertsKey struct {

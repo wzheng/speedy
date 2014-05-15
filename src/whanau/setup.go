@@ -4,7 +4,7 @@ package whanau
  Functions related to Whanau setup.
 */
 
-import "time"
+//import "time"
 import "fmt"
 //import "math/rand"
 
@@ -112,7 +112,8 @@ func (ws *WhanauServer) InitiateSetup() {
 			}
 		}
 
-		time.Sleep(1800 * time.Second)
+		//time.Sleep(1800 * time.Second)
+    break
 	}
 }
 

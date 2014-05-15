@@ -292,6 +292,8 @@ choose their ids to cluster around a particular key in one layer, then in
 the next layer, that clustering will be replicated in the honest node ids.
 This is because node ids for one layer is chosen randomly from the previous layer's finger tables.
 Sybil nodes can anticipate this layered routing table construction and choose
+a particular layer to cluster in, which is why many layers are used. \cite{whanau} shows that $O(log n)$ layers is the optimal number.
+During lookup, one layer is chosen at random, so an honest node is likely to be chosen even in the presence of a clustering attack.
 
 Our results did not show show a major difference in lookup success rate when a simulation was performed on a network of $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node.
 

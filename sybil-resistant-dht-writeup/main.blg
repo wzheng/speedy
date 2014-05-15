@@ -1,9 +1,9 @@
-This is BibTeX, Version 0.99d (TeX Live 2012)
+This is BibTeX, Version 0.99d (TeX Live 2012/Debian)
 Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: main.aux
 The style file: biblatex.bst
 Case mismatch error between cite keys Whanau and whanau
----line 54 of file main.aux
+---line 53 of file main.aux
  : \citation{Whanau
  :                 }
 I'm skipping whatever remains of this command

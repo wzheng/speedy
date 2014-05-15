@@ -1481,7 +1481,7 @@ func TestClusterComp(t *testing.T) {
 		const nkeys = 500          // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
-		attackEdgeProb := 0.4
+		attackEdgeProb := 0.1
 
 		// run setup in parallel
 		// parameters

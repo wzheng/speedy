@@ -329,18 +329,21 @@ will work correctly because this is analagous to a majority of nodes not failing
 
 We tested the robustness of the random walk by experimentally showing the relationship between the number
 of attack edges and the percent of paxos clusters that end up with a Sybil node majority after the setup phase.
-Figure 3 shows a linear relationship between the two. As mentioned above, the security of the Whanau protocol can support
-up to $O(n/logn)$ attack edges, where $n$ is the number of honest nodes in the network. In the experiment, we construct
-a 100 node network with $50$ honest and $50$ sybil nodes, each region is well connected with each other.
-We vary the number of edges (attack edges) between the two regions and observe the effect of the
-number of Sybil nodes that end up in the Paxos clusters. In the experiment, the $n$ is 50, so the $O(n/logn)$ cut off is around 12 attack edges.
-As seen from the graph, the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges.
+As proven in \cite{Whanau}, the security of the Whanau protocol can support
+up to $O(n/logn)$ attack edges, where $n$ is the number of honest nodes in the network.
+We relax this assumption and vary the number of edges (attack edges) between the two regions and observe the effect of the
+number of Sybil nodes that end up in the Paxos clusters.
+
+In the experiment, we construct a $100$ node network with $50$ honest and $50$ sybil nodes, where each region is well connected within the partition.
+We insert 5 keys into each node and run the entire setup protocol. We count the fraction of Sybil nodes in the Paxos clusters for all the keys that were inserted by honest nodes.
+In the experiment, $n$ is 50, so the $O(n/logn)$ upper bound is around 12 attack edges.
+As seen in Figure 3, the percentage of Sybil majority Paxos clusters is near zero for 12 attack edges
+and increases linearly with the number of attack edges.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\columnwidth]{sybilcluster-3}
-\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. The Paxos cluster size was set to $3$.
-The honest region is well connected and the sybil region is well connected.}
+\includegraphics[width=1.0\columnwidth]{sybilcluster-3}
+\caption{Number of attack edges in a graph with $50$ honest nodes, $50$ Sybil nodes, and $5$ keys per node. The Paxos cluster size was set to $3$.}
 \label{fig:sybilcluster-3}
 \end{figure}
 

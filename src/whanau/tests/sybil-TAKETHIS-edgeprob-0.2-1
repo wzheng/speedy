@@ -1,0 +1,139 @@
+Iteration: %d 
+ 
+ 0
+Actual number of attack edges: 85 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.1) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-1 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-3 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-4 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-7 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-11 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-13 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-14 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-16 
+Starting setup
+Finished setup, time: 1.805129856s
+Checking Try for every key from every node
+All test keys: [10 11 12 13 14 25 26 27 28 29 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 60 61 62 63 64 75 76 77 78 79 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99]
+numFound: 432
+total keys: 500
+Percent lookups successful: 0.864000
+Iteration: %d 
+ 
+ 1
+Actual number of attack edges: 73 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.2) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-1 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-5 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-9 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-15 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-16 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-17 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-18 
+Starting setup
+Finished setup, time: 1.923520927s
+Checking Try for every key from every node
+All test keys: [10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 35 36 37 38 39 40 41 42 43 44 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 95 96 97 98 99]
+numFound: 571
+total keys: 605
+Percent lookups successful: 0.943802
+Iteration: %d 
+ 
+ 2
+Actual number of attack edges: 70 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.3) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-2 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-3 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-4 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-5 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-8 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-9 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-10 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-11 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-12 
+Starting setup
+Finished setup, time: 1.756183685s
+Checking Try for every key from every node
+All test keys: [0 1 2 3 4 5 6 7 8 9 35 36 37 38 39 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99]
+numFound: 415
+total keys: 500
+Percent lookups successful: 0.830000
+Iteration: %d 
+ 
+ 3
+Actual number of attack edges: 58 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.4) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-2 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-4 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-9 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-13 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-16 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-18 
+Starting setup
+Finished setup, time: 1.882940879s
+Checking Try for every key from every node
+All test keys: [5 6 7 8 9 15 16 17 18 19 25 26 27 28 29 35 36 37 38 39 40 41 42 43 44 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 70 71 72 73 74 75 76 77 78 79 85 86 87 88 89 95 96 97 98 99]
+numFound: 641
+total keys: 720
+Percent lookups successful: 0.890278
+Iteration: %d 
+ 
+ 4
+Actual number of attack edges: 48 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.5) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-7 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-10 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-11 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-12 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-15 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-16 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-19 
+Starting setup
+Finished setup, time: 1.872750376s
+Checking Try for every key from every node
+All test keys: [5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 40 41 42 43 44 45 46 47 48 49 65 66 67 68 69 70 71 72 73 74 85 86 87 88 89 90 91 92 93 94]
+numFound: 575
+total keys: 605
+Percent lookups successful: 0.950413
+Iteration: %d 
+ 
+ 5
+Actual number of attack edges: 49 
+Edge probability: %!d(float32=0.2) 
+Attack edge probability: %!d(float32=0.6) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-1 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-2 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-4 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-6 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-10 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-11 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-12 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-14 
+Address of Sybil node: /var/tmp/824-1000/sm-27051-basic-15 
+Starting setup
+Finished setup, time: 1.70552047s
+Checking Try for every key from every node
+All test keys: [15 16 17 18 19 25 26 27 28 29 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 65 66 67 68 69 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99]
+exit status 2
+FAIL	whanau	346.203s

@@ -1,0 +1,97 @@
+Iteration: %d 
+ 
+ 0
+Max attack edges: 50 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-15 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-20 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-24 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-25 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-25 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-26 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-28 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-29 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-30 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-33 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-35 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-35 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-32 to /var/tmp/824-501/sm-74677-basic-35 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-36 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-38 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-39 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-41 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-42 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-42 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-42 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-43 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-44 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-44 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-32 to /var/tmp/824-501/sm-74677-basic-45 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-46 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-47 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-48 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-49 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-50 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-54 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-54 to /var/tmp/824-501/sm-74677-basic-55 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-56 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-57 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-58 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-59 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-32 to /var/tmp/824-501/sm-74677-basic-59 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-29 to /var/tmp/824-501/sm-74677-basic-60 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-54 to /var/tmp/824-501/sm-74677-basic-61 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-62 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-62 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-63 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-54 to /var/tmp/824-501/sm-74677-basic-63 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-57 to /var/tmp/824-501/sm-74677-basic-63 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-7 to /var/tmp/824-501/sm-74677-basic-64 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-18 to /var/tmp/824-501/sm-74677-basic-64 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-64 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-21 to /var/tmp/824-501/sm-74677-basic-65 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-57 to /var/tmp/824-501/sm-74677-basic-66 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-64 to /var/tmp/824-501/sm-74677-basic-66 
+Sybil edges from /var/tmp/824-501/sm-74677-basic-57 to /var/tmp/824-501/sm-74677-basic-67 
+Actual number of attack edges: 50 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-7
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-18
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-21
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-29
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-32
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-54
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-57
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-64
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-66
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-73
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-85
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-92
+Address of Sybil node: %s 
+ /var/tmp/824-501/sm-74677-basic-93
+Starting setup
+Finished setup, time: 35.928386295s
+Check key coverage in all dbs
+Covered keys: map[67:%!s(bool=true) 184:%!s(bool=true) 418:%!s(bool=true) 116:%!s(bool=true) 173:%!s(bool=true) 301:%!s(bool=true) 212:%!s(bool=true) 281:%!s(bool=true) 453:%!s(bool=true) 204:%!s(bool=true) 350:%!s(bool=true) 416:%!s(bool=true) 422:%!s(bool=true) 245:%!s(bool=true) 309:%!s(bool=true) 403:%!s(bool=true) 486:%!s(bool=true) 34:%!s(bool=true) 115:%!s(bool=true) 125:%!s(bool=true) 373:%!s(bool=true) 140:%!s(bool=true) 183:%!s(bool=true) 263:%!s(bool=true) 103:%!s(bool=true) 376:%!s(bool=true) 491:%!s(bool=true) 113:%!s(bool=true) 277:%!s(bool=true) 472:%!s(bool=true) 285:%!s(bool=true) 50:%!s(bool=true) 251:%!s(bool=true) 300:%!s(bool=true) 406:%!s(bool=true) 118:%!s(bool=true) 217:%!s(bool=true) 227:%!s(bool=true) 30:%!s(bool=true) 205:%!s(bool=true) 0:%!s(bool=true) 3:%!s(bool=true) 6:%!s(bool=true) 310:%!s(bool=true) 353:%!s(bool=true) 128:%!s(bool=true) 445:%!s(bool=true) 483:%!s(bool=true) 497:%!s(bool=true) 56:%!s(bool=true) 211:%!s(bool=true) 266:%!s(bool=true) 318:%!s(bool=true) 95:%!s(bool=true) 121:%!s(bool=true) 136:%!s(bool=true) 172:%!s(bool=true) 218:%!s(bool=true) 253:%!s(bool=true) 160:%!s(bool=true) 207:%!s(bool=true) 41:%!s(bool=true) 338:%!s(bool=true) 84:%!s(bool=true) 409:%!s(bool=true) 44:%!s(bool=true) 159:%!s(bool=true) 228:%!s(bool=true) 397:%!s(bool=true) 9:%!s(bool=true) 135:%!s(bool=true) 269:%!s(bool=true) 291:%!s(bool=true) 496:%!s(bool=true) 498:%!s(bool=true) 330:%!s(bool=true) 15:%!s(bool=true) 143:%!s(bool=true) 169:%!s(bool=true) 220:%!s(bool=true) 105:%!s(bool=true) 53:%!s(bool=true) 57:%!s(bool=true) 343:%!s(bool=true) 447:%!s(bool=true) 145:%!s(bool=true) 306:%!s(bool=true) 319:%!s(bool=true) 185:%!s(bool=true) 249:%!s(bool=true) 384:%!s(bool=true) 458:%!s(bool=true) 170:%!s(bool=true) 337:%!s(bool=true) 363:%!s(bool=true) 425:%!s(bool=true) 119:%!s(bool=true) 166:%!s(bool=true) 202:%!s(bool=true) 168:%!s(bool=true) 222:%!s(bool=true) 303:%!s(bool=true) 439:%!s(bool=true) 32:%!s(bool=true) 360:%!s(bool=true) 393:%!s(bool=true) 98:%!s(bool=true) 192:%!s(bool=true) 304:%!s(bool=true) 489:%!s(bool=true) 257:%!s(bool=true) 283:%!s(bool=true) 17:%!s(bool=true) 29:%!s(bool=true) 142:%!s(bool=true) 316:%!s(bool=true) 326:%!s(bool=true) 492:%!s(bool=true) 24:%!s(bool=true) 110:%!s(bool=true) 155:%!s(bool=true) 247:%!s(bool=true) 348:%!s(bool=true) 488:%!s(bool=true) 45:%!s(bool=true) 344:%!s(bool=true) 356:%!s(bool=true) 399:%!s(bool=true) 391:%!s(bool=true) 89:%!s(bool=true) 104:%!s(bool=true) 117:%!s(bool=true) 21:%!s(bool=true) 102:%!s(bool=true) 221:%!s(bool=true) 268:%!s(bool=true) 305:%!s(bool=true) 345:%!s(bool=true) 449:%!s(bool=true) 490:%!s(bool=true) 199:%!s(bool=true) 201:%!s(bool=true) 219:%!s(bool=true) 470:%!s(bool=true) 182:%!s(bool=true) 313:%!s(bool=true) 97:%!s(bool=true) 171:%!s(bool=true) 234:%!s(bool=true) 265:%!s(bool=true) 294:%!s(bool=true) 12:%!s(bool=true) 43:%!s(bool=true) 64:%!s(bool=true) 420:%!s(bool=true) 473:%!s(bool=true) 18:%!s(bool=true) 81:%!s(bool=true) 139:%!s(bool=true) 493:%!s(bool=true) 31:%!s(bool=true) 371:%!s(bool=true) 35:%!s(bool=true) 99:%!s(bool=true) 20:%!s(bool=true) 131:%!s(bool=true) 151:%!s(bool=true) 210:%!s(bool=true) 364:%!s(bool=true) 443:%!s(bool=true) 195:%!s(bool=true) 240:%!s(bool=true) 311:%!s(bool=true) 430:%!s(bool=true) 451:%!s(bool=true) 454:%!s(bool=true) 100:%!s(bool=true) 419:%!s(bool=true) 206:%!s(bool=true) 346:%!s(bool=true) 404:%!s(bool=true) 26:%!s(bool=true) 410:%!s(bool=true) 28:%!s(bool=true) 46:%!s(bool=true) 62:%!s(bool=true) 127:%!s(bool=true) 83:%!s(bool=true) 395:%!s(bool=true) 82:%!s(bool=true) 232:%!s(bool=true) 437:%!s(bool=true) 455:%!s(bool=true) 48:%!s(bool=true) 308:%!s(bool=true) 355:%!s(bool=true) 405:%!s(bool=true) 365:%!s(bool=true) 465:%!s(bool=true) 101:%!s(bool=true) 377:%!s(bool=true) 407:%!s(bool=true) 432:%!s(bool=true) 444:%!s(bool=true) 52:%!s(bool=true) 75:%!s(bool=true) 77:%!s(bool=true) 194:%!s(bool=true) 242:%!s(bool=true) 325:%!s(bool=true) 336:%!s(bool=true) 362:%!s(bool=true) 280:%!s(bool=true) 10:%!s(bool=true) 16:%!s(bool=true) 27:%!s(bool=true) 47:%!s(bool=true) 258:%!s(bool=true) 279:%!s(bool=true) 421:%!s(bool=true) 5:%!s(bool=true) 70:%!s(bool=true) 239:%!s(bool=true) 485:%!s(bool=true) 129:%!s(bool=true) 413:%!s(bool=true) 494:%!s(bool=true) 1:%!s(bool=true) 114:%!s(bool=true) 186:%!s(bool=true) 188:%!s(bool=true) 229:%!s(bool=true) 299:%!s(bool=true) 456:%!s(bool=true) 55:%!s(bool=true) 213:%!s(bool=true) 255:%!s(bool=true) 499:%!s(bool=true) 33:%!s(bool=true) 198:%!s(bool=true) 275:%!s(bool=true) 302:%!s(bool=true) 312:%!s(bool=true) 351:%!s(bool=true) 401:%!s(bool=true) 180:%!s(bool=true) 446:%!s(bool=true) 471:%!s(bool=true) 478:%!s(bool=true) 174:%!s(bool=true) 372:%!s(bool=true) 388:%!s(bool=true) 386:%!s(bool=true) 477:%!s(bool=true) 347:%!s(bool=true) 133:%!s(bool=true) 178:%!s(bool=true) 122:%!s(bool=true) 134:%!s(bool=true) 152:%!s(bool=true) 260:%!s(bool=true) 2:%!s(bool=true) 354:%!s(bool=true) 452:%!s(bool=true) 19:%!s(bool=true) 63:%!s(bool=true) 76:%!s(bool=true) 327:%!s(bool=true) 398:%!s(bool=true) 415:%!s(bool=true) 241:%!s(bool=true) 190:%!s(bool=true) 203:%!s(bool=true) 235:%!s(bool=true) 408:%!s(bool=true) 230:%!s(bool=true) 252:%!s(bool=true) 262:%!s(bool=true) 394:%!s(bool=true) 215:%!s(bool=true) 278:%!s(bool=true) 381:%!s(bool=true) 442:%!s(bool=true) 214:%!s(bool=true) 307:%!s(bool=true) 335:%!s(bool=true) 341:%!s(bool=true) 196:%!s(bool=true) 243:%!s(bool=true) 111:%!s(bool=true) 177:%!s(bool=true) 224:%!s(bool=true) 390:%!s(bool=true) 396:%!s(bool=true) 457:%!s(bool=true) 495:%!s(bool=true) 59:%!s(bool=true) 80:%!s(bool=true) 383:%!s(bool=true) 40:%!s(bool=true) 7:%!s(bool=true) 389:%!s(bool=true) 414:%!s(bool=true) 448:%!s(bool=true) 474:%!s(bool=true) 175:%!s(bool=true) 208:%!s(bool=true) 223:%!s(bool=true) 132:%!s(bool=true) 328:%!s(bool=true) 359:%!s(bool=true) 392:%!s(bool=true) 487:%!s(bool=true) 387:%!s(bool=true) 412:%!s(bool=true) 424:%!s(bool=true) 459:%!s(bool=true) 69:%!s(bool=true) 191:%!s(bool=true) 197:%!s(bool=true) 51:%!s(bool=true) 120:%!s(bool=true) 123:%!s(bool=true) 378:%!s(bool=true) 329:%!s(bool=true) 481:%!s(bool=true) 65:%!s(bool=true) 68:%!s(bool=true) 153:%!s(bool=true) 340:%!s(bool=true) 385:%!s(bool=true) 225:%!s(bool=true) 250:%!s(bool=true) 298:%!s(bool=true) 349:%!s(bool=true) 320:%!s(bool=true) 72:%!s(bool=true) 138:%!s(bool=true) 181:%!s(bool=true) 292:%!s(bool=true) 167:%!s(bool=true) 200:%!s(bool=true) 423:%!s(bool=true) 441:%!s(bool=true) 14:%!s(bool=true) 144:%!s(bool=true) 156:%!s(bool=true) 158:%!s(bool=true) 357:%!s(bool=true) 370:%!s(bool=true) 54:%!s(bool=true) 124:%!s(bool=true) 374:%!s(bool=true) 417:%!s(bool=true) 450:%!s(bool=true) 49:%!s(bool=true) 435:%!s(bool=true) 154:%!s(bool=true) 261:%!s(bool=true) 297:%!s(bool=true) 270:%!s(bool=true) 233:%!s(bool=true) 267:%!s(bool=true) 402:%!s(bool=true) 141:%!s(bool=true) 256:%!s(bool=true) 375:%!s(bool=true) 436:%!s(bool=true) 438:%!s(bool=true) 440:%!s(bool=true) 25:%!s(bool=true) 79:%!s(bool=true) 157:%!s(bool=true) 209:%!s(bool=true) 254:%!s(bool=true) 4:%!s(bool=true) 73:%!s(bool=true) 295:%!s(bool=true) 460:%!s(bool=true) 434:%!s(bool=true) 476:%!s(bool=true) 90:%!s(bool=true) 13:%!s(bool=true) 22:%!s(bool=true) 88:%!s(bool=true) 96:%!s(bool=true) 137:%!s(bool=true) 150:%!s(bool=true) 165:%!s(bool=true) 189:%!s(bool=true) 216:%!s(bool=true) 400:%!s(bool=true) 42:%!s(bool=true) 193:%!s(bool=true) 282:%!s(bool=true) 484:%!s(bool=true) 358:%!s(bool=true) 60:%!s(bool=true) 85:%!s(bool=true) 237:%!s(bool=true) 293:%!s(bool=true) 342:%!s(bool=true) 380:%!s(bool=true) 411:%!s(bool=true) 290:%!s(bool=true) 431:%!s(bool=true) 259:%!s(bool=true) 314:%!s(bool=true) 352:%!s(bool=true) 236:%!s(bool=true) 244:%!s(bool=true) 296:%!s(bool=true) 339:%!s(bool=true) 475:%!s(bool=true) 58:%!s(bool=true) 112:%!s(bool=true) 130:%!s(bool=true) 179:%!s(bool=true) 226:%!s(bool=true) 264:%!s(bool=true) 433:%!s(bool=true) 11:%!s(bool=true) 23:%!s(bool=true) 176:%!s(bool=true) 231:%!s(bool=true) 479:%!s(bool=true) 66:%!s(bool=true) 71:%!s(bool=true) 86:%!s(bool=true) 126:%!s(bool=true) 8:%!s(bool=true) 74:%!s(bool=true) 187:%!s(bool=true) 276:%!s(bool=true) 61:%!s(bool=true) 78:%!s(bool=true) 238:%!s(bool=true) 361:%!s(bool=true) 482:%!s(bool=true) 284:%!s(bool=true) 315:%!s(bool=true) 87:%!s(bool=true) 246:%!s(bool=true) 248:%!s(bool=true) 317:%!s(bool=true) 379:%!s(bool=true) 382:%!s(bool=true) 480:%!s(bool=true)] 
+key coverage in all dbs: 1.029885
+Check key coverage in all successor tables
+key coverage in all succ: 1.029885
+missing keys in succs: [19]
+Checking Try for every key from every node
+All test keys: [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 95 96 97 98 99 100 101 102 103 104 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 150 151 152 153 154 155 156 157 158 159 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 256 257 258 259 260 261 262 263 264 265 266 267 268 269 275 276 277 278 279 280 281 282 283 284 290 291 292 293 294 295 296 297 298 299 300 301 302 303 304 305 306 307 308 309 310 311 312 313 314 315 316 317 318 319 325 326 327 328 329 335 336 337 338 339 340 341 342 343 344 345 346 347 348 349 350 351 352 353 354 355 356 357 358 359 360 361 362 363 364 370 371 372 373 374 375 376 377 378 379 380 381 382 383 384 385 386 387 388 389 390 391 392 393 394 395 396 397 398 399 400 401 402 403 404 405 406 407 408 409 410 411 412 413 414 415 416 417 418 419 420 421 422 423 424 430 431 432 433 434 435 436 437 438 439 440 441 442 443 444 445 446 447 448 449 450 451 452 453 454 455 456 457 458 459 470 471 472 473 474 475 476 477 478 479 480 481 482 483 484 485 486 487 488 489 490 491 492 493 494 495 496 497 498 499]
+numFound: 37630
+total keys: 43500
+Percent lookups successful: 0.865057
+PASS
+ok  	_/Users/qliu/Documents/6.857/f_peoplekeepchanging/src/whanau	582.171s

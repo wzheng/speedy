@@ -1,0 +1,18 @@
+Iteration: %d 
+ 
+ 0
+Actual number of attack edges: 805 
+Edge probability: %!d(float32=0.6) 
+Attack edge probability: %!d(float32=0.1) 
+[95mTest: Lookup With Sybils[0m
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-0 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-1 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-2 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-3 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-7 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-8 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-9 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-16 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-17 
+Address of Sybil node: /var/tmp/824-1000/sm-27843-basic-18 
+Starting setup

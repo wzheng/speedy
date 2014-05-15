@@ -270,6 +270,21 @@ We see that the \emph{number} of Sybil nodes does affect the fraction of success
 
 \subsubsection{Clustering Attack}
 
+One form of clustering attack is when Sybil nodes all choose their ids to cluster
+around a particular key. This clustering could leak into the finger tables during
+the routing protocol so that requests for that particular key are likely to be routed to a Sybil node.
+
+One of the main contributions of the Whanau protocol is to prevent against clustering attacks.
+This is done by the layered construction of routing tables described in section 3.1.
+
+The intuition for preventing clustering attacks is that if Sybil nodes
+choose their ids to cluster around a particular key in one layer, then in
+the next layer, that clustering will be replicated in the honest node ids.
+This is because node ids for one layer is chosen randomly from the previous layer's finger tables.
+Sybil nodes can anticipate this layered routing table construction and choose
+a particular layer to cluster in, which is why many layers are used. \cite{whanau} shows that $O(log n)$ layers is the optimal number.
+During lookup, one layer is chosen at random, so an honest node is likely to be chosen even in the presence of a clustering attack.
+
 \subsection{Data Consistency Layer Security}
 
 We analyze the security of the Paxos data layer in this section.

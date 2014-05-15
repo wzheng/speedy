@@ -320,7 +320,7 @@ While the security on the Paxos protocol level is out of the scope of this proje
 design does try to minimize the number of Sybil nodes within a Paxos cluster.
 A Paxos cluster for a particular key is formed by taking some random walks from the node which a key is inserted/updated.
 If that node does not lie on an attack edge with the Sybil region, then there is a high probability
-all of the nodes contacted will stay within the honest region due to the sparse cut assumption
+all of the nodes contacted will stay within the honest region due to the sparse cut assumption.
 
 As long as a majority of the nodes in a Paxos cluster is honest, then the agreement part of the protocol
 will work correctly because this is analagous to a majority of nodes not failing.

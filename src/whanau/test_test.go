@@ -1474,14 +1474,14 @@ func TestRealLookupSybil(t *testing.T) {
 // Testing paxos cluster composition
 func TestClusterComp(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 1
+	iterations := 3
 	for z := 0; z < iterations; z++ {
 		fmt.Printf("Iteration: %d \n \n", z)
 		const nservers = 100
 		const nkeys = 500          // keys are strings from 0 to nkeys
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
-		attackEdgeProb := 0.01
+		attackEdgeProb := 0.4
 
 		// run setup in parallel
 		// parameters
@@ -1706,7 +1706,7 @@ func TestClusterComp(t *testing.T) {
 
 		}
 
-    fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v\n", nservers, nkeys, sybilProb, len(ksvh))
+    fmt.Printf("nservers: %d, nkeys: %d, sybilProb: %v, numSybilServers: %v, attackEdgeProb: %v\n", nservers, nkeys, sybilProb, len(ksvh), attackEdgeProb)
 		fmt.Printf("Actual number of attack edges: %d\n", attackCounter)
     fmt.Printf("Cluster size: %d\n", PaxosSize)
 		fmt.Printf("totalClusters: %d\n", totalClusters)

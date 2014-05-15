@@ -68,6 +68,7 @@ func (ws *WhanauServer) JoinClusterRPC(args *JoinClusterArgs,
 			for _, srv := range args.NewCluster {
 				uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 			}
+			uid = getShaHash(uid)
 			if new_wp, found := ws.FindWPInstanceIfCreated(uid); !found {
 				wp = StartWhanauPaxos(args.NewCluster, index, uid, ws.rpc)
 			} else {
@@ -114,6 +115,7 @@ func (ws *WhanauServer) InitPaxosCluster(args *InitPaxosClusterArgs, reply *Init
 				for _, srv := range servers {
 					uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 				}
+				uid = getShaHash(uid)
 
 				var wp *WhanauPaxos
 				if new_wp, found := ws.FindWPInstanceIfCreated(uid); !found {

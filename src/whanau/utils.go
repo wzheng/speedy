@@ -1,6 +1,10 @@
 package whanau
 
 import "math/rand"
+import (
+	"crypto/sha1"
+	"encoding/base64"
+)
 
 import "fmt"
 
@@ -87,4 +91,12 @@ func (ws *WhanauServer) FindWPInstanceIfCreated(uid string) (WhanauPaxos, bool) 
 	}
 
 	return wp, false
+}
+
+func getShaHash(str string) string {
+	hasher := sha1.New()
+	bv := []byte(str)
+	hasher.Write(bv)
+	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return sha
 }

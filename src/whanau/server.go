@@ -303,6 +303,7 @@ func StartServer(servers []string, me int, myaddr string,
 		for _, srv := range newservers {
 			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 		}
+		uid = getShaHash(uid)
 		StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 	}
 
@@ -322,6 +323,7 @@ func StartServer(servers []string, me int, myaddr string,
 		for _, srv := range newservers {
 			uid += strings.Join(strings.Split(srv, "/var/tmp/824-"+strconv.Itoa(os.Getuid())+"/"), "")
 		}
+		uid = getShaHash(uid)
 		wp_m := StartWhanauPaxos(newservers, idx, uid, ws.rpc)
 		ws.master_paxos_cluster = *wp_m
 		ws.all_pending_writes = make(map[PendingInsertsKey]TrueValueType)

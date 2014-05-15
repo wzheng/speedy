@@ -902,14 +902,18 @@ func TestDemo(t *testing.T) {
 // Redistributing some keys to sybil nodes
 func TestLookupWithSybilsMalicious(t *testing.T) {
 	runtime.GOMAXPROCS(8)
-	iterations := 20
+	iterations := 1
 	for z := 0; z < iterations; z++ {
 		fmt.Println("Iteration: %d \n \n", z)
 		const nservers = 20
 		const nkeys = 100          // keys are strings from 0 to 99
 		const k = nkeys / nservers // keys per node
 		const sybilProb = 0.49
+<<<<<<< HEAD
+        attackEdgeProb :=  0.5 // float32(z%10)/10 + 0.1
+=======
 		attackEdgeProb := float32(z%10)/10 + 0.1
+>>>>>>> 40adc9f4072d58facc490348589e8a0e019cf235
 		// run setup in parallel
 		// parameters
 		constant := 5
@@ -922,7 +926,11 @@ func TestLookupWithSybilsMalicious(t *testing.T) {
 		attackCounter := 0
 		numSybilServers := 10
 		sybilServerCounter := 0
+<<<<<<< HEAD
+        var edgeProb float32 = 1
+=======
 		var edgeProb float32 = 0.8
+>>>>>>> 40adc9f4072d58facc490348589e8a0e019cf235
 
 		var ws []*WhanauServer = make([]*WhanauServer, nservers)
 		var kvh []string = make([]string, nservers)

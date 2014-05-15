@@ -1,0 +1,67 @@
+This is BibTeX, Version 0.99d (TeX Live 2012/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: main.aux
+The style file: biblatex.bst
+Case mismatch error between cite keys Whanau and whanau
+---line 53 of file main.aux
+ : \citation{Whanau
+ :                 }
+I'm skipping whatever remains of this command
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: main-blx.bib
+Database file #2: literature.bib
+Biblatex version: 1.7
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 9000 items from 6000.
+You've used 6 entries,
+            6019 wiz_defined-function locations,
+            1152 strings with 8973 characters,
+and the built_in function-call counts, 24145 in all, are:
+= -- 792
+> -- 1813
+< -- 239
++ -- 1382
+- -- 1357
+* -- 1452
+:= -- 2505
+add.period$ -- 0
+call.type$ -- 6
+change.case$ -- 113
+chr.to.int$ -- 96
+cite$ -- 10
+duplicate$ -- 2106
+empty$ -- 1975
+format.name$ -- 395
+if$ -- 4408
+int.to.chr$ -- 0
+int.to.str$ -- 20
+missing$ -- 0
+newline$ -- 175
+num.names$ -- 287
+pop$ -- 1681
+preamble$ -- 1
+purify$ -- 124
+quote$ -- 0
+skip$ -- 1092
+stack$ -- 0
+substring$ -- 633
+swap$ -- 724
+text.length$ -- 187
+text.prefix$ -- 8
+top$ -- 1
+type$ -- 215
+warning$ -- 0
+while$ -- 180
+width$ -- 0
+write$ -- 168
+(There was 1 error message)
